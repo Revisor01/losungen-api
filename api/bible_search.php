@@ -163,20 +163,51 @@ class BibleSearchAPI {
         // - "Psalm 23,1-6"
         // - "Römer 8,28-29"
         // - "Mt 5,1" (mit DB-Abkürzungen)
+        // - "2. Mose 16,2–3.11–18" (komplexere Referenzen)
         
-        $pattern = '/^(.+?)\s+(\d+),(\d+)(?:-(\d+))?$/u';
-        if (preg_match($pattern, trim($reference), $matches)) {
-            $bookInput = trim($matches[1]);
-            $resolvedBook = $this->resolveBookAbbreviation($bookInput);
-            
-            return [
-                'book' => $resolvedBook ?: $bookInput, // Fallback auf original wenn nicht gefunden
-                'chapter' => (int)$matches[2],
-                'start_verse' => (int)$matches[3],
-                'end_verse' => isset($matches[4]) ? (int)$matches[4] : (int)$matches[3],
-                'original' => $reference,
-                'original_book' => $bookInput
-            ];
+        // Erweiterte Patterns für komplexere Referenzen
+        $patterns = [
+            // Standard: "Buch Kapitel,Vers" oder "Buch Kapitel,Vers-Vers"
+            '/^(.+?)\s+(\d+),(\d+)(?:[-–](\d+))?$/u',
+            // Komplexe Referenzen wie "2. Mose 16,2–3.11–18"
+            '/^(.+?)\s+(\d+),(.+)$/u'
+        ];
+        
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, trim($reference), $matches)) {
+                $bookInput = trim($matches[1]);
+                $resolvedBook = $this->resolveBookAbbreviation($bookInput);
+                
+                $chapter = (int)$matches[2];
+                
+                // Für einfache Formate
+                if (isset($matches[3]) && is_numeric($matches[3])) {
+                    return [
+                        'book' => $resolvedBook ?: $bookInput,
+                        'chapter' => $chapter,
+                        'start_verse' => (int)$matches[3],
+                        'end_verse' => isset($matches[4]) && is_numeric($matches[4]) ? (int)$matches[4] : (int)$matches[3],
+                        'original' => $reference,
+                        'original_book' => $bookInput
+                    ];
+                }
+                
+                // Für komplexe Formate - verwende einfach das erste gefundene Kapitel/Vers
+                if (isset($matches[3])) {
+                    $versePart = $matches[3];
+                    // Extrahiere ersten Vers
+                    if (preg_match('/^(\d+)/', $versePart, $verseMatch)) {
+                        return [
+                            'book' => $resolvedBook ?: $bookInput,
+                            'chapter' => $chapter,
+                            'start_verse' => (int)$verseMatch[1],
+                            'end_verse' => (int)$verseMatch[1], // Vereinfachung
+                            'original' => $reference,
+                            'original_book' => $bookInput
+                        ];
+                    }
+                }
+            }
         }
         
         return null;
@@ -187,7 +218,11 @@ class BibleSearchAPI {
      */
     private function resolveBookAbbreviation($bookInput) {
         try {
-            $stmt = $this->db->prepare("
+            // Verwende die PostgreSQL-Verbindung direkt
+            require_once 'database.php';
+            $pdo = getDatabase();
+            
+            $stmt = $pdo->prepare("
                 SELECT book_name 
                 FROM bible_abbreviations 
                 WHERE ? = ANY(abbreviations) OR LOWER(book_name) = LOWER(?)
@@ -198,7 +233,7 @@ class BibleSearchAPI {
             
             return $result ? $result['book_name'] : null;
         } catch (Exception $e) {
-            // Fallback bei DB-Fehler
+            // Fallback bei DB-Fehler - einfach das Original zurückgeben
             return null;
         }
     }
