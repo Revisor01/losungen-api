@@ -3,20 +3,18 @@ import { motion } from 'framer-motion';
 import { EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 
 interface LoginFormProps {
-  onLogin: (username: string, password: string, apiKey: string) => void;
+  onLogin: (username: string, password: string) => void;
   error?: string;
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, error }) => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [apiKey, setApiKey] = useState('ksadh8324oijcff45rfdsvcvhoids44');
   const [showPassword, setShowPassword] = useState(false);
-  const [showApiKey, setShowApiKey] = useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(username, password, apiKey);
+    onLogin(username, password);
   };
 
   return (
@@ -89,33 +87,6 @@ export const LoginForm: React.FC<LoginFormProps> = ({ onLogin, error }) => {
                 onClick={() => setShowPassword(!showPassword)}
               >
                 {showPassword ? (
-                  <EyeSlashIcon className="h-5 w-5 text-gray-400" />
-                ) : (
-                  <EyeIcon className="h-5 w-5 text-gray-400" />
-                )}
-              </button>
-            </div>
-            
-            <div className="relative">
-              <label htmlFor="apiKey" className="block text-sm font-medium text-gray-700 mb-1">
-                API Key
-              </label>
-              <input
-                id="apiKey"
-                name="apiKey"
-                type={showApiKey ? 'text' : 'password'}
-                required
-                className="input-field pr-10"
-                placeholder="API Key für Backend-Zugriff"
-                value={apiKey}
-                onChange={(e) => setApiKey(e.target.value)}
-              />
-              <button
-                type="button"
-                className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                onClick={() => setShowApiKey(!showApiKey)}
-              >
-                {showApiKey ? (
                   <EyeSlashIcon className="h-5 w-5 text-gray-400" />
                 ) : (
                   <EyeIcon className="h-5 w-5 text-gray-400" />

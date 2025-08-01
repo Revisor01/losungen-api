@@ -53,17 +53,21 @@ class ApiService {
 
   // Hole heutige Tageslosung
   async getTodayLosung(translation: string = 'LUT'): Promise<ApiResponse<DailyLosung>> {
-    return this.request<DailyLosung>(`/?translation=${translation}`);
+    const apiKey = this.getApiKey();
+    return this.request<DailyLosung>(`/?api_key=${apiKey}&translation=${translation}`);
   }
 
   // Hole Tageslosung für spezifisches Datum
   async getLosung(date: string, translation: string = 'LUT'): Promise<ApiResponse<DailyLosung>> {
-    return this.request<DailyLosung>(`/?date=${date}&translation=${translation}`);
+    const apiKey = this.getApiKey();
+    return this.request<DailyLosung>(`/?api_key=${apiKey}&date=${date}&translation=${translation}`);
   }
 
   // Suche nach beliebiger Bibelstelle
   async searchBibleText(request: BibleSearchRequest): Promise<ApiResponse<BibleSearchResult>> {
+    const apiKey = this.getApiKey();
     const params = new URLSearchParams({
+      api_key: apiKey,
       reference: request.reference,
       translation: request.translation,
       format: request.format || 'json'

@@ -41,6 +41,7 @@ export const Header: React.FC<HeaderProps> = ({
           <nav className="hidden md:flex items-center space-x-8">
             <NavLink href="/" active>Dashboard</NavLink>
             <NavLink href="/search">Suche</NavLink>
+            <NavLink href="/profile">Profil</NavLink>
             <NavLink href="/favorites">Favoriten</NavLink>
           </nav>
 
@@ -111,6 +112,7 @@ export const Header: React.FC<HeaderProps> = ({
             <nav className="px-4 py-4 space-y-3">
               <MobileNavLink href="/" active>Dashboard</MobileNavLink>
               <MobileNavLink href="/search">Suche</MobileNavLink>
+              <MobileNavLink href="/profile">Profil</MobileNavLink>
               <MobileNavLink href="/favorites">Favoriten</MobileNavLink>
               
               {user ? (

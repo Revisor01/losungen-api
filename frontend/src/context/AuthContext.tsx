@@ -49,19 +49,19 @@ export const AuthProvider: React.FC<AuthProviderProps> = ({ children }) => {
     }
   }, []);
 
-  const login = (username: string, password: string, apiKey: string): boolean => {
+  const login = (username: string, password: string): boolean => {
     // Check credentials
     if (VALID_USERS[username as keyof typeof VALID_USERS] === password) {
       const userData: User = {
         username,
-        apiKey
+        apiKey: 'ksadh8324oijcff45rfdsvcvhoids44' // Default API key
       };
       
       setUser(userData);
       localStorage.setItem('biblescraper_user', JSON.stringify(userData));
       
       // Update API service with new key
-      updateGlobalApiKey(apiKey);
+      updateGlobalApiKey(userData.apiKey);
       
       return true;
     }

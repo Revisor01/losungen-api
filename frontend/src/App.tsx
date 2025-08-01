@@ -5,6 +5,7 @@ import { LoginForm } from './components/auth/LoginForm';
 import { Header } from './components/layout/Header';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { SearchInterface } from './components/search/SearchInterface';
+import { ProfileSettings } from './components/profile/ProfileSettings';
 import './styles/globals.css';
 
 function AppContent() {
@@ -12,8 +13,8 @@ function AppContent() {
   const [loginError, setLoginError] = useState<string>('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
-  const handleLogin = (username: string, password: string, apiKey: string) => {
-    const success = login(username, password, apiKey);
+  const handleLogin = (username: string, password: string) => {
+    const success = login(username, password);
     if (!success) {
       setLoginError('Ungültige Anmeldedaten. Bitte versuche es erneut.');
     } else {
@@ -46,6 +47,7 @@ function AppContent() {
           <Routes>
             <Route path="/" element={<Dashboard />} />
             <Route path="/search" element={<SearchInterface />} />
+            <Route path="/profile" element={<ProfileSettings />} />
             <Route path="/favorites" element={<FavoritesPlaceholder />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
