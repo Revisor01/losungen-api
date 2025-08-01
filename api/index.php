@@ -75,10 +75,12 @@ function checkRateLimit() {
 
 class LosungenService {
     private $db;
+    private $losungenDb;
     private $bibleserverApiKey;
     
     public function __construct() {
         $this->db = getDatabase();
+        $this->losungenDb = new LosungenDatabase();
         $this->bibleserverApiKey = $_ENV['BIBLESERVER_API_KEY'] ?? null;
     }
     
@@ -101,9 +103,9 @@ class LosungenService {
                 return $this->errorResponse('Losung nicht gefunden für Datum: ' . $date);
             }
             
-            // If translation requested other than LUT, enhance with scraper
+            // If translation requested other than LUT, try cache first, then scraper
             if ($translation !== 'LUT') {
-                $losungData = $this->enhanceWithTranslations($losungData, $translation);
+                $losungData = $this->enhanceWithCachedTranslations($losungData, $translation, $date);
             }
             
             // Bibelstellen über ERF Bibleserver API in gewünschter Übersetzung laden
@@ -133,7 +135,20 @@ class LosungenService {
                 ot_text,
                 ot_reference,
                 nt_text,
-                nt_reference
+                nt_reference,
+                ot_text_bigs,
+                nt_text_bigs,
+                ot_text_ngu,
+                nt_text_ngu,
+                ot_text_hfa,
+                nt_text_hfa,
+                ot_text_eu,
+                nt_text_eu,
+                ot_text_elb,
+                nt_text_elb,
+                ot_text_esv,
+                nt_text_esv,
+                translations_updated_at
             FROM losungen 
             WHERE date = ?
         ");
@@ -225,6 +240,34 @@ class LosungenService {
             'error' => $message,
             'timestamp' => date('c')
         ];
+    }
+    
+    private function enhanceWithCachedTranslations($data, $translation, $date) {
+        // Try cache first 
+        logDocker("[LOSUNGEN] Checking translation cache for $translation on $date");
+        
+        try {
+            $cachedTranslation = $this->losungenDb->getTranslation($date, $translation);
+            
+            if ($cachedTranslation) {
+                logDocker("[LOSUNGEN] Found cached translation for $translation");
+                
+                // Use cached translation data
+                $data['losung']['text'] = $cachedTranslation['losung']['text'] ?? $data['losung']['text'];
+                $data['losung']['translation_source'] = $cachedTranslation['losung']['translation_source'] ?? $translation;
+                
+                $data['lehrtext']['text'] = $cachedTranslation['lehrtext']['text'] ?? $data['lehrtext']['text'];
+                $data['lehrtext']['translation_source'] = $cachedTranslation['lehrtext']['translation_source'] ?? $translation;
+                
+                return $data;
+            }
+        } catch (Exception $e) {
+            logDocker("[LOSUNGEN] Cache lookup failed: " . $e->getMessage());
+        }
+        
+        // Fallback to scraper if cache miss
+        logDocker("[LOSUNGEN] Cache miss for $translation, falling back to scraper");
+        return $this->enhanceWithTranslations($data, $translation);
     }
     
     private function enhanceWithTranslations($data, $translation) {
