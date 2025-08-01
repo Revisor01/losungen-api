@@ -7,6 +7,7 @@ export interface ChurchEvent {
   liturgicalColor?: string;
   season?: string;
   weeklyVerse?: string;
+  weeklyVerseReference?: string; // Just the bible reference like "Sach 9,9a"
   psalm?: string;
   epistle?: string;
   gospel?: string;
@@ -98,6 +99,7 @@ export class ICSParser {
       case 'URL;VALUE=URI':
       case 'URL':
         event.url = value;
+        console.log('Found URL:', value);
         break;
     }
   }
@@ -119,31 +121,52 @@ export class ICSParser {
   }
   
   private static parseDescription(event: Partial<ChurchEvent>, description: string) {
-    // The actual ICS format has literal \n characters and continued lines with tabs
-    console.log('Raw description:', description); // Debug
+    console.log('Raw description:', description);
     
-    // Clean up the description: handle multi-line values and tab continuations
-    const cleanedDescription = description
-      .replace(/\\n/g, '\n')  // Convert literal \n to actual newlines
-      .replace(/\n\t/g, ' ')  // Join tab-continued lines
-      .replace(/\n /g, ' ');  // Join space-continued lines
+    // Parse the description that comes from ICS with literal \n and continuation lines
+    // First, join continuation lines (lines starting with space/tab belong to previous line)
+    const normalizedDescription = description
+      .replace(/\n\s+/g, ' ')  // Join continuation lines with spaces
     
-    console.log('Cleaned description:', cleanedDescription); // Debug
+    // Then split on literal \n to get individual fields
+    const cleanText = normalizedDescription.replace(/\\n/g, '\n');
+    const lines = cleanText.split('\n').map(l => l.trim()).filter(l => l);
     
-    const lines = cleanedDescription.split('\n').map(l => l.trim()).filter(l => l);
+    console.log('Processed lines:', lines);
     
     const perikopen: { [key: string]: string } = {};
     let inPerikopenSection = false;
     
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
-      console.log('Processing line:', line); // Debug
+    for (const line of lines) {
+      console.log('Processing line:', line);
       
-      // Parse key-value pairs with colon separator
+      // Skip the explanation text
+      if (line.includes('Erklärung zu den Perikopen:') || 
+          line.includes('Die biblischen Predigttexte sind aufgeteilt') ||
+          line.includes('Jede Reihe gilt') ||
+          line.includes('Die einzelnen Reihen haben')) {
+        inPerikopenSection = true;
+        continue;
+      }
+      
+      // Parse Perikopen (I-VI) after explanation
+      if (inPerikopenSection) {
+        const perikopenMatch = line.match(/^([IVX]+):\s*(.+)$/);
+        if (perikopenMatch) {
+          const [, reihe, text] = perikopenMatch;
+          perikopen[reihe] = text.trim();
+          console.log(`Found Perikope ${reihe}: ${text.trim()}`);
+          continue;
+        }
+      }
+      
+      // Parse key-value pairs with colon
       if (line.includes(':') && !inPerikopenSection) {
         const colonIndex = line.indexOf(':');
         const key = line.substring(0, colonIndex).trim();
         const value = line.substring(colonIndex + 1).trim();
+        
+        console.log(`Key: "${key}", Value: "${value}"`);
         
         switch (key) {
           case 'liturgische Farbe':
@@ -154,10 +177,18 @@ export class ICSParser {
             break;
           case 'Wochenspruch':
             event.weeklyVerse = value;
+            // Also extract just the reference for potential bible search
+            const referenceMatch = value.match(/\(([^)]+)\)$/);
+            if (referenceMatch) {
+              // Store the biblical reference separately for easy access
+              event.weeklyVerseReference = referenceMatch[1];
+            }
             break;
           case 'Wochenpsalm':
-          case 'Eingangspsalm':
             event.psalm = value;
+            break;
+          case 'Eingangspsalm':
+            if (!event.psalm) event.psalm = value; // Use Wochenpsalm if available, otherwise Eingangspsalm
             break;
           case 'Epistel':
             event.epistle = value;
@@ -173,30 +204,13 @@ export class ICSParser {
             break;
         }
       }
-      
-      // Detect Perikopen section
-      if (line.includes('Erklärung zu den Perikopen:')) {
-        inPerikopenSection = true;
-        continue;
-      }
-      
-      // Parse Perikopen (I-VI)
-      if (inPerikopenSection) {
-        const perikopenMatch = line.match(/^([IVX]+):\s*(.+)$/);
-        if (perikopenMatch) {
-          const [, reihe, text] = perikopenMatch;
-          perikopen[reihe] = text.trim();
-          console.log(`Found Perikope ${reihe}: ${text.trim()}`); // Debug
-        }
-      }
     }
     
     if (Object.keys(perikopen).length > 0) {
       event.perikopen = perikopen;
-      console.log('All Perikopen:', event.perikopen); // Debug
     }
     
-    console.log('Parsed event data:', {
+    console.log('Final parsed event:', {
       liturgicalColor: event.liturgicalColor,
       season: event.season,
       weeklyVerse: event.weeklyVerse,
@@ -206,7 +220,7 @@ export class ICSParser {
       sermonText: event.sermonText,
       hymn: event.hymn,
       perikopen: event.perikopen
-    }); // Debug
+    });
   }
   
   /**

@@ -313,6 +313,17 @@ export const ChurchYearCalendar: React.FC = () => {
                         <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
                           <BookOpenIcon className="w-4 h-4 mr-2" />
                           Wochenspruch
+                          {selectedEvent.weeklyVerseReference && (
+                            <motion.button
+                              whileHover={{ scale: 1.1 }}
+                              whileTap={{ scale: 0.9 }}
+                              onClick={() => handleBibleReferenceClick(selectedEvent.weeklyVerseReference!)}
+                              className="ml-2 p-1 rounded hover:bg-gray-200 transition-colors"
+                              title="Bibelstelle suchen"
+                            >
+                              <MagnifyingGlassIcon className="w-4 h-4 text-gray-600" />
+                            </motion.button>
+                          )}
                         </h4>
                         <p className="text-sm text-gray-700">{selectedEvent.weeklyVerse}</p>
                       </div>
