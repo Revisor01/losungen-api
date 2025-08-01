@@ -89,16 +89,19 @@ class ApiService {
 
         const textContent = await response.text();
         
+        // Parse translation info from available translations
+        const translationInfo = this.getAvailableTranslations().find(t => t.code === request.translation) || {
+          code: request.translation,
+          name: request.translation,
+          language: 'German'
+        };
+        
         // Formatiere als BibleSearchResult für einheitliche Verwendung
         const result: BibleSearchResult = {
           text: textContent,
           reference: request.reference,
-          translation: {
-            code: request.translation,
-            name: request.translation,
-            language: 'German'
-          },
-          source: 'Bible Search API',
+          translation: translationInfo,
+          source: `Bible Search API (${request.format})`,
           url: ''
         };
 

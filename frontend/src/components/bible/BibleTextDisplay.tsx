@@ -119,15 +119,15 @@ export const BibleTextDisplay: React.FC<BibleTextDisplayProps> = ({
             )}
 
             {/* External Link */}
-            {verse.bibleserver_url && (
+            {(verse.bibleserver_url || verse.url) && (
               <motion.a
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                href={verse.bibleserver_url}
+                href={verse.bibleserver_url || verse.url}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="p-2 rounded-lg text-gray-400 hover:text-royal-600 hover:bg-royal-50 transition-colors"
-                title="In Bibleserver öffnen"
+                title="Zur Quelle"
               >
                 <ArrowTopRightOnSquareIcon className="w-5 h-5" />
               </motion.a>

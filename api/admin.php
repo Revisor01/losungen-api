@@ -126,7 +126,7 @@ function manualFetch($translation = 'ALL') {
         $deletedEntries = $stmt->rowCount();
         
         // Execute daily fetch script for all translations
-        $command = "/usr/local/bin/php " . __DIR__ . "/../scripts/daily_fetch.php " . escapeshellarg($today) . " 2>&1";
+        $command = "/usr/local/bin/php /var/www/html/scripts/daily_fetch.php " . escapeshellarg($today) . " 2>&1";
         $output = shell_exec($command);
         
         $endTime = microtime(true);

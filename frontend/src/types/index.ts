@@ -11,6 +11,7 @@ export interface BibleVerse {
   testament: 'AT' | 'NT';
   translation_source?: string;
   bibleserver_url?: string;
+  url?: string;
 }
 
 export interface DailyLosung {

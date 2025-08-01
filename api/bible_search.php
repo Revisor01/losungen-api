@@ -102,7 +102,22 @@ class BibleSearchAPI {
             // Suche in Cache (für heutige Losungen)
             $cachedResult = $this->searchInCache($parsedRef, $translation);
             if ($cachedResult) {
-                return $this->successResponse($cachedResult, 'database_cache');
+                // Formatierung auch für Cache-Ergebnisse anwenden
+                $formattedCached = $this->formatResult($cachedResult, $format);
+                
+                // Für text/markdown/html Formate: direkte Ausgabe ohne JSON wrapper
+                if (in_array($format, ['text', 'markdown', 'html'])) {
+                    // Header für entsprechendes Format setzen
+                    if ($format === 'html') {
+                        header('Content-Type: text/html; charset=utf-8');
+                    } else {
+                        header('Content-Type: text/plain; charset=utf-8');
+                    }
+                    echo $formattedCached;
+                    exit;
+                }
+                
+                return $this->successResponse($formattedCached, 'database_cache');
             }
             
             // Live-Scraping ausführen
@@ -118,6 +133,18 @@ class BibleSearchAPI {
             
             // Formatierung anwenden
             $formattedResult = $this->formatResult($scrapedResult, $format);
+            
+            // Für text/markdown/html Formate: direkte Ausgabe ohne JSON wrapper
+            if (in_array($format, ['text', 'markdown', 'html'])) {
+                // Header für entsprechendes Format setzen
+                if ($format === 'html') {
+                    header('Content-Type: text/html; charset=utf-8');
+                } else {
+                    header('Content-Type: text/plain; charset=utf-8');
+                }
+                echo $formattedResult;
+                exit;
+            }
             
             return $this->successResponse($formattedResult, 'live_scraping');
             
