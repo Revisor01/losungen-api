@@ -284,7 +284,7 @@ def get_bible_text_from_bigs(reference):
         book_abbrev = book_mappings.get(book_name, book_name)
         
         # URL für einzelnen Vers aufbauen mit korrektem BIGS-Format
-        url = f"https://www.bibel-in-gerechter-sprache.de/die-bibel/bigs-online/?{book_abbrev}/{chapter}/{start_verse}-/"
+        url = f"https://www.bibel-in-gerechter-sprache.de/die-bibel/bigs-online/?{book_abbrev}/{chapter}/{start_verse}/"
         
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
