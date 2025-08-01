@@ -46,6 +46,7 @@ services:
       - TZ=Europe/Berlin
     volumes:
       - postgres_data:/var/lib/postgresql/data
+      - ./db/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
     # ports:
     #   - "5433:5432"  # Nicht nötig - nur interne Container-Kommunikation
     networks:

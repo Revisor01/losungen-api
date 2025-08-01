@@ -9,6 +9,7 @@ import {
   ExclamationTriangleIcon,
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
+import { useAuth } from '../../context/AuthContext';
 
 interface SystemStatus {
   server_time: string;
@@ -35,6 +36,7 @@ interface CronStatus {
 }
 
 export const AdminPanel: React.FC = () => {
+  const { user } = useAuth();
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
   const [cronStatus, setCronStatus] = useState<CronStatus | null>(null);
   const [loading, setLoading] = useState(false);
@@ -43,7 +45,7 @@ export const AdminPanel: React.FC = () => {
   const [selectedTranslation, setSelectedTranslation] = useState('LUT');
   const [lastAction, setLastAction] = useState<string>('');
 
-  const apiKey = 'ksadh8324oijcff45rfdsvcvhoids44'; // From auth context in real app
+  const apiKey = user?.apiKey || 'ksadh8324oijcff45rfdsvcvhoids44';
 
   useEffect(() => {
     loadStatus();
@@ -52,15 +54,19 @@ export const AdminPanel: React.FC = () => {
   const loadStatus = async () => {
     setLoading(true);
     try {
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? window.location.origin 
+        : 'http://localhost:8374';
+        
       // Load system status
-      const statusResponse = await fetch(`/admin.php?action=status&api_key=${apiKey}`);
+      const statusResponse = await fetch(`${baseUrl}/admin.php?action=status&api_key=${apiKey}`);
       const statusData = await statusResponse.json();
       if (statusData.success) {
         setSystemStatus(statusData.data);
       }
 
       // Load cron status
-      const cronResponse = await fetch(`/admin.php?action=cron_status&api_key=${apiKey}`);
+      const cronResponse = await fetch(`${baseUrl}/admin.php?action=cron_status&api_key=${apiKey}`);
       const cronData = await cronResponse.json();
       if (cronData.success) {
         setCronStatus(cronData.data);
@@ -74,7 +80,11 @@ export const AdminPanel: React.FC = () => {
   const manualFetch = async () => {
     setFetchLoading(true);
     try {
-      const response = await fetch(`/admin.php?action=fetch&api_key=${apiKey}&translation=${selectedTranslation}`);
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? window.location.origin 
+        : 'http://localhost:8374';
+        
+      const response = await fetch(`${baseUrl}/admin.php?action=fetch&api_key=${apiKey}&translation=${selectedTranslation}`);
       const data = await response.json();
       
       if (data.success) {
@@ -92,7 +102,11 @@ export const AdminPanel: React.FC = () => {
   const clearCache = async () => {
     setClearLoading(true);
     try {
-      const response = await fetch(`/admin.php?action=clear_cache&api_key=${apiKey}`);
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? window.location.origin 
+        : 'http://localhost:8374';
+        
+      const response = await fetch(`${baseUrl}/admin.php?action=clear_cache&api_key=${apiKey}`);
       const data = await response.json();
       
       if (data.success) {
