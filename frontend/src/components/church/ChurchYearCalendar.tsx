@@ -66,11 +66,16 @@ export const ChurchYearCalendar: React.FC = () => {
           weeklyVerse: event.weekly_verse,
           weeklyVerseReference: event.weekly_verse_reference,
           psalm: event.psalm,
+          psalm_eg: event.psalm_eg,
           oldTestamentReading: event.old_testament_reading,
           epistle: event.epistle,
           gospel: event.gospel,
           sermonText: event.sermon_text,
           hymn: event.hymn,
+          hymn1: event.hymn1,
+          hymn2: event.hymn2,
+          hymn1_eg: event.hymn1_eg,
+          hymn2_eg: event.hymn2_eg,
           perikopen: event.perikopen
         }));
         setEvents(churchEvents);
@@ -461,6 +466,16 @@ export const ChurchYearCalendar: React.FC = () => {
                           />
                         </div>
                         <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Psalm EG Nummer</label>
+                          <input
+                            type="text"
+                            value={editedEvent.psalm_eg || ''}
+                            onChange={(e) => updateEditedField('psalm_eg', e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royal-500"
+                            placeholder="z.B. EG 311"
+                          />
+                        </div>
+                        <div>
                           <label className="block text-sm font-medium text-gray-700 mb-1">AT-Lesung</label>
                           <input
                             type="text"
@@ -553,11 +568,32 @@ export const ChurchYearCalendar: React.FC = () => {
                     )}
                     
                     {selectedEvent.psalm && (
-                      <BibleReferenceCard
-                        title="Psalm"
-                        reference={selectedEvent.psalm}
-                        onClick={handleBibleReferenceClick}
-                      />
+                      <div className="bg-gray-50 hover:bg-gray-100 rounded-lg p-4 transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
+                              Psalm
+                              <motion.button
+                                whileHover={{ scale: 1.1 }}
+                                whileTap={{ scale: 0.9 }}
+                                onClick={() => handleBibleReferenceClick(selectedEvent.psalm!)}
+                                className="ml-2 p-1 rounded hover:bg-gray-200 transition-colors"
+                                title="Bibelstelle suchen"
+                              >
+                                <MagnifyingGlassIcon className="w-4 h-4 text-gray-600" />
+                              </motion.button>
+                            </h4>
+                            <p className="text-sm text-gray-700">
+                              {selectedEvent.psalm}
+                              {selectedEvent.psalm_eg && (
+                                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+                                  {selectedEvent.psalm_eg}
+                                </span>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     )}
                     
                     {selectedEvent.oldTestamentReading && (
