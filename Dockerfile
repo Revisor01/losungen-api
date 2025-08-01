@@ -6,7 +6,6 @@ RUN apt-get update && apt-get install -y \
     python3-pip \
     python3-venv \
     libpq-dev \
-    cron \
     curl \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
@@ -41,10 +40,10 @@ RUN echo 'RewriteEngine On' > /var/www/html/.htaccess \
     && echo 'RewriteCond %{QUERY_STRING} !api_key=' >> /var/www/html/.htaccess \
     && echo 'RewriteRule ^/?$ /public/index.html [L]' >> /var/www/html/.htaccess
 
-# Setup cron for daily fetch at 00:02
-RUN echo '2 0 * * * root /usr/local/bin/php /var/www/html/scripts/daily_fetch.php >> /proc/1/fd/1 2>&1' > /etc/cron.d/daily-fetch \
-    && chmod 0644 /etc/cron.d/daily-fetch \
-    && crontab /etc/cron.d/daily-fetch
+# No cron needed - using database instead of scraping
+# RUN echo '2 0 * * * root /usr/local/bin/php /var/www/html/scripts/daily_fetch.php >> /proc/1/fd/1 2>&1' > /etc/cron.d/daily-fetch \
+#     && chmod 0644 /etc/cron.d/daily-fetch \
+#     && crontab /etc/cron.d/daily-fetch
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \
@@ -70,11 +69,8 @@ RUN echo '#!/bin/bash' > /start.sh \
     && echo 'echo "Container: losungen-api (Herrnhuter Losungen API)"' >> /start.sh \
     && echo 'echo "Database: PostgreSQL (translation cache active)"' >> /start.sh \
     && echo 'echo "Logs: Available in docker logs"' >> /start.sh \
-    && echo 'echo "Starting CRON daemon..."' >> /start.sh \
-    && echo 'service cron start' >> /start.sh \
-    && echo 'echo "CRON: Daily fetch scheduled for 00:02 UTC"' >> /start.sh \
-    && echo 'echo "Checking if today'\''s data exists..."' >> /start.sh \
-    && echo '/usr/local/bin/php /var/www/html/scripts/startup_check.php &' >> /start.sh \
+    && echo 'echo "Database mode: No scraping/cron needed"' >> /start.sh \
+    && echo 'echo "Losungen served directly from database"' >> /start.sh \
     && echo 'echo "Starting Apache2..."' >> /start.sh \
     && echo 'echo "=== LOSUNGEN API READY ==="' >> /start.sh \
     && echo 'apache2-foreground' >> /start.sh \
