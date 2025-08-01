@@ -106,7 +106,7 @@ try {
         if ($event['event_date']) {
             $date = new DateTime($event['event_date']);
             $event['formatted_date'] = $date->format('l, d.m.Y');
-            $event['formatted_date_german'] = strftime('%A, %d.%m.%Y', $date->getTimestamp());
+            $event['formatted_date_german'] = $date->format('l, d.m.Y');
         }
         
         // Remove any null/empty values for cleaner JSON
