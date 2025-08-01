@@ -112,26 +112,42 @@ function getSystemStatus() {
     return $status;
 }
 
-function manualFetch($translation = 'LUT') {
+function manualFetch($translation = 'ALL') {
     $startTime = microtime(true);
     
     try {
-        // Execute Python scraper
-        $command = "cd " . __DIR__ . " && python3 scraper.py " . escapeshellarg($translation);
+        require_once 'database.php';
+        $db = getDatabase();
+        
+        // Clear today's cache first
+        $today = date('Y-m-d');
+        $stmt = $db->prepare("DELETE FROM translation_cache WHERE date = ?");
+        $stmt->execute([$today]);
+        $deletedEntries = $stmt->rowCount();
+        
+        // Execute daily fetch script for all translations
+        $command = "/usr/local/bin/php " . __DIR__ . "/../scripts/daily_fetch.php " . escapeshellarg($today) . " 2>&1";
         $output = shell_exec($command);
         
         $endTime = microtime(true);
         $duration = round(($endTime - $startTime) * 1000);
         
+        // Count successful entries
+        $stmt = $db->prepare("SELECT COUNT(*) FROM translation_cache WHERE date = ? AND success = true");
+        $stmt->execute([$today]);
+        $successfulTranslations = $stmt->fetchColumn();
+        
         return [
             'success' => true,
             'data' => [
-                'translation' => $translation,
+                'date' => $today,
+                'cleared_entries' => $deletedEntries,
+                'successful_translations' => $successfulTranslations,
                 'duration_ms' => $duration,
                 'output' => $output,
                 'timestamp' => date('Y-m-d H:i:s')
             ],
-            'message' => "Manual fetch completed for $translation in {$duration}ms"
+            'message' => "Manual fetch completed: $successfulTranslations translations fetched in {$duration}ms"
         ];
         
     } catch (Exception $e) {

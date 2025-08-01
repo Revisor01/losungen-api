@@ -144,6 +144,9 @@ class DailyFetcher {
         
         echo "\n🎉 Fetch abgeschlossen!\n";
         
+        // Update cron status file for admin panel
+        touch(__DIR__ . '/cron_status.php');
+        
         // Log completion
         error_log("[LOSUNGEN DAILY] Completed fetch for $date: $successCount/" . count($this->availableTranslations) . " successful in {$totalDuration}s");
         
