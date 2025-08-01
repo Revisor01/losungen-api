@@ -1,12 +1,15 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { FavoritesProvider } from './context/FavoritesContext';
 import { LoginForm } from './components/auth/LoginForm';
 import { Header } from './components/layout/Header';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { SearchInterface } from './components/search/SearchInterface';
 import { ProfileSettings } from './components/profile/ProfileSettings';
 import { AdminPanel } from './components/admin/AdminPanel';
+import { FavoritesList } from './components/favorites/FavoritesList';
+import { ChurchYearCalendar } from './components/church/ChurchYearCalendar';
 import './styles/globals.css';
 
 function AppContent() {
@@ -50,7 +53,8 @@ function AppContent() {
             <Route path="/search" element={<SearchInterface />} />
             <Route path="/profile" element={<ProfileSettings />} />
             <Route path="/admin" element={<AdminPanel />} />
-            <Route path="/favorites" element={<FavoritesPlaceholder />} />
+            <Route path="/favorites" element={<FavoritesList />} />
+            <Route path="/kirchenjahr" element={<ChurchYearCalendar />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>
@@ -62,34 +66,12 @@ function AppContent() {
 function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      <FavoritesProvider>
+        <AppContent />
+      </FavoritesProvider>
     </AuthProvider>
   );
 }
 
-// Placeholder-Komponente für Favoriten
-const FavoritesPlaceholder: React.FC = () => (
-  <div className="min-h-screen bg-gradient-subtle">
-    <div className="max-w-4xl mx-auto px-4 py-8">
-      <div className="text-center">
-        <h1 className="font-heading text-4xl font-bold gradient-text mb-4">
-          Favoriten
-        </h1>
-        <p className="text-lg text-gray-600 mb-8">
-          Diese Funktion wird bald verfügbar sein.
-        </p>
-        <div className="card p-12">
-          <div className="text-6xl mb-4">❤️</div>
-          <h2 className="font-heading text-xl font-semibold text-gray-900 mb-2">
-            Deine Lieblings-Bibelverse
-          </h2>
-          <p className="text-gray-600">
-            Hier werden bald deine gespeicherten Bibelverse angezeigt.
-          </p>
-        </div>
-      </div>
-    </div>
-  </div>
-);
 
 export default App;

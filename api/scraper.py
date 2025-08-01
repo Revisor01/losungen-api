@@ -4,6 +4,7 @@ from bs4 import BeautifulSoup
 import json
 import sys
 import re
+from bibleserver_links import generate_bibleserver_url
 
 # Verfügbare Übersetzungen mit vollständigen Namen
 TRANSLATIONS = {
@@ -409,6 +410,17 @@ def main():
             'name': TRANSLATIONS[translation],
             'language': 'German' if translation in ['LUT', 'ELB', 'HFA', 'SLT', 'ZB', 'GNB', 'NGÜ', 'EU', 'NLB', 'VXB', 'NeÜ', 'BIGS'] else 'Other'
         }
+        
+        # ERF Bibleserver URLs für alle Übersetzungen hinzufügen (auch LUT)
+        if result['losung']['reference']:
+            losung_url = generate_bibleserver_url(result['losung']['reference'], translation)
+            if losung_url:
+                result['losung']['bibleserver_url'] = losung_url
+        
+        if result['lehrtext']['reference']:
+            lehrtext_url = generate_bibleserver_url(result['lehrtext']['reference'], translation)
+            if lehrtext_url:
+                result['lehrtext']['bibleserver_url'] = lehrtext_url
         
         # Bibeltexte in gewünschter Übersetzung laden, falls nicht LUT
         if translation != 'LUT':

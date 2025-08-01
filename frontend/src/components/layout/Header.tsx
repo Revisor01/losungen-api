@@ -2,6 +2,7 @@ import React from 'react';
 import { Bars3Icon, XMarkIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuth } from '../../context/AuthContext';
+import { useLocation } from 'react-router-dom';
 
 interface HeaderProps {
   isMenuOpen: boolean;
@@ -17,6 +18,7 @@ export const Header: React.FC<HeaderProps> = ({
   user 
 }) => {
   const { logout } = useAuth();
+  const location = useLocation();
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-royal-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -39,11 +41,12 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <NavLink href="/" active>Dashboard</NavLink>
-            <NavLink href="/search">Suche</NavLink>
-            <NavLink href="/profile">Profil</NavLink>
-            <NavLink href="/admin">Admin</NavLink>
-            <NavLink href="/favorites">Favoriten</NavLink>
+            <NavLink href="/" active={location.pathname === '/'}>Dashboard</NavLink>
+            <NavLink href="/search" active={location.pathname === '/search'}>Suche</NavLink>
+            <NavLink href="/profile" active={location.pathname === '/profile'}>Profil</NavLink>
+            <NavLink href="/admin" active={location.pathname === '/admin'}>Admin</NavLink>
+            <NavLink href="/favorites" active={location.pathname === '/favorites'}>Favoriten</NavLink>
+            <NavLink href="/kirchenjahr" active={location.pathname === '/kirchenjahr'}>Kirchenjahr</NavLink>
           </nav>
 
           {/* User Menu & Mobile Toggle */}
@@ -111,11 +114,12 @@ export const Header: React.FC<HeaderProps> = ({
             className="md:hidden bg-white/95 backdrop-blur-lg border-b border-royal-100"
           >
             <nav className="px-4 py-4 space-y-3">
-              <MobileNavLink href="/" active>Dashboard</MobileNavLink>
-              <MobileNavLink href="/search">Suche</MobileNavLink>
-              <MobileNavLink href="/profile">Profil</MobileNavLink>
-              <MobileNavLink href="/admin">Admin</MobileNavLink>
-              <MobileNavLink href="/favorites">Favoriten</MobileNavLink>
+              <MobileNavLink href="/" active={location.pathname === '/'}>Dashboard</MobileNavLink>
+              <MobileNavLink href="/search" active={location.pathname === '/search'}>Suche</MobileNavLink>
+              <MobileNavLink href="/profile" active={location.pathname === '/profile'}>Profil</MobileNavLink>
+              <MobileNavLink href="/admin" active={location.pathname === '/admin'}>Admin</MobileNavLink>
+              <MobileNavLink href="/favorites" active={location.pathname === '/favorites'}>Favoriten</MobileNavLink>
+              <MobileNavLink href="/kirchenjahr" active={location.pathname === '/kirchenjahr'}>Kirchenjahr</MobileNavLink>
               
               {user ? (
                 <div className="pt-3 border-t border-gray-200">
