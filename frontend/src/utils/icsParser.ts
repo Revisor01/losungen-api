@@ -99,7 +99,6 @@ export class ICSParser {
       case 'URL;VALUE=URI':
       case 'URL':
         event.url = value;
-        console.log('Found URL:', value);
         break;
     }
   }
@@ -123,13 +122,9 @@ export class ICSParser {
   private static parseDescription(event: Partial<ChurchEvent>, description: string) {
     console.log('Raw description:', description);
     
-    // Parse the description that comes from ICS with literal \n and continuation lines
-    // First, join continuation lines (lines starting with space/tab belong to previous line)
-    const normalizedDescription = description
-      .replace(/\n\s+/g, ' ')  // Join continuation lines with spaces
-    
-    // Then split on literal \n to get individual fields
-    const cleanText = normalizedDescription.replace(/\\n/g, '\n');
+    // The description from ICS is already joined by the main parser, but contains literal \n
+    // Convert literal \n to actual newlines and clean up
+    const cleanText = description.replace(/\\n/g, '\n');
     const lines = cleanText.split('\n').map(l => l.trim()).filter(l => l);
     
     console.log('Processed lines:', lines);
