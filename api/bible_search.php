@@ -16,6 +16,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 require_once 'auth.php';
 require_once 'database.php';
 
+/**
+ * Testament-Erkennung basierend auf Buchnamen
+ */
+function detectTestament($bookName) {
+    $ntBooks = [
+        'matthäus', 'markus', 'lukas', 'johannes',
+        'apostelgeschichte', 'apg', 'römer', 'rö', 'röm',
+        '1 korinther', '1kor', '1. korinther', '1 kor', '1. kor',
+        '2 korinther', '2kor', '2. korinther', '2 kor', '2. kor',
+        'galater', 'gal', 'epheser', 'eph', 'philipper', 'phil',
+        'kolosser', 'kol', '1 thessalonicher', '1thess', '1. thessalonicher',
+        '1 thess', '1. thess', '2 thessalonicher', '2thess', '2. thessalonicher',
+        '2 thess', '2. thess', '1 timotheus', '1tim', '1. timotheus',
+        '1 tim', '1. tim', '2 timotheus', '2tim', '2. timotheus',
+        '2 tim', '2. tim', 'titus', 'tit', 'philemon', 'phlm',
+        'hebräer', 'hebr', 'jakobus', 'jak', '1 petrus', '1petr',
+        '1. petrus', '1 petr', '1. petr', '2 petrus', '2petr',
+        '2. petrus', '2 petr', '2. petr', '1 johannes', '1joh',
+        '1. johannes', '1 joh', '1. joh', '2 johannes', '2joh',
+        '2. johannes', '2 joh', '2. joh', '3 johannes', '3joh',
+        '3. johannes', '3 joh', '3. joh', 'judas', 'jud',
+        'offenbarung', 'offb', 'off'
+    ];
+    
+    $cleanBook = strtolower(str_replace(['.', ' '], '', $bookName));
+    
+    foreach ($ntBooks as $ntBook) {
+        $cleanNt = strtolower(str_replace(['.', ' '], '', $ntBook));
+        if ($cleanBook === $cleanNt || strpos($cleanBook, $cleanNt) === 0) {
+            return 'NT';
+        }
+    }
+    
+    return 'AT';
+}
+
 // API-Key validieren
 if (!validateApiKey()) {
     http_response_code(401);
@@ -73,6 +109,11 @@ class BibleSearchAPI {
             $scrapedResult = $this->scrapeReference($parsedRef, $translation);
             if (!$scrapedResult) {
                 return $this->errorResponse('Failed to retrieve text for: ' . $reference);
+            }
+            
+            // Testament-Erkennung für Live-Scraping
+            if (isset($scrapedResult['testament'])) {
+                $scrapedResult['testament'] = detectTestament($parsedRef['book']);
             }
             
             // Formatierung anwenden
@@ -137,7 +178,7 @@ class BibleSearchAPI {
                 ],
                 'source' => $cacheResult['losung_source'] ?? 'Database Cache',
                 'url' => $cacheResult['losung_url'],
-                'testament' => $cacheResult['losung_testament'] ?? 'AT',
+                'testament' => detectTestament($parsedRef['book']),
                 'cached_at' => $cacheResult['created_at']
             ];
         }
@@ -153,7 +194,7 @@ class BibleSearchAPI {
                 ],
                 'source' => $cacheResult['lehrtext_source'] ?? 'Database Cache',
                 'url' => $cacheResult['lehrtext_url'],
-                'testament' => $cacheResult['lehrtext_testament'] ?? 'NT',
+                'testament' => detectTestament($parsedRef['book']),
                 'cached_at' => $cacheResult['created_at']
             ];
         }
@@ -213,9 +254,9 @@ class BibleSearchAPI {
                 return $result['text'];
                 
             case 'markdown':
-                $text = $result['text'];
-                $ref = $result['reference'];
-                $translation = $result['translation']['name'] ?? $result['translation']['code'];
+                $text = $result['text'] ?? 'Kein Text verfügbar';
+                $ref = $result['reference'] ?? 'Unbekannte Referenz';
+                $translation = $result['translation']['name'] ?? $result['translation']['code'] ?? 'Unbekannte Übersetzung';
                 
                 return "## {$ref}\n\n> {$text}\n\n*— {$translation}*";
                 

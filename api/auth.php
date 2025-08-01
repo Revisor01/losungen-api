@@ -7,7 +7,7 @@ function validateApiKey() {
         $_ENV['API_KEY_3'] ?? ''
     ];
 
-    $providedKey = $_GET['api_key'] ?? $_SERVER['HTTP_X_API_KEY'] ?? '';
+    $providedKey = $_GET['api_key'] ?? $_POST['api_key'] ?? $_SERVER['HTTP_X_API_KEY'] ?? '';
     
     foreach ($apiKeys as $key) {
         if (!empty($key) && $providedKey === $key) {
