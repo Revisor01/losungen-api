@@ -329,9 +329,9 @@ export const ChurchYearCalendar: React.FC = () => {
                   exit={{ opacity: 0, y: -20 }}
                   className="card p-8"
                 >
-                  {/* Edit Controls */}
+                  {/* Edit Controls - positioned to not overlap liturgical color */}
                   {isAuthenticated && (
-                    <div className="absolute top-4 right-4 flex space-x-2">
+                    <div className="absolute top-4 left-4 flex space-x-2">
                       {isEditing ? (
                         <>
                           <motion.button
@@ -367,9 +367,9 @@ export const ChurchYearCalendar: React.FC = () => {
                   )}
 
                   {/* Event Header */}
-                  <div className="mb-6">
+                  <div className="mb-6 mt-12">
                     <div className="flex items-start justify-between mb-4">
-                      <div>
+                      <div className="flex-1">
                         <h2 className="font-heading text-2xl font-bold text-gray-900 mb-2">
                           {selectedEvent.summary}
                         </h2>
@@ -381,7 +381,7 @@ export const ChurchYearCalendar: React.FC = () => {
                       {selectedEvent.liturgicalColor && (
                         <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                           ICSParser.getLiturgicalColorClass(selectedEvent.liturgicalColor)
-                        }`}>
+                        }`} style={{ marginRight: '60px' }}>
                           {selectedEvent.liturgicalColor}
                         </span>
                       )}
@@ -393,6 +393,141 @@ export const ChurchYearCalendar: React.FC = () => {
                       </div>
                     )}
                   </div>
+
+                  {/* Edit Form - shown when editing */}
+                  {isEditing && editedEvent && (
+                    <div className="mb-8 bg-blue-50 rounded-lg p-6">
+                      <h3 className="font-semibold text-blue-900 mb-4">Ereignis bearbeiten</h3>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Basic Fields */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Bezeichnung</label>
+                          <input
+                            type="text"
+                            value={editedEvent.summary || ''}
+                            onChange={(e) => updateEditedField('summary', e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royal-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Liturgische Farbe</label>
+                          <input
+                            type="text"
+                            value={editedEvent.liturgicalColor || ''}
+                            onChange={(e) => updateEditedField('liturgicalColor', e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royal-500"
+                          />
+                        </div>
+                        
+                        {/* Season and Verse */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Kirchenjahreszeit</label>
+                          <input
+                            type="text"
+                            value={editedEvent.season || ''}
+                            onChange={(e) => updateEditedField('season', e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royal-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Wochenspruch Referenz</label>
+                          <input
+                            type="text"
+                            value={editedEvent.weeklyVerseReference || ''}
+                            onChange={(e) => updateEditedField('weeklyVerseReference', e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royal-500"
+                          />
+                        </div>
+                        
+                        {/* Weekly Verse - full width */}
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Wochenspruch</label>
+                          <textarea
+                            value={editedEvent.weeklyVerse || ''}
+                            onChange={(e) => updateEditedField('weeklyVerse', e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royal-500"
+                            rows={2}
+                          />
+                        </div>
+                        
+                        {/* Biblical Readings */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Psalm</label>
+                          <input
+                            type="text"
+                            value={editedEvent.psalm || ''}
+                            onChange={(e) => updateEditedField('psalm', e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royal-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">AT-Lesung</label>
+                          <input
+                            type="text"
+                            value={editedEvent.oldTestamentReading || ''}
+                            onChange={(e) => updateEditedField('oldTestamentReading', e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royal-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Epistel</label>
+                          <input
+                            type="text"
+                            value={editedEvent.epistle || ''}
+                            onChange={(e) => updateEditedField('epistle', e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royal-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Evangelium</label>
+                          <input
+                            type="text"
+                            value={editedEvent.gospel || ''}
+                            onChange={(e) => updateEditedField('gospel', e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royal-500"
+                          />
+                        </div>
+                        
+                        {/* Hymns */}
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Lied 1</label>
+                          <input
+                            type="text"
+                            value={editedEvent.hymn1 || ''}
+                            onChange={(e) => updateEditedField('hymn1', e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royal-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">EG Nummer 1</label>
+                          <input
+                            type="text"
+                            value={editedEvent.hymn1_eg || ''}
+                            onChange={(e) => updateEditedField('hymn1_eg', e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royal-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">Lied 2</label>
+                          <input
+                            type="text"
+                            value={editedEvent.hymn2 || ''}
+                            onChange={(e) => updateEditedField('hymn2', e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royal-500"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">EG Nummer 2</label>
+                          <input
+                            type="text"
+                            value={editedEvent.hymn2_eg || ''}
+                            onChange={(e) => updateEditedField('hymn2_eg', e.target.value)}
+                            className="w-full px-3 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-royal-500"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   {/* Biblical Texts */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
@@ -498,24 +633,48 @@ export const ChurchYearCalendar: React.FC = () => {
 
                   {/* Additional Information */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {(selectedEvent.hymn1 || selectedEvent.hymn2 || selectedEvent.hymn) && (
+                    {/* Hymns - always show if editing or if any hymn data exists */}
+                    {(isEditing || selectedEvent.hymn1 || selectedEvent.hymn2 || selectedEvent.hymn) && (
                       <div className="bg-purple-50 rounded-lg p-4">
-                        <h4 className="font-semibold text-purple-900 mb-2 flex items-center">
+                        <h4 className="font-semibold text-purple-900 mb-3 flex items-center">
                           <MusicalNoteIcon className="w-4 h-4 mr-2" />
                           Wochenlieder
                         </h4>
-                        {selectedEvent.hymn1 && (
-                          <p className="text-sm text-purple-800">
-                            {selectedEvent.hymn1} {selectedEvent.hymn1_eg && `(${selectedEvent.hymn1_eg})`}
-                          </p>
+                        
+                        {/* Show hymn1 if it exists or if editing */}
+                        {(selectedEvent.hymn1 || isEditing) && (
+                          <div className="mb-2">
+                            <span className="text-xs text-purple-700 font-medium">Lied 1:</span>
+                            <p className="text-sm text-purple-800">
+                              {selectedEvent.hymn1 || (isEditing ? '(Leer - Bitte bearbeiten)' : 'Nicht gesetzt')} 
+                              {selectedEvent.hymn1_eg && ` (${selectedEvent.hymn1_eg})`}
+                            </p>
+                          </div>
                         )}
-                        {selectedEvent.hymn2 && (
-                          <p className="text-sm text-purple-800">
-                            {selectedEvent.hymn2} {selectedEvent.hymn2_eg && `(${selectedEvent.hymn2_eg})`}
-                          </p>
+                        
+                        {/* Show hymn2 if it exists or if editing */}
+                        {(selectedEvent.hymn2 || isEditing) && (
+                          <div className="mb-2">
+                            <span className="text-xs text-purple-700 font-medium">Lied 2:</span>
+                            <p className="text-sm text-purple-800">
+                              {selectedEvent.hymn2 || (isEditing ? '(Leer - Bitte bearbeiten)' : 'Nicht gesetzt')} 
+                              {selectedEvent.hymn2_eg && ` (${selectedEvent.hymn2_eg})`}
+                            </p>
+                          </div>
                         )}
-                        {selectedEvent.hymn && !selectedEvent.hymn1 && (
-                          <p className="text-sm text-purple-800">{selectedEvent.hymn}</p>
+                        
+                        {/* Legacy hymn field - only show if no hymn1/hymn2 or if explicitly set */}
+                        {selectedEvent.hymn && !selectedEvent.hymn1 && !selectedEvent.hymn2 && (
+                          <div className="mb-2">
+                            <span className="text-xs text-purple-700 font-medium">Lied (Legacy):</span>
+                            <p className="text-sm text-purple-800">{selectedEvent.hymn}</p>
+                          </div>
+                        )}
+                        
+                        {isEditing && (
+                          <p className="text-xs text-purple-600 mt-2 italic">
+                            Hinweis: Leere Felder werden beim Bearbeiten angezeigt und können ausgefüllt werden.
+                          </p>
                         )}
                       </div>
                     )}
