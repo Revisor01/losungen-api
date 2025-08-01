@@ -9,6 +9,7 @@ export interface ChurchEvent {
   weeklyVerse?: string;
   weeklyVerseReference?: string; // Just the bible reference like "Sach 9,9a"
   psalm?: string;
+  psalm_eg?: string;
   oldTestamentReading?: string; // AT-Lesung
   epistle?: string;
   gospel?: string;
