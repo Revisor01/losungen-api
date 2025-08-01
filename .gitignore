@@ -84,6 +84,9 @@ api_keys.txt
 *.sql
 *.dump
 
+# But include schema files
+!db/schema.sql
+
 # Backup files
 *.bak
 *.backup
