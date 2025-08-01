@@ -41,8 +41,8 @@ RUN echo 'RewriteEngine On' > /var/www/html/.htaccess \
     && echo 'RewriteCond %{QUERY_STRING} !api_key=' >> /var/www/html/.htaccess \
     && echo 'RewriteRule ^/?$ /public/index.html [L]' >> /var/www/html/.htaccess
 
-# Setup cron for daily fetch
-RUN echo '0 6 * * * root /usr/local/bin/php /var/www/html/scripts/daily_fetch.php >> /proc/1/fd/1 2>&1' > /etc/cron.d/daily-fetch \
+# Setup cron for daily fetch at 00:02
+RUN echo '2 0 * * * root /usr/local/bin/php /var/www/html/scripts/daily_fetch.php >> /proc/1/fd/1 2>&1' > /etc/cron.d/daily-fetch \
     && chmod 0644 /etc/cron.d/daily-fetch \
     && crontab /etc/cron.d/daily-fetch
 
@@ -72,7 +72,7 @@ RUN echo '#!/bin/bash' > /start.sh \
     && echo 'echo "Logs: Available in docker logs"' >> /start.sh \
     && echo 'echo "Starting CRON daemon..."' >> /start.sh \
     && echo 'service cron start' >> /start.sh \
-    && echo 'echo "CRON: Daily fetch scheduled for 06:00 UTC"' >> /start.sh \
+    && echo 'echo "CRON: Daily fetch scheduled for 00:02 UTC"' >> /start.sh \
     && echo 'echo "Checking if today'\''s data exists..."' >> /start.sh \
     && echo '/usr/local/bin/php /var/www/html/scripts/startup_check.php &' >> /start.sh \
     && echo 'echo "Starting Apache2..."' >> /start.sh \
