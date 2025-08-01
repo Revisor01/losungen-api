@@ -1,0 +1,86 @@
+FROM php:8.2-apache
+
+# Install system packages
+RUN apt-get update && apt-get install -y \
+    python3 \
+    python3-pip \
+    python3-venv \
+    libpq-dev \
+    cron \
+    curl \
+    && apt-get clean \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install PHP extensions
+RUN docker-php-ext-install pdo pdo_pgsql
+
+# Create Python virtual environment and install packages
+RUN python3 -m venv /opt/venv \
+    && /opt/venv/bin/pip install requests beautifulsoup4
+
+# Enable Apache modules
+RUN a2enmod rewrite headers
+
+# Copy application files
+COPY api/ /var/www/html/
+COPY public/ /var/www/html/public/
+COPY scripts/ /var/www/html/scripts/
+
+# Create .htaccess for routing
+RUN echo 'RewriteEngine On' > /var/www/html/.htaccess \
+    && echo 'RewriteCond %{REQUEST_FILENAME} !-f' >> /var/www/html/.htaccess \
+    && echo 'RewriteCond %{REQUEST_FILENAME} !-d' >> /var/www/html/.htaccess \
+    && echo '# API calls go to index.php' >> /var/www/html/.htaccess \
+    && echo 'RewriteCond %{QUERY_STRING} api_key=' >> /var/www/html/.htaccess \
+    && echo 'RewriteRule ^(.*)$ /index.php [QSA,L]' >> /var/www/html/.htaccess \
+    && echo '# Root without api_key goes to landingpage' >> /var/www/html/.htaccess \
+    && echo 'RewriteCond %{QUERY_STRING} !api_key=' >> /var/www/html/.htaccess \
+    && echo 'RewriteRule ^/?$ /public/index.html [L]' >> /var/www/html/.htaccess
+
+# Setup cron for daily fetch
+RUN echo '0 6 * * * root /usr/local/bin/php /var/www/html/scripts/daily_fetch.php >> /proc/1/fd/1 2>&1' > /etc/cron.d/daily-fetch \
+    && chmod 0644 /etc/cron.d/daily-fetch \
+    && crontab /etc/cron.d/daily-fetch
+
+# Set permissions
+RUN chown -R www-data:www-data /var/www/html \
+    && chmod +x /var/www/html/scripts/daily_fetch.php
+
+# Configure Apache to log to stdout/stderr for Docker
+RUN ln -sf /dev/stdout /var/log/apache2/access.log \
+    && ln -sf /dev/stderr /var/log/apache2/error.log
+
+# Configure PHP to log errors to stderr
+RUN echo 'log_errors = On' >> /usr/local/etc/php/conf.d/docker-php-errors.ini \
+    && echo 'error_log = /dev/stderr' >> /usr/local/etc/php/conf.d/docker-php-errors.ini
+
+# Fix Apache ServerName warning
+RUN echo 'ServerName losungen-api' >> /etc/apache2/apache2.conf
+
+# Reduce Apache log noise (suppress startup notices etc.)
+RUN sed -i 's/^LogLevel .*/LogLevel warn/' /etc/apache2/apache2.conf
+
+# Start script that runs both Apache and Cron
+RUN echo '#!/bin/bash' > /start.sh \
+    && echo 'echo "=== LOSUNGEN API CONTAINER STARTING ==="' >> /start.sh \
+    && echo 'echo "Container: losungen-api (Herrnhuter Losungen API)"' >> /start.sh \
+    && echo 'echo "Database: PostgreSQL (translation cache active)"' >> /start.sh \
+    && echo 'echo "Logs: Available in docker logs"' >> /start.sh \
+    && echo 'echo "Starting CRON daemon..."' >> /start.sh \
+    && echo 'service cron start' >> /start.sh \
+    && echo 'echo "CRON: Daily fetch scheduled for 06:00 UTC"' >> /start.sh \
+    && echo 'echo "Checking if today'\''s data exists..."' >> /start.sh \
+    && echo '/usr/local/bin/php /var/www/html/scripts/startup_check.php &' >> /start.sh \
+    && echo 'echo "Starting Apache2..."' >> /start.sh \
+    && echo 'echo "=== LOSUNGEN API READY ==="' >> /start.sh \
+    && echo 'apache2-foreground' >> /start.sh \
+    && chmod +x /start.sh
+
+# Expose port
+EXPOSE 80
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
+    CMD curl -f http://localhost/ || exit 1
+
+CMD ["/start.sh"]
