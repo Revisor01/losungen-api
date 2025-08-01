@@ -154,7 +154,7 @@ class BibleSearchAPI {
     }
     
     /**
-     * Parse Bibelstellen-Referenz
+     * Parse Bibelstellen-Referenz mit DB-Abkürzungen
      */
     private function parseReference($reference) {
         // Unterstützte Formate:
@@ -162,19 +162,45 @@ class BibleSearchAPI {
         // - "1. Korinther 13,4-8"  
         // - "Psalm 23,1-6"
         // - "Römer 8,28-29"
+        // - "Mt 5,1" (mit DB-Abkürzungen)
         
         $pattern = '/^(.+?)\s+(\d+),(\d+)(?:-(\d+))?$/u';
         if (preg_match($pattern, trim($reference), $matches)) {
+            $bookInput = trim($matches[1]);
+            $resolvedBook = $this->resolveBookAbbreviation($bookInput);
+            
             return [
-                'book' => trim($matches[1]),
+                'book' => $resolvedBook ?: $bookInput, // Fallback auf original wenn nicht gefunden
                 'chapter' => (int)$matches[2],
                 'start_verse' => (int)$matches[3],
                 'end_verse' => isset($matches[4]) ? (int)$matches[4] : (int)$matches[3],
-                'original' => $reference
+                'original' => $reference,
+                'original_book' => $bookInput
             ];
         }
         
         return null;
+    }
+    
+    /**
+     * Löse Buchabkürzung über Datenbank auf
+     */
+    private function resolveBookAbbreviation($bookInput) {
+        try {
+            $stmt = $this->db->prepare("
+                SELECT book_name 
+                FROM bible_abbreviations 
+                WHERE ? = ANY(abbreviations) OR LOWER(book_name) = LOWER(?)
+                LIMIT 1
+            ");
+            $stmt->execute([$bookInput, $bookInput]);
+            $result = $stmt->fetch(PDO::FETCH_ASSOC);
+            
+            return $result ? $result['book_name'] : null;
+        } catch (Exception $e) {
+            // Fallback bei DB-Fehler
+            return null;
+        }
     }
     
     /**
