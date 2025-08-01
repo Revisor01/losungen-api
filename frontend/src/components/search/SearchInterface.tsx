@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { MagnifyingGlassIcon, BookOpenIcon, ClockIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { BibleTextDisplay } from '../bible/BibleTextDisplay';
 import { TranslationSelector } from '../bible/TranslationSelector';
+import { FormatSelector } from './FormatSelector';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorMessage } from '../ui/ErrorMessage';
 import { apiService } from '../../services/api';
@@ -156,17 +157,11 @@ export const SearchInterface: React.FC = () => {
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Format
                 </label>
-                <select
-                  value={selectedFormat}
-                  onChange={(e) => setSelectedFormat(e.target.value as any)}
-                  className="input-field"
+                <FormatSelector
+                  selected={selectedFormat}
+                  onSelect={(format) => setSelectedFormat(format as any)}
                   disabled={loading}
-                >
-                  <option value="json">Standard</option>
-                  <option value="text">Nur Text</option>
-                  <option value="markdown">Markdown (für Predigten)</option>
-                  <option value="html">HTML</option>
-                </select>
+                />
               </div>
             </div>
 
