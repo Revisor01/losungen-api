@@ -14,6 +14,10 @@ export interface ChurchEvent {
   gospel?: string;
   sermonText?: string;
   hymn?: string;
+  hymn1?: string;
+  hymn2?: string;
+  hymn1_eg?: string;
+  hymn2_eg?: string;
   perikopen?: {
     [key: string]: string; // I, II, III, IV, V, VI
   };
