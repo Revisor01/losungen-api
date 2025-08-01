@@ -5,16 +5,30 @@ class ApiService {
   private apiKey: string;
 
   constructor() {
-    // Diese werden später über Umgebungsvariablen gesetzt
-    this.baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8374';
+    // API URL basierend auf Environment
+    this.baseUrl = process.env.REACT_APP_API_URL || (
+      process.env.NODE_ENV === 'production' 
+        ? window.location.origin 
+        : 'http://localhost:8374'
+    );
     this.apiKey = process.env.REACT_APP_API_KEY || 'ksadh8324oijcff45rfdsvcvhoids44';
+  }
+
+  // Allow dynamic API key updates
+  setApiKey(apiKey: string) {
+    this.apiKey = apiKey;
+  }
+
+  // Get current API key (for auth context)
+  getApiKey(): string {
+    return (window as any).__BIBLESCRAPER_API_KEY__ || this.apiKey;
   }
 
   private async request<T>(endpoint: string, options: RequestInit = {}): Promise<ApiResponse<T>> {
     const url = `${this.baseUrl}${endpoint}`;
     const headers = {
       'Content-Type': 'application/json',
-      'X-API-Key': this.apiKey,
+      'X-API-Key': this.getApiKey(),
       ...options.headers,
     };
 

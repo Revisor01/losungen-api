@@ -1,6 +1,7 @@
 import React from 'react';
-import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
+import { Bars3Icon, XMarkIcon, ArrowRightOnRectangleIcon } from '@heroicons/react/24/outline';
 import { motion, AnimatePresence } from 'framer-motion';
+import { useAuth } from '../../context/AuthContext';
 
 interface HeaderProps {
   isMenuOpen: boolean;
@@ -15,6 +16,7 @@ export const Header: React.FC<HeaderProps> = ({
   onMenuToggle, 
   user 
 }) => {
+  const { logout } = useAuth();
   return (
     <header className="sticky top-0 z-50 bg-white/80 backdrop-blur-lg border-b border-royal-100">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -46,8 +48,15 @@ export const Header: React.FC<HeaderProps> = ({
           <div className="flex items-center space-x-4">
             {/* User Info */}
             {user ? (
-              <div className="hidden sm:flex items-center space-x-2 text-sm text-gray-600">
-                <span>Hallo, {user.username}</span>
+              <div className="hidden sm:flex items-center space-x-3">
+                <span className="text-sm text-gray-600">Hallo, {user.username}</span>
+                <button
+                  onClick={logout}
+                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors text-gray-400 hover:text-gray-600"
+                  title="Abmelden"
+                >
+                  <ArrowRightOnRectangleIcon className="w-5 h-5" />
+                </button>
               </div>
             ) : (
               <button className="btn-secondary text-sm px-4 py-2">
@@ -104,7 +113,20 @@ export const Header: React.FC<HeaderProps> = ({
               <MobileNavLink href="/search">Suche</MobileNavLink>
               <MobileNavLink href="/favorites">Favoriten</MobileNavLink>
               
-              {!user && (
+              {user ? (
+                <div className="pt-3 border-t border-gray-200">
+                  <div className="flex items-center justify-between px-4 py-2">
+                    <span className="text-sm text-gray-600">Hallo, {user.username}</span>
+                    <button
+                      onClick={logout}
+                      className="flex items-center space-x-2 text-sm text-gray-500 hover:text-red-600 transition-colors"
+                    >
+                      <ArrowRightOnRectangleIcon className="w-4 h-4" />
+                      <span>Abmelden</span>
+                    </button>
+                  </div>
+                </div>
+              ) : (
                 <div className="pt-3 border-t border-gray-200">
                   <button className="btn-primary w-full">
                     Anmelden

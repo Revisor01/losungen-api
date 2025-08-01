@@ -1,26 +1,37 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
+import { LoginForm } from './components/auth/LoginForm';
 import { Header } from './components/layout/Header';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { SearchInterface } from './components/search/SearchInterface';
 import './styles/globals.css';
 
-function App() {
+function AppContent() {
+  const { isAuthenticated, login, user } = useAuth();
+  const [loginError, setLoginError] = useState<string>('');
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  
-  // Später durch echte Authentifizierung ersetzen
-  const [user] = useState({
-    username: 'Demo User'
-  });
+
+  const handleLogin = (username: string, password: string, apiKey: string) => {
+    const success = login(username, password, apiKey);
+    if (!success) {
+      setLoginError('Ungültige Anmeldedaten. Bitte versuche es erneut.');
+    } else {
+      setLoginError('');
+    }
+  };
 
   const handleMenuToggle = () => {
     setIsMenuOpen(!isMenuOpen);
   };
 
-  // Schließe Menu bei Route-Wechsel
   const handleRouteChange = () => {
     setIsMenuOpen(false);
   };
+
+  if (!isAuthenticated) {
+    return <LoginForm onLogin={handleLogin} error={loginError} />;
+  }
 
   return (
     <Router>
@@ -28,7 +39,7 @@ function App() {
         <Header
           isMenuOpen={isMenuOpen}
           onMenuToggle={handleMenuToggle}
-          user={user}
+          user={{ username: user?.username || 'Unbekannt' }}
         />
         
         <main onClick={handleRouteChange}>
@@ -41,6 +52,14 @@ function App() {
         </main>
       </div>
     </Router>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }
 
