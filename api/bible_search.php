@@ -217,25 +217,9 @@ class BibleSearchAPI {
      * Löse Buchabkürzung über Datenbank auf
      */
     private function resolveBookAbbreviation($bookInput) {
-        try {
-            // Verwende die PostgreSQL-Verbindung direkt
-            require_once 'database.php';
-            $pdo = getDatabase();
-            
-            $stmt = $pdo->prepare("
-                SELECT book_name 
-                FROM bible_abbreviations 
-                WHERE ? = ANY(abbreviations) OR LOWER(book_name) = LOWER(?)
-                LIMIT 1
-            ");
-            $stmt->execute([$bookInput, $bookInput]);
-            $result = $stmt->fetch(PDO::FETCH_ASSOC);
-            
-            return $result ? $result['book_name'] : null;
-        } catch (Exception $e) {
-            // Fallback bei DB-Fehler - einfach das Original zurückgeben
-            return null;
-        }
+        // Für jetzt erstmal deaktiviert - einfach das Original zurückgeben
+        // TODO: DB-Abkürzungen später implementieren wenn Basis-Funktionalität wieder läuft
+        return null;
     }
     
     /**
