@@ -3,6 +3,7 @@ export interface ParsedReference {
   chapter: number;
   verseStart: number;
   verseEnd?: number;
+  verseRanges?: Array<{start: number, end: number}>; // For complex ranges like 2-3.11-18
   originalInput: string;
   normalized: string;
 }
@@ -36,8 +37,16 @@ export class BibleReferenceParser {
     
     // Weitere häufige Bücher
     'mt': 'Matthäus', 'matt': 'Matthäus', 'matthäus': 'Matthäus', 'matthew': 'Matthew',
-    'mk': 'Markus', 'markus': 'Markus', 'mark': 'Mark',
+    'mk': 'Markus', 'markus': 'Markus', 'mark': 'Mark', 
     'lk': 'Lukas', 'lukas': 'Lukas', 'luke': 'Luke',
+    
+    // Additional missing books
+    '3mo': '3. Mose', '3.mo': '3. Mose', '3mose': '3. Mose', '3.mose': '3. Mose',
+    'lev': '3. Mose', 'levitikus': '3. Mose', 'leviticus': 'Leviticus',
+    '4mo': '4. Mose', '4.mo': '4. Mose', '4mose': '4. Mose', '4.mose': '4. Mose',
+    'num': '4. Mose', 'numeri': '4. Mose', 'numbers': 'Numbers',
+    '5mo': '5. Mose', '5.mo': '5. Mose', '5mose': '5. Mose', '5.mose': '5. Mose',
+    'dtn': '5. Mose', 'deuteronomium': '5. Mose', 'deut': '5. Mose', 'deuteronomy': 'Deuteronomy',
     'apg': 'Apostelgeschichte', 'acts': 'Acts',
     'röm': 'Römer', 'roemer': 'Römer', 'rom': 'Römer', 'romans': 'Romans',
     '1kor': '1. Korinther', '1.kor': '1. Korinther', '1cor': '1 Corinthians',
@@ -77,6 +86,8 @@ export class BibleReferenceParser {
    * - Joh. 3, 16 - 18
    * - 1. Joh 1, 2-12
    * - 1Johannes 1,2-3
+   * - 2. Mose 16,2-3.11-18 (verse ranges with gaps)
+   * - Mt 21,1–11 (with em dash)
    */
   static parse(input: string): ParsedReference | null {
     if (!input || typeof input !== 'string') {
@@ -84,6 +95,51 @@ export class BibleReferenceParser {
     }
 
     const trimmed = input.trim();
+    
+    // Check for complex verse ranges first (e.g., "2. Mose 16,2-3.11-18")
+    const complexPattern = /^([1-3]?\.?\s*[a-züäöß]+\.?)\s+(\d+)[,\.]\s*(.+)$/i;
+    const complexMatch = trimmed.match(complexPattern);
+    
+    if (complexMatch) {
+      const [, bookPart, chapterStr, versePart] = complexMatch;
+      
+      // Check if versePart contains periods (indicating gaps)
+      if (versePart.includes('.')) {
+        const normalizedBook = this.normalizeBook(bookPart.trim());
+        if (!normalizedBook) return null;
+        
+        const chapter = parseInt(chapterStr, 10);
+        const verseRanges: Array<{start: number, end: number}> = [];
+        
+        // Parse ranges like "2-3.11-18"
+        const ranges = versePart.split('.');
+        let firstStart: number | null = null;
+        
+        for (const range of ranges) {
+          const rangeMatch = range.trim().match(/^(\d+)(?:\s*[-–]\s*(\d+))?$/);
+          if (rangeMatch) {
+            const start = parseInt(rangeMatch[1], 10);
+            const end = rangeMatch[2] ? parseInt(rangeMatch[2], 10) : start;
+            
+            if (firstStart === null) firstStart = start;
+            verseRanges.push({ start, end });
+          }
+        }
+        
+        if (verseRanges.length > 0 && firstStart !== null) {
+          const lastRange = verseRanges[verseRanges.length - 1];
+          return {
+            book: normalizedBook,
+            chapter,
+            verseStart: firstStart,
+            verseEnd: lastRange.end,
+            verseRanges,
+            originalInput: input,
+            normalized: `${normalizedBook} ${chapter},${versePart}`
+          };
+        }
+      }
+    }
     
     // Regex für verschiedene Formate
     // Gruppe 1: Buch (mit optionaler Nummer und Punkt)
@@ -191,7 +247,8 @@ export class BibleReferenceParser {
       'Matthäus 5,1-12',
       'Psalm 23,1',
       'Römer 8,28-39',
-      '1. Korinther 13,1-13'
+      '1. Korinther 13,1-13',
+      '2. Mose 16,2-3.11-18'
     ];
   }
 

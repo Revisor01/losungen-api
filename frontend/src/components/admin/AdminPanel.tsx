@@ -10,6 +10,7 @@ import {
   ArrowPathIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../context/AuthContext';
+import { BibleAbbreviations } from './BibleAbbreviations';
 
 interface SystemStatus {
   server_time: string;
@@ -379,6 +380,11 @@ export const AdminPanel: React.FC = () => {
               </div>
             )}
           </div>
+        </div>
+
+        {/* Bible Abbreviations Management */}
+        <div className="mt-8">
+          <BibleAbbreviations />
         </div>
       </div>
     </div>
