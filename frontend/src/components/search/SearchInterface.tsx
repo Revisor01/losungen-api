@@ -56,7 +56,7 @@ export const SearchInterface: React.FC = () => {
         const churchEvent: ChurchEvent = {
           uid: event.uid,
           summary: event.summary,
-          description: event.description || '',
+          description: '', // No longer stored in database
           date: new Date(event.event_date),
           url: event.url,
           liturgicalColor: event.liturgical_color,

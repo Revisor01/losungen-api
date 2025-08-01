@@ -95,8 +95,9 @@ try {
             throw new Exception('Invalid action. Use: today, next, upcoming, date, or range');
     }
     
-    // Convert perikopen JSON strings back to objects
+    // Process events data
     foreach ($events as &$event) {
+        // Convert perikopen JSON strings back to objects
         if ($event['perikopen']) {
             $event['perikopen'] = json_decode($event['perikopen'], true);
         }
@@ -107,6 +108,11 @@ try {
             $event['formatted_date'] = $date->format('l, d.m.Y');
             $event['formatted_date_german'] = strftime('%A, %d.%m.%Y', $date->getTimestamp());
         }
+        
+        // Remove any null/empty values for cleaner JSON
+        $event = array_filter($event, function($value) {
+            return $value !== null && $value !== '';
+        });
     }
     
     echo json_encode([

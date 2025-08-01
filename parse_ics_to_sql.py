@@ -21,7 +21,6 @@ CREATE TABLE IF NOT EXISTS church_events (
     id SERIAL PRIMARY KEY,
     uid VARCHAR(255) UNIQUE NOT NULL,
     summary TEXT NOT NULL,
-    description TEXT,
     event_date DATE NOT NULL,
     url TEXT,
     liturgical_color VARCHAR(50),
@@ -72,16 +71,15 @@ DELETE FROM church_events;
         if url_match:
             event['url'] = url_match.group(1).strip()
         
-        # Extract description (handle multi-line)
+        # Extract description and parse liturgical data (but don't store raw description)
         desc_match = re.search(r'DESCRIPTION:(.*?)(?=\n[A-Z]|$)', block, re.DOTALL)
         if desc_match:
             # Join continuation lines (lines starting with tab/space)
             raw_desc = desc_match.group(1)
             # Remove line breaks that are followed by whitespace (continuation lines)
             desc_joined = re.sub(r'\n\s+', ' ', raw_desc)
-            event['raw_description'] = desc_joined
             
-            # Parse the description content
+            # Parse the description content and add to event
             liturgical_data = parse_description(desc_joined)
             event.update(liturgical_data)
         
@@ -113,8 +111,13 @@ DELETE FROM church_events;
         print("  Summary: {}".format(event.get('summary', 'N/A')))
         print("  Date: {}".format(event.get('date', 'N/A')))
         print("  Season: {}".format(event.get('season', 'N/A')))
+        print("  Liturgical Color: {}".format(event.get('liturgical_color', 'N/A')))
+        print("  Weekly Verse Ref: {}".format(event.get('weekly_verse_reference', 'N/A')))
         print("  Psalm: {}".format(event.get('psalm', 'N/A')))
+        print("  AT-Lesung: {}".format(event.get('old_testament_reading', 'N/A')))
+        print("  Epistel: {}".format(event.get('epistle', 'N/A')))
         print("  Gospel: {}".format(event.get('gospel', 'N/A')))
+        print("  Perikopen: {}".format('Yes' if event.get('perikopen') else 'No'))
     
     return events
 
@@ -217,15 +220,14 @@ def generate_insert_sql(event):
         return "'" + str(value).replace("'", "''") + "'"
     
     sql = """INSERT INTO church_events (
-    uid, summary, description, event_date, url,
+    uid, summary, event_date, url,
     liturgical_color, season, weekly_verse, weekly_verse_reference,
     psalm, old_testament_reading, epistle, gospel, sermon_text, hymn, perikopen
 ) VALUES (
-    {},{},{},{},{},{},{},{},{},{},{},{},{},{},{},{}
+    {},{},{},{},{},{},{},{},{},{},{},{},{},{},{}
 );""".format(
         escape_sql(event.get('uid')),
         escape_sql(event.get('summary')),
-        escape_sql(event.get('raw_description')),
         "'{}'".format(event.get('date')),
         escape_sql(event.get('url')),
         escape_sql(event.get('liturgical_color')),
