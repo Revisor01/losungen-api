@@ -202,7 +202,8 @@ class ApiService {
       
       return {
         success: true,
-        data: data.data || []
+        data: data.data || [],
+        timestamp: new Date().toISOString()
       };
     } catch (error) {
       console.error('Church events API error:', error);
