@@ -116,6 +116,45 @@ export const FavoritesList: React.FC = () => {
   }
 
   return (
+    <div className="max-w-4xl mx-auto px-4 py-8">
+      {/* Hero Section */}
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="text-center mb-12"
+      >
+        <div className="flex items-center justify-center mb-4">
+          <SparklesIcon className="w-8 h-8 text-royal-500 mr-3" />
+          <h1 className="font-heading text-4xl font-bold gradient-text">
+            {getCurrentGreeting()}
+          </h1>
+        </div>
+    
+        <p className="text-lg text-gray-600 font-body">
+          {losung ? formatDate(losung.date) : 'Lade Tageslosung...'}
+        </p>
+      </motion.div>
+    
+      {/* Translation Selector */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.2 }}
+        className="mb-8"
+      >
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="font-heading text-xl font-semibold text-gray-900">
+            Tageslosung
+          </h2>
+          <div className="w-64">
+            <TranslationSelector
+              selected={selectedTranslation}
+              onSelect={handleTranslationChange}
+              available={availableTranslations}
+            />
+          </div>
+        </div>
+      </motion.div>
     <div className="min-h-screen bg-gradient-subtle py-8">
       <div className="max-w-6xl mx-auto px-4">
         {/* Header Section */}
