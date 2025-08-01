@@ -54,7 +54,7 @@ export class ICSParser {
       }
       
       // Process previous property if we have one
-      if (currentProperty && currentValue) {
+      if (currentProperty && currentValue !== '') {
         this.setEventProperty(currentEvent, currentProperty, currentValue);
       }
       
@@ -64,6 +64,11 @@ export class ICSParser {
       
       currentProperty = line.substring(0, colonIndex);
       currentValue = line.substring(colonIndex + 1);
+    }
+    
+    // Process last property if any
+    if (currentEvent && currentProperty && currentValue !== '') {
+      this.setEventProperty(currentEvent, currentProperty, currentValue);
     }
     
     return events.sort((a, b) => a.date.getTime() - b.date.getTime());
@@ -114,54 +119,94 @@ export class ICSParser {
   }
   
   private static parseDescription(event: Partial<ChurchEvent>, description: string) {
-    // Parse structured liturgical information from description
-    const lines = description.split('\\n').map(l => l.trim()).filter(l => l);
+    // The actual ICS format has literal \n characters and continued lines with tabs
+    console.log('Raw description:', description); // Debug
+    
+    // Clean up the description: handle multi-line values and tab continuations
+    const cleanedDescription = description
+      .replace(/\\n/g, '\n')  // Convert literal \n to actual newlines
+      .replace(/\n\t/g, ' ')  // Join tab-continued lines
+      .replace(/\n /g, ' ');  // Join space-continued lines
+    
+    console.log('Cleaned description:', cleanedDescription); // Debug
+    
+    const lines = cleanedDescription.split('\n').map(l => l.trim()).filter(l => l);
     
     const perikopen: { [key: string]: string } = {};
+    let inPerikopenSection = false;
     
-    for (const line of lines) {
-      if (line.includes('liturgische Farbe:')) {
-        event.liturgicalColor = line.split(':')[1]?.trim();
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      console.log('Processing line:', line); // Debug
+      
+      // Parse key-value pairs with colon separator
+      if (line.includes(':') && !inPerikopenSection) {
+        const colonIndex = line.indexOf(':');
+        const key = line.substring(0, colonIndex).trim();
+        const value = line.substring(colonIndex + 1).trim();
+        
+        switch (key) {
+          case 'liturgische Farbe':
+            event.liturgicalColor = value;
+            break;
+          case 'Festzeit':
+            event.season = value;
+            break;
+          case 'Wochenspruch':
+            event.weeklyVerse = value;
+            break;
+          case 'Wochenpsalm':
+          case 'Eingangspsalm':
+            event.psalm = value;
+            break;
+          case 'Epistel':
+            event.epistle = value;
+            break;
+          case 'Evangelium':
+            event.gospel = value;
+            break;
+          case 'Predigttext':
+            event.sermonText = value;
+            break;
+          case 'Wochenlied':
+            event.hymn = value;
+            break;
+        }
       }
       
-      if (line.includes('Festzeit:')) {
-        event.season = line.split(':')[1]?.trim();
-      }
-      
-      if (line.includes('Wochenspruch:')) {
-        event.weeklyVerse = line.split(':')[1]?.trim();
-      }
-      
-      if (line.includes('Wochenpsalm:') || line.includes('Eingangspsalm:')) {
-        event.psalm = line.split(':')[1]?.trim();
-      }
-      
-      if (line.includes('Epistel:')) {
-        event.epistle = line.split(':')[1]?.trim();
-      }
-      
-      if (line.includes('Evangelium:')) {
-        event.gospel = line.split(':')[1]?.trim();
-      }
-      
-      if (line.includes('Predigttext:')) {
-        event.sermonText = line.split(':')[1]?.trim();
-      }
-      
-      if (line.includes('Wochenlied:')) {
-        event.hymn = line.split(':')[1]?.trim();
+      // Detect Perikopen section
+      if (line.includes('Erklärung zu den Perikopen:')) {
+        inPerikopenSection = true;
+        continue;
       }
       
       // Parse Perikopen (I-VI)
-      const perikopenMatch = line.match(/^([IVX]+):\s*(.+)$/);
-      if (perikopenMatch) {
-        perikopen[perikopenMatch[1]] = perikopenMatch[2].trim();
+      if (inPerikopenSection) {
+        const perikopenMatch = line.match(/^([IVX]+):\s*(.+)$/);
+        if (perikopenMatch) {
+          const [, reihe, text] = perikopenMatch;
+          perikopen[reihe] = text.trim();
+          console.log(`Found Perikope ${reihe}: ${text.trim()}`); // Debug
+        }
       }
     }
     
     if (Object.keys(perikopen).length > 0) {
       event.perikopen = perikopen;
+      console.log('All Perikopen:', event.perikopen); // Debug
     }
+    
+    console.log('Parsed event data:', {
+      liturgicalColor: event.liturgicalColor,
+      season: event.season,
+      weeklyVerse: event.weeklyVerse,
+      psalm: event.psalm,
+      epistle: event.epistle,
+      gospel: event.gospel,
+      sermonText: event.sermonText,
+      hymn: event.hymn,
+      perikopen: event.perikopen
+    }); // Debug
   }
   
   /**

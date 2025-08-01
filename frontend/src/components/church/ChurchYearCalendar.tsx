@@ -51,6 +51,13 @@ export const ChurchYearCalendar: React.FC = () => {
       if (response.ok) {
         const icsContent = await response.text();
         const parsedEvents = ICSParser.parseICS(icsContent);
+        
+        // Debug: Log first few events to see what we're parsing
+        if (parsedEvents.length > 0) {
+          console.log('First parsed event:', parsedEvents[0]);
+          console.log('Event with details:', parsedEvents.find(e => e.psalm || e.epistle || e.gospel));
+        }
+        
         setEvents(parsedEvents);
       } else {
         // Fallback: Create some mock events for demonstration
