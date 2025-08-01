@@ -98,6 +98,7 @@ export const FavoritesList: React.FC = () => {
           <div className="text-center">
             <div className="mb-8">
               <HeartIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+            </div>
             
             <div className="card p-8 max-w-md mx-auto">
               <BookOpenIcon className="w-12 h-12 text-royal-600 mx-auto mb-4" />
