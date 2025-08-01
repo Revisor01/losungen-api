@@ -210,7 +210,8 @@ class ApiService {
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
-        data: []
+        data: [],
+        timestamp: new Date().toISOString()
       };
     }
   }
