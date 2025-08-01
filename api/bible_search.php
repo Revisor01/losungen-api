@@ -326,6 +326,9 @@ if ($method === 'GET') {
     if ($format === 'text') {
         header('Content-Type: text/plain; charset=utf-8');
         echo $result['success'] ? $result['data'] : $result['error'];
+    } elseif ($format === 'markdown') {
+        header('Content-Type: text/markdown; charset=utf-8');
+        echo $result['success'] ? $result['data'] : '# Error\n\n' . $result['error'];
     } elseif ($format === 'html') {
         header('Content-Type: text/html; charset=utf-8');
         echo $result['success'] ? $result['data'] : '<p>Error: ' . htmlspecialchars($result['error']) . '</p>';

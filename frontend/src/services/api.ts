@@ -8,7 +8,7 @@ class ApiService {
     // API URL basierend auf Environment
     this.baseUrl = process.env.REACT_APP_API_URL || (
       process.env.NODE_ENV === 'production' 
-        ? window.location.origin 
+        ? '/api' 
         : 'http://localhost:8374'
     );
     this.apiKey = process.env.REACT_APP_API_KEY || 'ksadh8324oijcff45rfdsvcvhoids44';

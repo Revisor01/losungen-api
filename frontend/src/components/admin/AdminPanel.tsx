@@ -42,7 +42,6 @@ export const AdminPanel: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [fetchLoading, setFetchLoading] = useState(false);
   const [clearLoading, setClearLoading] = useState(false);
-  const [selectedTranslation, setSelectedTranslation] = useState('LUT');
   const [lastAction, setLastAction] = useState<string>('');
 
   const apiKey = user?.apiKey || 'ksadh8324oijcff45rfdsvcvhoids44';
@@ -55,7 +54,7 @@ export const AdminPanel: React.FC = () => {
     setLoading(true);
     try {
       const baseUrl = process.env.NODE_ENV === 'production' 
-        ? `${window.location.protocol}//${window.location.hostname}:8374`
+        ? '/api'
         : 'http://localhost:8374';
         
       // Load system status
@@ -81,14 +80,14 @@ export const AdminPanel: React.FC = () => {
     setFetchLoading(true);
     try {
       const baseUrl = process.env.NODE_ENV === 'production' 
-        ? `${window.location.protocol}//${window.location.hostname}:8374`
+        ? '/api'
         : 'http://localhost:8374';
         
-      const response = await fetch(`${baseUrl}/admin.php?action=fetch&api_key=${apiKey}&translation=${selectedTranslation}`);
+      const response = await fetch(`${baseUrl}/admin.php?action=fetch&api_key=${apiKey}`);
       const data = await response.json();
       
       if (data.success) {
-        setLastAction(`✓ Manual fetch completed for ${selectedTranslation} in ${data.data.duration_ms}ms`);
+        setLastAction(`✓ Alle Übersetzungen geladen: ${data.data.successful_translations} erfolgreich in ${data.data.duration_ms}ms`);
         loadStatus(); // Refresh status
       } else {
         setLastAction(`✗ Fetch failed: ${data.error}`);
@@ -103,7 +102,7 @@ export const AdminPanel: React.FC = () => {
     setClearLoading(true);
     try {
       const baseUrl = process.env.NODE_ENV === 'production' 
-        ? `${window.location.protocol}//${window.location.hostname}:8374`
+        ? '/api'
         : 'http://localhost:8374';
         
       const response = await fetch(`${baseUrl}/admin.php?action=clear_cache&api_key=${apiKey}`);
@@ -149,33 +148,24 @@ export const AdminPanel: React.FC = () => {
               <h3 className="font-heading text-lg font-semibold">Manual Fetch</h3>
             </div>
             
-            <div className="space-y-3">
-              <select
-                value={selectedTranslation}
-                onChange={(e) => setSelectedTranslation(e.target.value)}
-                className="input-field"
-              >
-                <option value="LUT">Lutherbibel 2017</option>
-                <option value="HFA">Hoffnung für alle</option>
-                <option value="ELB">Elberfelder</option>
-                <option value="BIGS">BIGS</option>
-              </select>
-              
-              <motion.button
-                onClick={manualFetch}
-                disabled={fetchLoading}
-                whileHover={{ scale: 1.02 }}
-                whileTap={{ scale: 0.98 }}
-                className="btn-primary w-full flex items-center justify-center space-x-2"
-              >
-                {fetchLoading ? (
-                  <ArrowPathIcon className="w-4 h-4 animate-spin" />
-                ) : (
-                  <PlayIcon className="w-4 h-4" />
-                )}
-                <span>{fetchLoading ? 'Fetching...' : 'Fetch Now'}</span>
-              </motion.button>
-            </div>
+            <p className="text-sm text-gray-600 mb-4">
+              Lädt alle Übersetzungen für den heutigen Tag neu und löscht den bestehenden Cache.
+            </p>
+            
+            <motion.button
+              onClick={manualFetch}
+              disabled={fetchLoading}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="btn-primary w-full flex items-center justify-center space-x-2"
+            >
+              {fetchLoading ? (
+                <ArrowPathIcon className="w-4 h-4 animate-spin" />
+              ) : (
+                <PlayIcon className="w-4 h-4" />
+              )}
+              <span>{fetchLoading ? 'Lade alle Übersetzungen...' : 'Heutigen Tag neu laden'}</span>
+            </motion.button>
           </div>
 
           <div className="card p-6">
