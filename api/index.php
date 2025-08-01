@@ -75,9 +75,11 @@ function checkRateLimit() {
 
 class LosungenService {
     private $db;
+    private $bibleserverApiKey;
     
     public function __construct() {
         $this->db = getDatabase();
+        $this->bibleserverApiKey = $_ENV['BIBLESERVER_API_KEY'] ?? null;
     }
     
     public function getDailyLosung($date = null, $translation = 'LUT') {
@@ -92,17 +94,24 @@ class LosungenService {
                 return $this->errorResponse('Invalid date format. Use YYYY-MM-DD');
             }
             
-            // Get Losung from database
+            // Get base Losung data from database
             $losungData = $this->getLosungFromDatabase($date);
             
             if (!$losungData) {
                 return $this->errorResponse('Losung nicht gefunden für Datum: ' . $date);
             }
             
-            // Add translation info (currently only German available from XML)
-            $losungData['translation'] = 'LUT'; // German Luther Bible references
+            // If translation requested other than LUT, enhance with scraper
+            if ($translation !== 'LUT') {
+                $losungData = $this->enhanceWithTranslations($losungData, $translation);
+            }
             
-            logDocker("Successfully served Losung for $date from database");
+            // Bibelstellen über ERF Bibleserver API in gewünschter Übersetzung laden
+            if ($this->bibleserverApiKey) {
+                $losungData = $this->enhanceWithBibleserver($losungData, $translation);
+            }
+            
+            logDocker("Successfully served Losung for $date from database with translation $translation");
             
             return $this->successResponse($losungData);
             
@@ -213,6 +222,96 @@ class LosungenService {
             'error' => $message,
             'timestamp' => date('c')
         ];
+    }
+    
+    private function enhanceWithTranslations($data, $translation) {
+        // Use Python scraper for different translations
+        $pythonScript = '/var/www/html/scraper.py';
+        
+        if (!file_exists($pythonScript)) {
+            logDocker("[LOSUNGEN] WARNING: Python scraper not found, using German text only");
+            return $data;
+        }
+        
+        logDocker("[LOSUNGEN] Using Python scraper for translation: $translation");
+        
+        // Create temporary data in scraper format
+        $tempData = [
+            'losung' => [
+                'reference' => $data['losung']['reference'],
+                'text' => $data['losung']['text']
+            ],
+            'lehrtext' => [
+                'reference' => $data['lehrtext']['reference'], 
+                'text' => $data['lehrtext']['text']
+            ]
+        ];
+        
+        // Execute Python script with translation parameter
+        $output = shell_exec("/opt/venv/bin/python3 $pythonScript " . escapeshellarg($translation) . " 2>&1");
+        
+        if ($output) {
+            $scrapedData = json_decode($output, true);
+            if ($scrapedData && !isset($scrapedData['error'])) {
+                // Use scraped translations if available
+                if (isset($scrapedData['losung'])) {
+                    $data['losung']['text'] = $scrapedData['losung']['text'] ?? $data['losung']['text'];
+                    $data['losung']['translation_source'] = $scrapedData['losung']['translation_source'] ?? $data['losung']['translation_source'];
+                }
+                if (isset($scrapedData['lehrtext'])) {
+                    $data['lehrtext']['text'] = $scrapedData['lehrtext']['text'] ?? $data['lehrtext']['text'];
+                    $data['lehrtext']['translation_source'] = $scrapedData['lehrtext']['translation_source'] ?? $data['lehrtext']['translation_source'];
+                }
+                
+                logDocker("[LOSUNGEN] Successfully enhanced with translations from scraper");
+            } else {
+                logDocker("[LOSUNGEN] WARNING: Scraper failed, using German text");
+            }
+        }
+        
+        return $data;
+    }
+    
+    private function enhanceWithBibleserver($data, $translation) {
+        if (!$this->bibleserverApiKey) {
+            return $data;
+        }
+        
+        // Losung über Bibleserver API in gewünschter Übersetzung laden
+        if (!empty($data['losung']['reference'])) {
+            $losungUrl = $this->buildBibleserverUrl($data['losung']['reference'], $translation);
+            $data['losung']['bibleserver_url'] = $losungUrl;
+        }
+        
+        // Lehrtext über Bibleserver API in gewünschter Übersetzung laden 
+        if (!empty($data['lehrtext']['reference'])) {
+            $lehrtextUrl = $this->buildBibleserverUrl($data['lehrtext']['reference'], $translation);
+            $data['lehrtext']['bibleserver_url'] = $lehrtextUrl;
+        }
+        
+        $data['translation'] = $translation;
+        
+        return $data;
+    }
+    
+    private function buildBibleserverUrl($reference, $translation) {
+        // Bibelstelle für URL formatieren
+        $reference = str_replace(' ', '', $reference);
+        $reference = str_replace(',', ',', $reference);
+        
+        // Umlaute für URL kodieren
+        $reference = str_replace('ä', 'ae', $reference);
+        $reference = str_replace('ö', 'oe', $reference);
+        $reference = str_replace('ü', 'ue', $reference);
+        $reference = str_replace('Ä', 'Ae', $reference);
+        $reference = str_replace('Ö', 'Oe', $reference);
+        $reference = str_replace('Ü', 'Ue', $reference);
+        $reference = str_replace('ß', 'ss', $reference);
+        
+        // URL-encode für Sonderzeichen
+        $reference = urlencode($reference);
+        
+        return "https://www.bibleserver.com/{$translation}/{$reference}";
     }
 }
 
