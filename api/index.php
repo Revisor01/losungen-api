@@ -112,18 +112,7 @@ class LosungenService {
                 $losungData = $this->enhanceWithBibleserver($losungData, $translation);
             }
             
-            // For BIGS, fix URLs that may have been set by scraper
-            if ($translation === 'BIGS') {
-                logDocker("[BIGS] Fixing URLs for BIGS translation");
-                if (!empty($losungData['losung']['reference'])) {
-                    logDocker("[BIGS] Fixing losung URL for: " . $losungData['losung']['reference']);
-                    $losungData['losung']['bibleserver_url'] = $this->buildBigsUrl($losungData['losung']['reference']);
-                }
-                if (!empty($losungData['lehrtext']['reference'])) {
-                    logDocker("[BIGS] Fixing lehrtext URL for: " . $losungData['lehrtext']['reference']);
-                    $losungData['lehrtext']['bibleserver_url'] = $this->buildBigsUrl($losungData['lehrtext']['reference']);
-                }
-            }
+            // For BIGS, scraper already provides correct URLs, no need to override
             
             logDocker("Successfully served Losung for $date from database with translation $translation");
             
