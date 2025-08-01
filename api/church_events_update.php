@@ -52,7 +52,7 @@ try {
     // Allowed fields to update
     $allowedFields = [
         'summary', 'liturgical_color', 'season', 'weekly_verse', 
-        'weekly_verse_reference', 'psalm', 'old_testament_reading',
+        'weekly_verse_reference', 'psalm', 'psalm_eg', 'old_testament_reading',
         'epistle', 'gospel', 'sermon_text', 'hymn1', 'hymn2',
         'hymn1_eg', 'hymn2_eg', 'perikopen'
     ];

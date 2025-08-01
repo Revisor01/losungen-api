@@ -564,6 +564,9 @@ export const ChurchYearCalendar: React.FC = () => {
                           )}
                         </h4>
                         <p className="text-sm text-gray-700">{selectedEvent.weeklyVerse}</p>
+                        {selectedEvent.weeklyVerseReference && (
+                          <p className="text-xs text-gray-500 mt-1 italic">— {selectedEvent.weeklyVerseReference}</p>
+                        )}
                       </div>
                     )}
                     
