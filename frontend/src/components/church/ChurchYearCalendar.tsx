@@ -12,15 +12,21 @@ import {
 import { ICSParser, ChurchEvent } from '../../utils/icsParser';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '../../services/api';
+import { useAuth } from '../../context/AuthContext';
+import { PencilIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
 
 export const ChurchYearCalendar: React.FC = () => {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [events, setEvents] = useState<ChurchEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [todaysEvents, setTodaysEvents] = useState<ChurchEvent[]>([]);
   const [nextEvent, setNextEvent] = useState<ChurchEvent | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<ChurchEvent | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedEvent, setEditedEvent] = useState<any>(null);
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadChurchYearData();
@@ -127,6 +133,42 @@ export const ChurchYearCalendar: React.FC = () => {
   const handleBibleReferenceClick = (reference: string) => {
     // Navigate to search with pre-filled reference
     navigate(`/search?ref=${encodeURIComponent(reference)}`);
+  };
+
+  const handleEdit = () => {
+    setIsEditing(true);
+    setEditedEvent({ ...selectedEvent });
+  };
+
+  const handleCancel = () => {
+    setIsEditing(false);
+    setEditedEvent(null);
+  };
+
+  const handleSave = async () => {
+    if (!editedEvent) return;
+    
+    setSaving(true);
+    try {
+      const response = await apiService.updateChurchEvent(editedEvent);
+      if (response.success && response.data) {
+        // Update local state
+        const updatedEvents = events.map(e => 
+          e.uid === response.data.uid ? { ...e, ...response.data } : e
+        );
+        setEvents(updatedEvents);
+        setSelectedEvent({ ...selectedEvent, ...response.data });
+        setIsEditing(false);
+      }
+    } catch (error) {
+      console.error('Failed to update event:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const updateEditedField = (field: string, value: string) => {
+    setEditedEvent({ ...editedEvent, [field]: value });
   };
 
   if (loading) {
@@ -287,6 +329,43 @@ export const ChurchYearCalendar: React.FC = () => {
                   exit={{ opacity: 0, y: -20 }}
                   className="card p-8"
                 >
+                  {/* Edit Controls */}
+                  {isAuthenticated && (
+                    <div className="absolute top-4 right-4 flex space-x-2">
+                      {isEditing ? (
+                        <>
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleCancel}
+                            disabled={saving}
+                            className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+                          >
+                            <XMarkIcon className="w-4 h-4 text-gray-600" />
+                          </motion.button>
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={handleSave}
+                            disabled={saving}
+                            className="p-2 rounded-lg bg-green-100 hover:bg-green-200 transition-colors"
+                          >
+                            <CheckIcon className="w-4 h-4 text-green-600" />
+                          </motion.button>
+                        </>
+                      ) : (
+                        <motion.button
+                          whileHover={{ scale: 1.05 }}
+                          whileTap={{ scale: 0.95 }}
+                          onClick={handleEdit}
+                          className="p-2 rounded-lg bg-gray-100 hover:bg-gray-200 transition-colors"
+                        >
+                          <PencilIcon className="w-4 h-4 text-gray-600" />
+                        </motion.button>
+                      )}
+                    </div>
+                  )}
+
                   {/* Event Header */}
                   <div className="mb-6">
                     <div className="flex items-start justify-between mb-4">
@@ -374,40 +453,70 @@ export const ChurchYearCalendar: React.FC = () => {
                   {/* Perikopen */}
                   {selectedEvent.perikopen && Object.keys(selectedEvent.perikopen).length > 0 && (
                     <div className="mb-6">
-                      <h4 className="font-semibold text-gray-900 mb-3">Perikopenreihen</h4>
+                      <div className="flex items-center justify-between mb-3">
+                        <h4 className="font-semibold text-gray-900">Perikopenreihen</h4>
+                        <span className="text-sm text-gray-600">Aktuell: Reihe I (bis 1. Advent 2025)</span>
+                      </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-                        {Object.entries(selectedEvent.perikopen).map(([reihe, text]) => (
-                          <motion.button
-                            key={reihe}
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => handleBibleReferenceClick(text)}
-                            className="bg-blue-50 hover:bg-blue-100 rounded-lg p-3 text-left transition-colors group"
-                          >
+                        {Object.entries(selectedEvent.perikopen).map(([reihe, text]) => {
+                          // Current year's Perikope is Reihe I until Advent 2025
+                          const isCurrentPerikope = reihe === 'I';
+                          
+                          return (
+                            <motion.button
+                              key={reihe}
+                              whileHover={{ scale: 1.02 }}
+                              whileTap={{ scale: 0.98 }}
+                              onClick={() => handleBibleReferenceClick(text)}
+                              className={`${
+                                isCurrentPerikope 
+                                  ? 'bg-royal-100 hover:bg-royal-200 ring-2 ring-royal-400' 
+                                  : 'bg-blue-50 hover:bg-blue-100'
+                              } rounded-lg p-3 text-left transition-colors group`}
+                            >
                             <div className="flex items-center justify-between">
                               <div>
-                                <span className="font-medium text-blue-900 text-sm block">
-                                  Reihe {reihe}
+                                <span className={`font-medium text-sm block ${
+                                  isCurrentPerikope ? 'text-royal-900' : 'text-blue-900'
+                                }`}>
+                                  Reihe {reihe} {isCurrentPerikope && '(Predigttext)'}
                                 </span>
-                                <span className="text-blue-800 text-sm">{text}</span>
+                                <span className={`text-sm ${
+                                  isCurrentPerikope ? 'text-royal-800' : 'text-blue-800'
+                                }`}>{text}</span>
                               </div>
-                              <MagnifyingGlassIcon className="w-4 h-4 text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                              <MagnifyingGlassIcon className={`w-4 h-4 ${
+                                isCurrentPerikope ? 'text-royal-600' : 'text-blue-600'
+                              } opacity-0 group-hover:opacity-100 transition-opacity`} />
                             </div>
-                          </motion.button>
-                        ))}
+                            </motion.button>
+                          );
+                        })}
                       </div>
                     </div>
                   )}
 
                   {/* Additional Information */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {selectedEvent.hymn && (
+                    {(selectedEvent.hymn1 || selectedEvent.hymn2 || selectedEvent.hymn) && (
                       <div className="bg-purple-50 rounded-lg p-4">
                         <h4 className="font-semibold text-purple-900 mb-2 flex items-center">
                           <MusicalNoteIcon className="w-4 h-4 mr-2" />
-                          Wochenlied
+                          Wochenlieder
                         </h4>
-                        <p className="text-sm text-purple-800">{selectedEvent.hymn}</p>
+                        {selectedEvent.hymn1 && (
+                          <p className="text-sm text-purple-800">
+                            {selectedEvent.hymn1} {selectedEvent.hymn1_eg && `(${selectedEvent.hymn1_eg})`}
+                          </p>
+                        )}
+                        {selectedEvent.hymn2 && (
+                          <p className="text-sm text-purple-800">
+                            {selectedEvent.hymn2} {selectedEvent.hymn2_eg && `(${selectedEvent.hymn2_eg})`}
+                          </p>
+                        )}
+                        {selectedEvent.hymn && !selectedEvent.hymn1 && (
+                          <p className="text-sm text-purple-800">{selectedEvent.hymn}</p>
+                        )}
                       </div>
                     )}
                     

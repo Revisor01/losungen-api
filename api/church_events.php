@@ -109,6 +109,23 @@ try {
             $event['formatted_date_german'] = $date->format('l, d.m.Y');
         }
         
+        // Add hymn fields if available
+        if ($event['hymn1'] || $event['hymn2']) {
+            $event['hymns'] = [];
+            if ($event['hymn1']) {
+                $event['hymns'][] = [
+                    'title' => $event['hymn1'],
+                    'eg_number' => $event['hymn1_eg']
+                ];
+            }
+            if ($event['hymn2']) {
+                $event['hymns'][] = [
+                    'title' => $event['hymn2'],
+                    'eg_number' => $event['hymn2_eg']
+                ];
+            }
+        }
+        
         // Remove any null/empty values for cleaner JSON
         $event = array_filter($event, function($value) {
             return $value !== null && $value !== '';

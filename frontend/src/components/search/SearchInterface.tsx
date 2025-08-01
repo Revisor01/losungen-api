@@ -275,7 +275,7 @@ export const SearchInterface: React.FC = () => {
                   </span>
                 </div>
                 
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
                   {nextEvent.psalm && (
                     <button
                       onClick={() => handleSearchDirect(nextEvent.psalm!)}

@@ -231,6 +231,13 @@ class ApiService {
   async getChurchEventsForDate(date: string): Promise<ApiResponse<any[]>> {
     return this.getChurchEvents('date', { date });
   }
+
+  async updateChurchEvent(event: any): Promise<ApiResponse<any>> {
+    return this.request<any>('/api/church_events_update.php', {
+      method: 'POST',
+      body: JSON.stringify(event)
+    });
+  }
 }
 
 export const apiService = new ApiService();
