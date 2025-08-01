@@ -84,9 +84,9 @@ class LosungenService {
     
     public function getDailyLosung($date = null, $translation = 'LUT') {
         try {
-            // Use today if no date specified
+            // Use today if no date specified (German timezone)
             if (!$date) {
-                $date = date('Y-m-d');
+                $date = $this->getCurrentGermanDate();
             }
             
             // Validate date format
@@ -312,6 +312,13 @@ class LosungenService {
         $reference = urlencode($reference);
         
         return "https://www.bibleserver.com/{$translation}/{$reference}";
+    }
+    
+    private function getCurrentGermanDate() {
+        // Set timezone to German time (CEST/CET)
+        $timezone = new DateTimeZone('Europe/Berlin');
+        $now = new DateTime('now', $timezone);
+        return $now->format('Y-m-d');
     }
 }
 

@@ -8,8 +8,13 @@ RUN apt-get update && apt-get install -y \
     libpq-dev \
     cron \
     curl \
+    tzdata \
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*
+
+# Set timezone to German time
+RUN ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime \
+    && echo "Europe/Berlin" > /etc/timezone
 
 # Install PHP extensions
 RUN docker-php-ext-install pdo pdo_pgsql
@@ -54,9 +59,10 @@ RUN chown -R www-data:www-data /var/www/html \
 RUN ln -sf /dev/stdout /var/log/apache2/access.log \
     && ln -sf /dev/stderr /var/log/apache2/error.log
 
-# Configure PHP to log errors to stderr
+# Configure PHP to log errors to stderr and set timezone
 RUN echo 'log_errors = On' >> /usr/local/etc/php/conf.d/docker-php-errors.ini \
-    && echo 'error_log = /dev/stderr' >> /usr/local/etc/php/conf.d/docker-php-errors.ini
+    && echo 'error_log = /dev/stderr' >> /usr/local/etc/php/conf.d/docker-php-errors.ini \
+    && echo 'date.timezone = Europe/Berlin' >> /usr/local/etc/php/conf.d/docker-php-errors.ini
 
 # Fix Apache ServerName warning
 RUN echo 'ServerName losungen-api' >> /etc/apache2/apache2.conf
