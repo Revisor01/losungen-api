@@ -7,7 +7,7 @@ interface User {
 
 interface AuthContextType {
   user: User | null;
-  login: (username: string, password: string, apiKey: string) => boolean;
+  login: (username: string, password: string) => boolean;
   logout: () => void;
   isAuthenticated: boolean;
   updateApiKey: (apiKey: string) => void;
