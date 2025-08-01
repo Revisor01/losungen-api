@@ -6,11 +6,14 @@ import {
   MusicalNoteIcon,
   ArrowTopRightOnSquareIcon,
   ChevronLeftIcon,
-  ChevronRightIcon
+  ChevronRightIcon,
+  MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import { ICSParser, ChurchEvent } from '../../utils/icsParser';
+import { useNavigate } from 'react-router-dom';
 
 export const ChurchYearCalendar: React.FC = () => {
+  const navigate = useNavigate();
   const [events, setEvents] = useState<ChurchEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -103,6 +106,11 @@ export const ChurchYearCalendar: React.FC = () => {
       month: 'long',
       year: 'numeric'
     });
+  };
+
+  const handleBibleReferenceClick = (reference: string) => {
+    // Navigate to search with pre-filled reference
+    navigate(`/search?ref=${encodeURIComponent(reference)}`);
   };
 
   if (loading) {
@@ -304,24 +312,27 @@ export const ChurchYearCalendar: React.FC = () => {
                     )}
                     
                     {selectedEvent.psalm && (
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <h4 className="font-semibold text-gray-900 mb-2">Psalm</h4>
-                        <p className="text-sm text-gray-700">{selectedEvent.psalm}</p>
-                      </div>
+                      <BibleReferenceCard
+                        title="Psalm"
+                        reference={selectedEvent.psalm}
+                        onClick={handleBibleReferenceClick}
+                      />
                     )}
                     
                     {selectedEvent.epistle && (
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <h4 className="font-semibold text-gray-900 mb-2">Epistel</h4>
-                        <p className="text-sm text-gray-700">{selectedEvent.epistle}</p>
-                      </div>
+                      <BibleReferenceCard
+                        title="Epistel"
+                        reference={selectedEvent.epistle}
+                        onClick={handleBibleReferenceClick}
+                      />
                     )}
                     
                     {selectedEvent.gospel && (
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <h4 className="font-semibold text-gray-900 mb-2">Evangelium</h4>
-                        <p className="text-sm text-gray-700">{selectedEvent.gospel}</p>
-                      </div>
+                      <BibleReferenceCard
+                        title="Evangelium"
+                        reference={selectedEvent.gospel}
+                        onClick={handleBibleReferenceClick}
+                      />
                     )}
                   </div>
 
@@ -331,12 +342,23 @@ export const ChurchYearCalendar: React.FC = () => {
                       <h4 className="font-semibold text-gray-900 mb-3">Perikopenreihen</h4>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         {Object.entries(selectedEvent.perikopen).map(([reihe, text]) => (
-                          <div key={reihe} className="bg-blue-50 rounded-lg p-3">
-                            <span className="font-medium text-blue-900 text-sm">
-                              {reihe}: 
-                            </span>
-                            <span className="text-blue-800 text-sm ml-1">{text}</span>
-                          </div>
+                          <motion.button
+                            key={reihe}
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            onClick={() => handleBibleReferenceClick(text)}
+                            className="bg-blue-50 hover:bg-blue-100 rounded-lg p-3 text-left transition-colors group"
+                          >
+                            <div className="flex items-center justify-between">
+                              <div>
+                                <span className="font-medium text-blue-900 text-sm block">
+                                  Reihe {reihe}
+                                </span>
+                                <span className="text-blue-800 text-sm">{text}</span>
+                              </div>
+                              <MagnifyingGlassIcon className="w-4 h-4 text-blue-600 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </div>
+                          </motion.button>
                         ))}
                       </div>
                     </div>
@@ -391,3 +413,26 @@ export const ChurchYearCalendar: React.FC = () => {
     </div>
   );
 };
+
+interface BibleReferenceCardProps {
+  title: string;
+  reference: string;
+  onClick: (reference: string) => void;
+}
+
+const BibleReferenceCard: React.FC<BibleReferenceCardProps> = ({ title, reference, onClick }) => (
+  <motion.button
+    whileHover={{ scale: 1.02 }}
+    whileTap={{ scale: 0.98 }}
+    onClick={() => onClick(reference)}
+    className="bg-gray-50 hover:bg-gray-100 rounded-lg p-4 text-left transition-colors group w-full"
+  >
+    <div className="flex items-center justify-between">
+      <div>
+        <h4 className="font-semibold text-gray-900 mb-2">{title}</h4>
+        <p className="text-sm text-gray-700">{reference}</p>
+      </div>
+      <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
+    </div>
+  </motion.button>
+);

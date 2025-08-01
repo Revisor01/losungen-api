@@ -162,12 +162,22 @@ class ApiService {
 
   // Parse deutsche Datumsstring (von Losungen API)
   parseGermanDate(dateString: string): Date | null {
-    // Format: "Freitag, 01.08.2025"
-    const match = dateString.match(/(\d{2})\.(\d{2})\.(\d{4})/);
-    if (match) {
-      const [, day, month, year] = match;
+    // Format: "Freitag, 01.08.2025" oder ISO Format "2025-08-01"
+    
+    // ISO Format (YYYY-MM-DD)
+    const isoMatch = dateString.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (isoMatch) {
+      const [, year, month, day] = isoMatch;
       return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
     }
+    
+    // Deutsches Format (DD.MM.YYYY)
+    const germanMatch = dateString.match(/(\d{2})\.(\d{2})\.(\d{4})/);
+    if (germanMatch) {
+      const [, day, month, year] = germanMatch;
+      return new Date(parseInt(year), parseInt(month) - 1, parseInt(day));
+    }
+    
     return null;
   }
 }

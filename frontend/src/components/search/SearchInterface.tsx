@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MagnifyingGlassIcon, BookOpenIcon, ClockIcon, CheckIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, BookOpenIcon, ClockIcon, CheckIcon, CalendarIcon } from '@heroicons/react/24/outline';
 import { BibleTextDisplay } from '../bible/BibleTextDisplay';
 import { TranslationSelector } from '../bible/TranslationSelector';
 import { FormatSelector } from './FormatSelector';
@@ -9,8 +9,12 @@ import { ErrorMessage } from '../ui/ErrorMessage';
 import { apiService } from '../../services/api';
 import { BibleSearchRequest, BibleSearchResult } from '../../types';
 import { BibleReferenceParser } from '../../utils/bibleParser';
+import { ICSParser, ChurchEvent } from '../../utils/icsParser';
+import { useLocation, useNavigate } from 'react-router-dom';
 
 export const SearchInterface: React.FC = () => {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTranslation, setSelectedTranslation] = useState('LUT');
   const [selectedFormat, setSelectedFormat] = useState<'json' | 'text' | 'html' | 'markdown'>('json');
@@ -20,11 +24,42 @@ export const SearchInterface: React.FC = () => {
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
+  const [nextEvent, setNextEvent] = useState<ChurchEvent | null>(null);
 
   const availableTranslations = apiService.getAvailableTranslations();
 
   // Beispiel-Suchen für bessere UX (jetzt aus Parser)
   const exampleSearches = BibleReferenceParser.getExamples();
+
+  // Load URL parameters and next church event
+  useEffect(() => {
+    const urlParams = new URLSearchParams(location.search);
+    const refParam = urlParams.get('ref');
+    if (refParam) {
+      setSearchTerm(refParam);
+      // Auto-search if we have a reference from URL
+      if (refParam.trim()) {
+        handleSearchDirect(refParam);
+      }
+    }
+
+    // Load next church event
+    loadNextChurchEvent();
+  }, [location]);
+
+  const loadNextChurchEvent = async () => {
+    try {
+      const response = await fetch('/kirchenjahr-evangelisch-all.ics');
+      if (response.ok) {
+        const icsContent = await response.text();
+        const events = ICSParser.parseICS(icsContent);
+        const next = ICSParser.findNextEvent(events);
+        setNextEvent(next);
+      }
+    } catch (error) {
+      console.error('Failed to load church events:', error);
+    }
+  };
 
   const handleInputChange = (value: string) => {
     setSearchTerm(value);
@@ -39,44 +74,44 @@ export const SearchInterface: React.FC = () => {
     }
   };
 
-  const handleSearch = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!searchTerm.trim()) return;
+  const handleSearchDirect = async (term: string) => {
+    if (!term.trim()) return;
 
     setLoading(true);
     setError(null);
     setShowSuggestions(false);
 
-    // Parse und validiere Eingabe
-    const parsed = BibleReferenceParser.parse(searchTerm.trim());
-    const referenceToUse = parsed ? parsed.normalized : searchTerm.trim();
-
-    const request: BibleSearchRequest = {
-      reference: referenceToUse,
-      translation: selectedTranslation,
-      format: selectedFormat
-    };
-
     try {
+      const request: BibleSearchRequest = {
+        reference: term.trim(),
+        translation: selectedTranslation,
+        format: selectedFormat
+      };
+
       const response = await apiService.searchBibleText(request);
       
       if (response.success && response.data) {
         setSearchResult(response.data);
         
-        // Zur Suchhistorie hinzufügen
-        setSearchHistory(prev => {
-          const newHistory = [searchTerm.trim(), ...prev.filter(item => item !== searchTerm.trim())];
-          return newHistory.slice(0, 5); // Nur die letzten 5 behalten
-        });
+        // Update search history
+        const newHistory = [term.trim(), ...searchHistory.filter(h => h !== term.trim())].slice(0, 5);
+        setSearchHistory(newHistory);
       } else {
-        setError(response.error || 'Bibelstelle nicht gefunden');
+        setError(response.error || 'Fehler bei der Suche');
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Fehler bei der Suche');
+      setError(err instanceof Error ? err.message : 'Unbekannter Fehler');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleSearch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!searchTerm.trim()) return;
+
+    await handleSearchDirect(searchTerm);
   };
 
   const handleExampleClick = (example: string) => {
@@ -197,6 +232,80 @@ export const SearchInterface: React.FC = () => {
             </div>
           </form>
         </motion.div>
+
+        {/* Next Church Event */}
+        {nextEvent && !searchResult && !error && !loading && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
+            className="card p-6 mb-8 bg-gradient-to-r from-blue-50 to-purple-50"
+          >
+            <div className="flex items-start space-x-4">
+              <CalendarIcon className="w-6 h-6 text-blue-600 flex-shrink-0 mt-1" />
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-2">
+                  <h3 className="font-heading text-lg font-semibold text-gray-900">
+                    Nächster Feiertag: {nextEvent.summary}
+                  </h3>
+                  <span className="text-sm text-gray-500">
+                    {ICSParser.formatDate(nextEvent.date)}
+                  </span>
+                </div>
+                
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mt-4">
+                  {nextEvent.psalm && (
+                    <button
+                      onClick={() => handleSearchDirect(nextEvent.psalm)}
+                      className="bg-white/60 hover:bg-white/80 rounded-lg p-3 text-left transition-colors group"
+                    >
+                      <div className="text-xs text-gray-600 mb-1">Psalm</div>
+                      <div className="text-sm font-medium text-blue-900 group-hover:text-blue-700">
+                        {nextEvent.psalm}
+                      </div>
+                    </button>
+                  )}
+                  
+                  {nextEvent.epistle && (
+                    <button
+                      onClick={() => handleSearchDirect(nextEvent.epistle)}
+                      className="bg-white/60 hover:bg-white/80 rounded-lg p-3 text-left transition-colors group"
+                    >
+                      <div className="text-xs text-gray-600 mb-1">Epistel</div>
+                      <div className="text-sm font-medium text-blue-900 group-hover:text-blue-700">
+                        {nextEvent.epistle}
+                      </div>
+                    </button>
+                  )}
+                  
+                  {nextEvent.gospel && (
+                    <button
+                      onClick={() => handleSearchDirect(nextEvent.gospel)}
+                      className="bg-white/60 hover:bg-white/80 rounded-lg p-3 text-left transition-colors group"
+                    >
+                      <div className="text-xs text-gray-600 mb-1">Evangelium</div>
+                      <div className="text-sm font-medium text-blue-900 group-hover:text-blue-700">
+                        {nextEvent.gospel}
+                      </div>
+                    </button>
+                  )}
+                  
+                  {nextEvent.sermonText && (
+                    <button
+                      onClick={() => handleSearchDirect(nextEvent.sermonText)}
+                      className="bg-white/60 hover:bg-white/80 rounded-lg p-3 text-left transition-colors group"
+                    >
+                      <div className="text-xs text-gray-600 mb-1">Predigttext</div>
+                      <div className="text-sm font-medium text-blue-900 group-hover:text-blue-700">
+                        {nextEvent.sermonText}
+                      </div>
+                    </button>
+                  )}
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        )}
 
         {/* Example Searches */}
         {!searchResult && !error && !loading && (
