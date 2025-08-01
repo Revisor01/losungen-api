@@ -49,12 +49,29 @@ export const SearchInterface: React.FC = () => {
 
   const loadNextChurchEvent = async () => {
     try {
-      const response = await fetch('/kirchenjahr-evangelisch-all.ics');
-      if (response.ok) {
-        const icsContent = await response.text();
-        const events = ICSParser.parseICS(icsContent);
-        const next = ICSParser.findNextEvent(events);
-        setNextEvent(next);
+      const response = await apiService.getNextChurchEvent();
+      if (response.success && response.data && response.data.length > 0) {
+        const event = response.data[0];
+        // Convert to ChurchEvent format
+        const churchEvent: ChurchEvent = {
+          uid: event.uid,
+          summary: event.summary,
+          description: event.description || '',
+          date: new Date(event.event_date),
+          url: event.url,
+          liturgicalColor: event.liturgical_color,
+          season: event.season,
+          weeklyVerse: event.weekly_verse,
+          weeklyVerseReference: event.weekly_verse_reference,
+          psalm: event.psalm,
+          oldTestamentReading: event.old_testament_reading,
+          epistle: event.epistle,
+          gospel: event.gospel,
+          sermonText: event.sermon_text,
+          hymn: event.hymn,
+          perikopen: event.perikopen
+        };
+        setNextEvent(churchEvent);
       }
     } catch (error) {
       console.error('Failed to load church events:', error);

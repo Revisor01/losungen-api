@@ -180,6 +180,55 @@ class ApiService {
     
     return null;
   }
+
+  // Kirchenjahr API Methoden
+  async getChurchEvents(action: 'today' | 'next' | 'upcoming' | 'date' | 'range' = 'upcoming', params?: any): Promise<ApiResponse<any[]>> {
+    try {
+      let url = `/api/church_events.php?action=${action}`;
+      
+      if (params) {
+        if (params.date) url += `&date=${params.date}`;
+        if (params.start) url += `&start=${params.start}`;
+        if (params.end) url += `&end=${params.end}`;
+        if (params.limit) url += `&limit=${params.limit}`;
+      }
+      
+      const response = await fetch(url);
+      const data = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch church events');
+      }
+      
+      return {
+        success: true,
+        data: data.data || []
+      };
+    } catch (error) {
+      console.error('Church events API error:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+        data: []
+      };
+    }
+  }
+
+  async getTodaysChurchEvents(): Promise<ApiResponse<any[]>> {
+    return this.getChurchEvents('today');
+  }
+
+  async getNextChurchEvent(): Promise<ApiResponse<any[]>> {
+    return this.getChurchEvents('next');
+  }
+
+  async getUpcomingChurchEvents(limit: number = 10): Promise<ApiResponse<any[]>> {
+    return this.getChurchEvents('upcoming', { limit });
+  }
+
+  async getChurchEventsForDate(date: string): Promise<ApiResponse<any[]>> {
+    return this.getChurchEvents('date', { date });
+  }
 }
 
 export const apiService = new ApiService();

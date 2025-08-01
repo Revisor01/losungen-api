@@ -11,6 +11,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { ICSParser, ChurchEvent } from '../../utils/icsParser';
 import { useNavigate } from 'react-router-dom';
+import { apiService } from '../../services/api';
 
 export const ChurchYearCalendar: React.FC = () => {
   const navigate = useNavigate();
@@ -45,20 +46,28 @@ export const ChurchYearCalendar: React.FC = () => {
 
   const loadChurchYearData = async () => {
     try {
-      // In real app, this would load from the ICS file
-      // For now, we'll use a mock implementation or fetch from public folder
-      const response = await fetch('/kirchenjahr-evangelisch-all.ics');
-      if (response.ok) {
-        const icsContent = await response.text();
-        const parsedEvents = ICSParser.parseICS(icsContent);
-        
-        // Debug: Log first few events to see what we're parsing
-        if (parsedEvents.length > 0) {
-          console.log('First parsed event:', parsedEvents[0]);
-          console.log('Event with details:', parsedEvents.find(e => e.psalm || e.epistle || e.gospel));
-        }
-        
-        setEvents(parsedEvents);
+      // Load events from database API
+      const response = await apiService.getUpcomingChurchEvents(50); // Get more events for full year view
+      if (response.success && response.data) {
+        const churchEvents: ChurchEvent[] = response.data.map(event => ({
+          uid: event.uid,
+          summary: event.summary,
+          description: event.description || '',
+          date: new Date(event.event_date),
+          url: event.url,
+          liturgicalColor: event.liturgical_color,
+          season: event.season,
+          weeklyVerse: event.weekly_verse,
+          weeklyVerseReference: event.weekly_verse_reference,
+          psalm: event.psalm,
+          oldTestamentReading: event.old_testament_reading,
+          epistle: event.epistle,
+          gospel: event.gospel,
+          sermonText: event.sermon_text,
+          hymn: event.hymn,
+          perikopen: event.perikopen
+        }));
+        setEvents(churchEvents);
       } else {
         // Fallback: Create some mock events for demonstration
         createMockEvents();
