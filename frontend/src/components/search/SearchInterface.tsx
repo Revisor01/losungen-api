@@ -1,12 +1,13 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MagnifyingGlassIcon, BookOpenIcon, ClockIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, BookOpenIcon, ClockIcon, CheckIcon } from '@heroicons/react/24/outline';
 import { BibleTextDisplay } from '../bible/BibleTextDisplay';
 import { TranslationSelector } from '../bible/TranslationSelector';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorMessage } from '../ui/ErrorMessage';
 import { apiService } from '../../services/api';
 import { BibleSearchRequest, BibleSearchResult } from '../../types';
+import { BibleReferenceParser } from '../../utils/bibleParser';
 
 export const SearchInterface: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
@@ -16,18 +17,26 @@ export const SearchInterface: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
 
   const availableTranslations = apiService.getAvailableTranslations();
 
-  // Beispiel-Suchen für bessere UX
-  const exampleSearches = [
-    'Johannes 3,16',
-    'Psalm 23,1-6',
-    'Römer 8,28-29',
-    '1. Korinther 13,4-8',
-    'Matthäus 5,3-12',
-    'Jeremia 29,11'
-  ];
+  // Beispiel-Suchen für bessere UX (jetzt aus Parser)
+  const exampleSearches = BibleReferenceParser.getExamples();
+
+  const handleInputChange = (value: string) => {
+    setSearchTerm(value);
+    
+    // Suggestions anzeigen
+    if (value.length >= 2) {
+      const bookSuggestions = BibleReferenceParser.getSuggestions(value);
+      setSuggestions(bookSuggestions);
+      setShowSuggestions(bookSuggestions.length > 0);
+    } else {
+      setShowSuggestions(false);
+    }
+  };
 
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -36,9 +45,14 @@ export const SearchInterface: React.FC = () => {
 
     setLoading(true);
     setError(null);
+    setShowSuggestions(false);
+
+    // Parse und validiere Eingabe
+    const parsed = BibleReferenceParser.parse(searchTerm.trim());
+    const referenceToUse = parsed ? parsed.normalized : searchTerm.trim();
 
     const request: BibleSearchRequest = {
-      reference: searchTerm.trim(),
+      reference: referenceToUse,
       translation: selectedTranslation,
       format: selectedFormat
     };
