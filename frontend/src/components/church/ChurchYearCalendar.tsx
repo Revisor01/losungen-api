@@ -337,6 +337,14 @@ export const ChurchYearCalendar: React.FC = () => {
                       />
                     )}
                     
+                    {selectedEvent.oldTestamentReading && (
+                      <BibleReferenceCard
+                        title="AT-Lesung"
+                        reference={selectedEvent.oldTestamentReading}
+                        onClick={handleBibleReferenceClick}
+                      />
+                    )}
+                    
                     {selectedEvent.epistle && (
                       <BibleReferenceCard
                         title="Epistel"

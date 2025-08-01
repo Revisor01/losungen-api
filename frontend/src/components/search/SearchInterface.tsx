@@ -271,6 +271,18 @@ export const SearchInterface: React.FC = () => {
                     </button>
                   )}
                   
+                  {nextEvent.oldTestamentReading && (
+                    <button
+                      onClick={() => handleSearchDirect(nextEvent.oldTestamentReading!)}
+                      className="bg-white/60 hover:bg-white/80 rounded-lg p-3 text-left transition-colors group"
+                    >
+                      <div className="text-xs text-gray-600 mb-1">AT-Lesung</div>
+                      <div className="text-sm font-medium text-blue-900 group-hover:text-blue-700">
+                        {nextEvent.oldTestamentReading}
+                      </div>
+                    </button>
+                  )}
+                  
                   {nextEvent.epistle && (
                     <button
                       onClick={() => handleSearchDirect(nextEvent.epistle!)}

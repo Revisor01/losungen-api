@@ -9,6 +9,7 @@ export interface ChurchEvent {
   weeklyVerse?: string;
   weeklyVerseReference?: string; // Just the bible reference like "Sach 9,9a"
   psalm?: string;
+  oldTestamentReading?: string; // AT-Lesung
   epistle?: string;
   gospel?: string;
   sermonText?: string;
@@ -123,8 +124,21 @@ export class ICSParser {
     console.log('Raw description:', description);
     
     // The description from ICS is already joined by the main parser, but contains literal \n
-    // Convert literal \n to actual newlines and clean up
-    const cleanText = description.replace(/\\n/g, '\n');
+    // Convert literal \n to actual newlines and fix broken words
+    let cleanText = description.replace(/\\n/g, '\n');
+    
+    // Fix broken words that were split across lines (common ICS issue)
+    cleanText = cleanText
+      .replace(/Ep\s+istel/g, 'Epistel')
+      .replace(/J\s+es\s+/g, 'Jes ')
+      .replace(/J\s+ak\s+/g, 'Jak ')
+      .replace(/W\s+ochenlied/g, 'Wochenlied')
+      .replace(/D\s+ie\s+einzelnen/g, 'Die einzelnen')
+      .replace(/ilt\s+in\s+die/g, 'ilt in die')
+      .replace(/gil\s+t\s+-\s+beginnend/g, 'gilt - beginnend')
+      .replace(/enjahr\s+\s+\(/g, 'enjahr (')
+      .replace(/rpunkte\s+\(/g, 'rpunkte (');
+    
     const lines = cleanText.split('\n').map(l => l.trim()).filter(l => l);
     
     console.log('Processed lines:', lines);
@@ -185,6 +199,9 @@ export class ICSParser {
           case 'Eingangspsalm':
             if (!event.psalm) event.psalm = value; // Use Wochenpsalm if available, otherwise Eingangspsalm
             break;
+          case 'AT-Lesung':
+            event.oldTestamentReading = value;
+            break;
           case 'Epistel':
             event.epistle = value;
             break;
@@ -209,7 +226,9 @@ export class ICSParser {
       liturgicalColor: event.liturgicalColor,
       season: event.season,
       weeklyVerse: event.weeklyVerse,
+      weeklyVerseReference: event.weeklyVerseReference,
       psalm: event.psalm,
+      oldTestamentReading: event.oldTestamentReading,
       epistle: event.epistle,
       gospel: event.gospel,
       sermonText: event.sermonText,
