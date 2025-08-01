@@ -109,7 +109,7 @@ export const FavoritesProvider: React.FC<FavoritesProviderProps> = ({ children }
 
   const getAllTags = () => {
     const allTags = favorites.flatMap(fav => fav.tags || []);
-    return [...new Set(allTags)].sort();
+    return Array.from(new Set(allTags)).sort();
   };
 
   const value: FavoritesContextType = {
