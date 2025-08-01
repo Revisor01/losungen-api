@@ -6,6 +6,7 @@ import { Header } from './components/layout/Header';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { SearchInterface } from './components/search/SearchInterface';
 import { ProfileSettings } from './components/profile/ProfileSettings';
+import { AdminPanel } from './components/admin/AdminPanel';
 import './styles/globals.css';
 
 function AppContent() {
@@ -48,6 +49,7 @@ function AppContent() {
             <Route path="/" element={<Dashboard />} />
             <Route path="/search" element={<SearchInterface />} />
             <Route path="/profile" element={<ProfileSettings />} />
+            <Route path="/admin" element={<AdminPanel />} />
             <Route path="/favorites" element={<FavoritesPlaceholder />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>

@@ -42,6 +42,7 @@ export const Header: React.FC<HeaderProps> = ({
             <NavLink href="/" active>Dashboard</NavLink>
             <NavLink href="/search">Suche</NavLink>
             <NavLink href="/profile">Profil</NavLink>
+            <NavLink href="/admin">Admin</NavLink>
             <NavLink href="/favorites">Favoriten</NavLink>
           </nav>
 
@@ -113,6 +114,7 @@ export const Header: React.FC<HeaderProps> = ({
               <MobileNavLink href="/" active>Dashboard</MobileNavLink>
               <MobileNavLink href="/search">Suche</MobileNavLink>
               <MobileNavLink href="/profile">Profil</MobileNavLink>
+              <MobileNavLink href="/admin">Admin</MobileNavLink>
               <MobileNavLink href="/favorites">Favoriten</MobileNavLink>
               
               {user ? (
