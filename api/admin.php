@@ -9,6 +9,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit(0);
 }
 
+require_once __DIR__ . '/database.php';
+
 // API Key validation
 $apiKeys = [
     $_ENV['API_KEY_1'] ?? 'ksadh8324oijcff45rfdsvcvhoids44',
