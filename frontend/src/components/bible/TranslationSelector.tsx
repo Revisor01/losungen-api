@@ -65,8 +65,8 @@ export const TranslationSelector: React.FC<TranslationSelectorProps> = ({
         onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl px-4 py-3 text-left shadow-card hover:shadow-card-hover transition-all focus:outline-none focus:ring-2 focus:ring-royal-500/20"
       >
-        <div className="flex items-center space-x-3">
-          <span className="font-mono text-sm font-medium text-royal-600 bg-royal-50 px-2 py-1 rounded-md">
+        <div className="flex items-center space-x-3 min-w-0 flex-1">
+          <span className="font-mono text-sm font-medium text-royal-600 bg-royal-50 px-2 py-1 rounded-md flex-shrink-0">
             {selectedTranslation?.code}
           </span>
           <span className="font-medium text-gray-900 truncate">
@@ -123,11 +123,11 @@ export const TranslationSelector: React.FC<TranslationSelectorProps> = ({
                       onClick={() => handleSelect(translation)}
                       className="w-full flex items-center justify-between px-4 py-3 text-left hover:bg-royal-25 transition-colors"
                     >
-                      <div className="flex items-center space-x-3">
-                        <span className="font-mono text-sm font-medium text-royal-600 bg-royal-50 px-2 py-1 rounded-md min-w-[3rem] text-center">
+                      <div className="flex items-center space-x-3 min-w-0 flex-1">
+                        <span className="font-mono text-sm font-medium text-royal-600 bg-royal-50 px-2 py-1 rounded-md min-w-[3rem] text-center flex-shrink-0">
                           {translation.code}
                         </span>
-                        <span className="font-medium text-gray-900">
+                        <span className="font-medium text-gray-900 truncate">
                           {translation.name}
                         </span>
                       </div>

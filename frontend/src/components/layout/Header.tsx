@@ -43,10 +43,10 @@ export const Header: React.FC<HeaderProps> = ({
           <nav className="hidden md:flex items-center space-x-8">
             <NavLink href="/" active={location.pathname === '/'}>Dashboard</NavLink>
             <NavLink href="/search" active={location.pathname === '/search'}>Suche</NavLink>
+            <NavLink href="/kirchenjahr" active={location.pathname === '/kirchenjahr'}>Kirchenjahr</NavLink>
+            <NavLink href="/favorites" active={location.pathname === '/favorites'}>Favoriten</NavLink>
             <NavLink href="/profile" active={location.pathname === '/profile'}>Profil</NavLink>
             <NavLink href="/admin" active={location.pathname === '/admin'}>Admin</NavLink>
-            <NavLink href="/favorites" active={location.pathname === '/favorites'}>Favoriten</NavLink>
-            <NavLink href="/kirchenjahr" active={location.pathname === '/kirchenjahr'}>Kirchenjahr</NavLink>
           </nav>
 
           {/* User Menu & Mobile Toggle */}
@@ -116,10 +116,10 @@ export const Header: React.FC<HeaderProps> = ({
             <nav className="px-4 py-4 space-y-3">
               <MobileNavLink href="/" active={location.pathname === '/'}>Dashboard</MobileNavLink>
               <MobileNavLink href="/search" active={location.pathname === '/search'}>Suche</MobileNavLink>
+              <MobileNavLink href="/kirchenjahr" active={location.pathname === '/kirchenjahr'}>Kirchenjahr</MobileNavLink>
+              <MobileNavLink href="/favorites" active={location.pathname === '/favorites'}>Favoriten</MobileNavLink>
               <MobileNavLink href="/profile" active={location.pathname === '/profile'}>Profil</MobileNavLink>
               <MobileNavLink href="/admin" active={location.pathname === '/admin'}>Admin</MobileNavLink>
-              <MobileNavLink href="/favorites" active={location.pathname === '/favorites'}>Favoriten</MobileNavLink>
-              <MobileNavLink href="/kirchenjahr" active={location.pathname === '/kirchenjahr'}>Kirchenjahr</MobileNavLink>
               
               {user ? (
                 <div className="pt-3 border-t border-gray-200">

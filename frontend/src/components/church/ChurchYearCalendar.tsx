@@ -121,16 +121,22 @@ export const ChurchYearCalendar: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-subtle py-8">
       <div className="max-w-6xl mx-auto px-4">
-        <div className="mb-8">
-          <div className="flex items-center space-x-3 mb-4">
-            <CalendarIcon className="w-8 h-8 text-royal-600" />
-            <h1 className="font-heading text-3xl font-bold text-gray-900">
-              Kirchenjahr-Kalender
-            </h1>
+        {/* Header Section */}
+        <div className="card p-8 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="font-heading text-3xl font-bold text-gray-900 mb-2">
+                Kirchenjahr-Kalender
+              </h1>
+              <p className="text-gray-600">
+                Liturgische Feste und Zeiten im evangelischen Kirchenjahr mit Perikopen und Wochensprüchen.
+              </p>
+            </div>
+            <div className="text-right">
+              <CalendarIcon className="w-12 h-12 text-royal-600 mx-auto mb-2" />
+              <p className="text-sm text-gray-500">Kirchenjahr</p>
+            </div>
           </div>
-          <p className="text-gray-600">
-            Liturgische Feste und Zeiten im evangelischen Kirchenjahr
-          </p>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">

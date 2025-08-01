@@ -53,12 +53,15 @@ export const Dashboard: React.FC = () => {
     const date = apiService.parseGermanDate(dateString);
     if (!date) return dateString;
     
-    return new Intl.DateTimeFormat('de-DE', {
+    const formatter = new Intl.DateTimeFormat('de-DE', {
       weekday: 'long',
       year: 'numeric',
       month: 'long',
       day: 'numeric'
-    }).format(date);
+    });
+    
+    // Format: "Freitag, 1. August 2025"
+    return formatter.format(date).replace(/(\d+)\.\s/, '$1. ');
   };
 
   return (

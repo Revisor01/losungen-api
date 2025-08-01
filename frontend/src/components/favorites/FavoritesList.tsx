@@ -74,17 +74,30 @@ export const FavoritesList: React.FC = () => {
   if (favorites.length === 0) {
     return (
       <div className="min-h-screen bg-gradient-subtle py-8">
-        <div className="max-w-4xl mx-auto px-4">
+        <div className="max-w-6xl mx-auto px-4">
+          {/* Header Section */}
+          <div className="card p-8 mb-8">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="font-heading text-3xl font-bold text-gray-900 mb-2">
+                  Deine Favoriten
+                </h1>
+                <p className="text-gray-600">
+                  Du hast noch keine Lieblings-Bibelverse gespeichert.
+                </p>
+              </div>
+              <div className="text-right">
+                <span className="bg-gray-100 text-gray-500 px-4 py-2 rounded-full text-lg font-medium">
+                  0
+                </span>
+                <p className="text-sm text-gray-500 mt-1">Gespeicherte Verse</p>
+              </div>
+            </div>
+          </div>
+          
           <div className="text-center">
             <div className="mb-8">
               <HeartIcon className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <h1 className="font-heading text-3xl font-bold text-gray-900 mb-2">
-                Deine Favoriten
-              </h1>
-              <p className="text-gray-600">
-                Du hast noch keine Lieblings-Bibelverse gespeichert.
-              </p>
-            </div>
             
             <div className="card p-8 max-w-md mx-auto">
               <BookOpenIcon className="w-12 h-12 text-royal-600 mx-auto mb-4" />
@@ -103,17 +116,28 @@ export const FavoritesList: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gradient-subtle py-8">
-      <div className="max-w-4xl mx-auto px-4">
-        <div className="mb-8">
-          <div className="flex items-center space-x-3 mb-4">
-            <HeartSolidIcon className="w-8 h-8 text-red-500" />
-            <h1 className="font-heading text-3xl font-bold text-gray-900">
-              Deine Favoriten
-            </h1>
-            <span className="bg-royal-100 text-royal-800 px-3 py-1 rounded-full text-sm font-medium">
-              {favorites.length}
-            </span>
+      <div className="max-w-6xl mx-auto px-4">
+        {/* Header Section */}
+        <div className="card p-8 mb-8">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="font-heading text-3xl font-bold text-gray-900 mb-2">
+                Deine Favoriten
+              </h1>
+              <p className="text-gray-600">
+                Deine gespeicherten Lieblings-Bibelverse und persönlichen Notizen.
+              </p>
+            </div>
+            <div className="text-right">
+              <span className="bg-royal-100 text-royal-800 px-4 py-2 rounded-full text-lg font-medium">
+                {favorites.length}
+              </span>
+              <p className="text-sm text-gray-500 mt-1">Gespeicherte Verse</p>
+            </div>
           </div>
+        </div>
+
+        <div className="mb-8">
           
           {/* Search and Filter Bar */}
           <div className="flex flex-col sm:flex-row gap-4">
