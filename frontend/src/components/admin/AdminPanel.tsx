@@ -55,7 +55,7 @@ export const AdminPanel: React.FC = () => {
     setLoading(true);
     try {
       const baseUrl = process.env.NODE_ENV === 'production' 
-        ? window.location.origin 
+        ? `${window.location.protocol}//${window.location.hostname}:8374`
         : 'http://localhost:8374';
         
       // Load system status
@@ -81,7 +81,7 @@ export const AdminPanel: React.FC = () => {
     setFetchLoading(true);
     try {
       const baseUrl = process.env.NODE_ENV === 'production' 
-        ? window.location.origin 
+        ? `${window.location.protocol}//${window.location.hostname}:8374`
         : 'http://localhost:8374';
         
       const response = await fetch(`${baseUrl}/admin.php?action=fetch&api_key=${apiKey}&translation=${selectedTranslation}`);
@@ -103,7 +103,7 @@ export const AdminPanel: React.FC = () => {
     setClearLoading(true);
     try {
       const baseUrl = process.env.NODE_ENV === 'production' 
-        ? window.location.origin 
+        ? `${window.location.protocol}//${window.location.hostname}:8374`
         : 'http://localhost:8374';
         
       const response = await fetch(`${baseUrl}/admin.php?action=clear_cache&api_key=${apiKey}`);

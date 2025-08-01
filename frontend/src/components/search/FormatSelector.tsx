@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDownIcon, CheckIcon, DocumentTextIcon, CodeBracketIcon, LanguageIcon, DocumentIcon } from '@heroicons/react/24/outline';
 
 const formatOptions = [
-  { value: 'json', label: 'Standard', description: 'JSON mit allen Daten', icon: CodeBracketIcon },
+  { value: 'json', label: 'Standard', description: 'Strukturierte Daten', icon: CodeBracketIcon },
   { value: 'text', label: 'Nur Text', description: 'Reiner Bibeltext', icon: DocumentTextIcon },
   { value: 'markdown', label: 'Markdown', description: 'Für Predigten & Dokumente', icon: LanguageIcon },
   { value: 'html', label: 'HTML', description: 'Web-formatiert', icon: DocumentIcon }

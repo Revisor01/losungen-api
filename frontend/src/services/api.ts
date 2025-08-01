@@ -73,6 +73,45 @@ class ApiService {
       format: request.format || 'json'
     });
 
+    // Für text/markdown/html Format direkte Response behandeln
+    if (request.format && ['text', 'markdown', 'html'].includes(request.format)) {
+      try {
+        const response = await fetch(`${this.baseUrl}/bible_search.php?${params}`, {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+        }
+
+        const textContent = await response.text();
+        
+        // Formatiere als BibleSearchResult für einheitliche Verwendung
+        const result: BibleSearchResult = {
+          text: textContent,
+          reference: request.reference,
+          translation: {
+            code: request.translation,
+            name: request.translation,
+            language: 'German'
+          },
+          source: 'Bible Search API',
+          url: ''
+        };
+
+        return {
+          success: true,
+          data: result,
+          timestamp: new Date().toISOString()
+        };
+      } catch (error) {
+        throw error;
+      }
+    }
+
     return this.request<BibleSearchResult>(`/bible_search.php?${params}`);
   }
 
