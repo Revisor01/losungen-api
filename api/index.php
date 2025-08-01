@@ -107,8 +107,22 @@ class LosungenService {
             }
             
             // Bibelstellen über ERF Bibleserver API in gewünschter Übersetzung laden
-            if ($this->bibleserverApiKey) {
+            // BIGS needs special URLs even without API key
+            if ($this->bibleserverApiKey || $translation === 'BIGS') {
                 $losungData = $this->enhanceWithBibleserver($losungData, $translation);
+            }
+            
+            // For BIGS, fix URLs that may have been set by scraper
+            if ($translation === 'BIGS') {
+                logDocker("[BIGS] Fixing URLs for BIGS translation");
+                if (!empty($losungData['losung']['reference'])) {
+                    logDocker("[BIGS] Fixing losung URL for: " . $losungData['losung']['reference']);
+                    $losungData['losung']['bibleserver_url'] = $this->buildBigsUrl($losungData['losung']['reference']);
+                }
+                if (!empty($losungData['lehrtext']['reference'])) {
+                    logDocker("[BIGS] Fixing lehrtext URL for: " . $losungData['lehrtext']['reference']);
+                    $losungData['lehrtext']['bibleserver_url'] = $this->buildBigsUrl($losungData['lehrtext']['reference']);
+                }
             }
             
             logDocker("Successfully served Losung for $date from database with translation $translation");
@@ -273,7 +287,8 @@ class LosungenService {
     }
     
     private function enhanceWithBibleserver($data, $translation) {
-        if (!$this->bibleserverApiKey) {
+        // BIGS doesn't need API key, just URL generation
+        if (!$this->bibleserverApiKey && $translation !== 'BIGS') {
             return $data;
         }
         
@@ -295,6 +310,11 @@ class LosungenService {
     }
     
     private function buildBibleserverUrl($reference, $translation) {
+        // Spezielle Behandlung für BIGS
+        if ($translation === 'BIGS') {
+            return $this->buildBigsUrl($reference);
+        }
+        
         // Bibelstelle für URL formatieren
         $reference = str_replace(' ', '', $reference);
         $reference = str_replace(',', ',', $reference);
@@ -312,6 +332,98 @@ class LosungenService {
         $reference = urlencode($reference);
         
         return "https://www.bibleserver.com/{$translation}/{$reference}";
+    }
+    
+    private function buildBigsUrl($reference) {
+        logDocker("[BIGS] Building URL for reference: $reference");
+        // Parse Referenz für BIGS URL - handle "1. Petrus 3,8" format
+        if (preg_match('/^(.+?)\s+(\d+),(\d+)(?:-(\d+))?/', $reference, $matches)) {
+            $book_name = $matches[1];
+            $chapter = $matches[2];
+            $verse = $matches[3];
+            
+            // Korrekte BIGS Slugs aus bigs.txt
+            $book_mappings = [
+                // Altes Testament
+                '1. Mose' => 'Gen', 'Genesis' => 'Gen',
+                '2. Mose' => 'Ex', 'Exodus' => 'Ex', 
+                '3. Mose' => 'Lev', 'Levitikus' => 'Lev',
+                '4. Mose' => 'Num', 'Numeri' => 'Num',
+                '5. Mose' => 'Dtn', 'Deuteronomium' => 'Dtn',
+                'Josua' => 'Jos',
+                'Richter' => 'Ri',
+                '1. Samuel' => '1-Sam',
+                '2. Samuel' => '2-Sam',
+                '1. Könige' => '1-Koen',
+                '2. Könige' => '2-Koen',
+                'Jesaja' => 'Jes',
+                'Jeremia' => 'Jer',
+                'Hesekiel' => 'Ez-Hes', 'Ezechiel' => 'Ez-Hes',
+                'Hosea' => 'Hos',
+                'Joel' => 'Joel',
+                'Amos' => 'Am',
+                'Obadja' => 'Ob',
+                'Jona' => 'Jona',
+                'Micha' => 'Mi',
+                'Nahum' => 'Nah',
+                'Habakuk' => 'Hab',
+                'Zefanja' => 'Zef',
+                'Haggai' => 'Hag',
+                'Sacharja' => 'Sach',
+                'Maleachi' => 'Mal',
+                'Psalm' => 'Ps', 'Psalmen' => 'Ps',
+                'Sprichwörter' => 'Spr',
+                'Hiob' => 'Hiob', 'Job' => 'Hiob',
+                'Hoheslied' => 'Hld',
+                'Rut' => 'Rut',
+                'Klagelieder' => 'Klgl',
+                'Prediger' => 'Koh', 'Kohelet' => 'Koh',
+                'Ester' => 'Est',
+                'Daniel' => 'Dan',
+                'Esra' => 'Esr',
+                'Nehemia' => 'Neh',
+                '1. Chronik' => '1-Chr',
+                '2. Chronik' => '2-Chr',
+                
+                // Neues Testament
+                'Matthäus' => 'Mt',
+                'Markus' => 'Mk', 
+                'Lukas' => 'Lk',
+                'Johannes' => 'Joh',
+                'Apostelgeschichte' => 'Apg',
+                'Römer' => 'Roem',
+                '1. Korinther' => '1-Kor',
+                '2. Korinther' => '2-Kor',
+                'Galater' => 'Gal',
+                'Epheser' => 'Eph',
+                'Philipper' => 'Phil',
+                'Kolosser' => 'Kol',
+                '1. Thessalonicher' => '1-Thess',
+                '2. Thessalonicher' => '2-Thess',
+                '1. Timotheus' => '1-Tim',
+                '2. Timotheus' => '2-Tim',
+                'Titus' => 'Tit',
+                'Philemon' => 'Phlm',
+                'Hebräer' => 'Hebr',
+                'Jakobus' => 'Jak',
+                '1. Petrus' => '1-Petr',
+                '2. Petrus' => '2-Petr',
+                '1. Johannes' => '1-Joh',
+                '2. Johannes' => '2-Joh',
+                '3. Johannes' => '3-Joh',
+                'Judas' => 'Jud',
+                'Offenbarung' => 'Offb-Apk'
+            ];
+            
+            $book_abbrev = $book_mappings[$book_name] ?? $book_name;
+            $url = "https://www.bibel-in-gerechter-sprache.de/die-bibel/bigs-online/?{$book_abbrev}/{$chapter}/{$verse}/";
+            logDocker("[BIGS] Generated URL: $url");
+            return $url;
+        }
+        
+        // Fallback to ERF if parsing fails
+        logDocker("[BIGS] Parse failed, using fallback for: $reference");
+        return "https://www.bibleserver.com/BIGS/" . urlencode($reference);
     }
     
     private function getCurrentGermanDate() {
