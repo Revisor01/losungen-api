@@ -126,10 +126,17 @@ try {
             }
         }
         
-        // Remove any null/empty values for cleaner JSON
-        $event = array_filter($event, function($value) {
-            return $value !== null && $value !== '';
-        });
+        // Keep important fields even if empty
+        $keepFields = ['weekly_verse', 'weekly_verse_reference', 'psalm_eg', 'hymn1_eg', 'hymn2_eg'];
+        $filteredEvent = [];
+        
+        foreach ($event as $key => $value) {
+            if (in_array($key, $keepFields) || ($value !== null && $value !== '')) {
+                $filteredEvent[$key] = $value;
+            }
+        }
+        
+        $event = $filteredEvent;
     }
     
     echo json_encode([
