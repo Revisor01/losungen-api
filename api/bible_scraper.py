@@ -137,12 +137,21 @@ class BibleScraper:
                                 # Markiere optionale Verse (nur für Verse-Array, nicht im Text)
                                 is_optional = verse_num in reference.get('optional_verses', [])
                                 
-                                verse_texts.append(verse_text)
-                                verses_data.append({
+                                # Prüfe auf Suffixe (a, b, etc.)
+                                suffixes = reference.get('suffixes', {})
+                                suffix = suffixes.get(str(verse_num)) or suffixes.get(verse_num)
+                                
+                                verse_data = {
                                     'number': verse_num,
                                     'text': verse_text,
                                     'optional': is_optional
-                                })
+                                }
+                                
+                                if suffix:
+                                    verse_data['suffix'] = suffix
+                                
+                                verse_texts.append(verse_text)
+                                verses_data.append(verse_data)
             
             if verse_texts:
                 combined_text = ' '.join(verse_texts)
@@ -222,12 +231,21 @@ class BibleScraper:
                             # Markiere optionale Verse (nur für Verse-Array, nicht im Text) 
                             is_optional = verse_num in reference.get('optional_verses', [])
                             
-                            verse_texts.append(verse_text)
-                            verses_data.append({
+                            # Prüfe auf Suffixe (a, b, etc.)
+                            suffixes = reference.get('suffixes', {})
+                            suffix = suffixes.get(str(verse_num)) or suffixes.get(verse_num)
+                            
+                            verse_data = {
                                 'number': verse_num,
                                 'text': verse_text,
                                 'optional': is_optional
-                            })
+                            }
+                            
+                            if suffix:
+                                verse_data['suffix'] = suffix
+                            
+                            verse_texts.append(verse_text)
+                            verses_data.append(verse_data)
             
             if verse_texts:
                 combined_text = ' '.join(verse_texts)

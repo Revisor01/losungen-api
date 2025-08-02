@@ -256,7 +256,22 @@ class BibleSearchAPI {
             }
         }
         
-        // Entferne Buchstaben-Suffixe von Versen (z.B. 15a → 15, auch außerhalb von Klammern)
+        // Erfasse Buchstaben-Suffixe bevor wir sie entfernen (für Johannes 3,16a-19.21b-24)
+        // Suffixe in regulären Bereichen (nicht in Klammern)
+        $suffixes = []; // Speichert alle Suffixe inkl. der aus Klammern
+        
+        // Finde alle Verse mit Suffixen außerhalb von Klammern
+        preg_match_all('/(\d+)([a-z])(?=[-–\.]|$)/', $reference, $suffixMatches, PREG_SET_ORDER);
+        foreach ($suffixMatches as $match) {
+            $verseNum = (int)$match[1];
+            $suffix = $match[2];
+            $suffixes[$verseNum] = $suffix;
+        }
+        
+        // Kombiniere mit optionalen Suffixen aus Klammern
+        $suffixes = array_merge($suffixes, $optionalSuffixes);
+        
+        // Entferne Buchstaben-Suffixe von Versen (z.B. 15a → 15)
         $reference = preg_replace('/(\d+)[a-z]/', '$1', $reference);
         
         // Normalisiere Leerzeichen
@@ -325,6 +340,7 @@ class BibleSearchAPI {
                         'excluded_verses' => $excludedVerses,
                         'optional_verses' => $optionalVerses,
                         'optional_suffixes' => $optionalSuffixes,
+                        'suffixes' => $suffixes,
                         'original' => $originalReference,
                         'original_book' => $bookInput
                     ];
@@ -344,6 +360,7 @@ class BibleSearchAPI {
                             'excluded_verses' => [],
                             'optional_verses' => $optionalVerses,
                             'optional_suffixes' => $optionalSuffixes,
+                            'suffixes' => $suffixes,
                             'original' => $originalReference,
                             'original_book' => $bookInput
                         ];
@@ -592,11 +609,18 @@ class BibleSearchAPI {
                 $verseText = $data['text'];
             }
             
-            $allVerses[] = [
+            $verseEntry = [
                 'number' => $excludedVerse,
                 'text' => $verseText,
                 'excluded' => true
             ];
+            
+            // Füge Suffix hinzu wenn vorhanden
+            if (isset($parsedRef['suffixes'][$excludedVerse])) {
+                $verseEntry['suffix'] = $parsedRef['suffixes'][$excludedVerse];
+            }
+            
+            $allVerses[] = $verseEntry;
         }
         
         // Sortiere Verse nach Nummer

@@ -517,14 +517,17 @@ export const SearchInterface: React.FC = () => {
                               : ''
                           }`}
                         >
-                          <span className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
-                            verse.excluded 
-                              ? 'bg-orange-100 text-orange-700'
-                              : verse.optional
-                              ? 'bg-blue-100 text-blue-700'
-                              : 'bg-royal-100 text-royal-700'
-                          }`}>
-                            {verse.number}
+                          <span 
+                            className={`flex-shrink-0 min-w-[2rem] h-8 px-2 rounded-full flex items-center justify-center text-sm font-semibold ${
+                              verse.excluded 
+                                ? 'bg-orange-100 text-orange-700'
+                                : verse.optional
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-royal-100 text-royal-700'
+                            }`}
+                            title={verse.suffix ? `Vers ${verse.number}${verse.suffix} - nur Teil "${verse.suffix}" des Verses` : undefined}
+                          >
+                            {verse.number}{verse.suffix && <span className="text-xs ml-0.5">{verse.suffix}</span>}
                           </span>
                           <p className={`flex-1 leading-relaxed ${
                             verse.excluded 

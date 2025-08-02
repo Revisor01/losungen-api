@@ -50,6 +50,7 @@ export interface BibleSearchResult {
     text: string;
     excluded?: boolean;
     optional?: boolean;
+    suffix?: string;
   }>;
 }
 
