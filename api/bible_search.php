@@ -235,24 +235,24 @@ class BibleSearchAPI {
                 }
             }
             
-            // Behandle Klammern speziell bei direkt anschließenden Versen
-            // z.B. "Phil 3,(4b–6)7–14" wird zu "Phil 3,4–14"
-            if (preg_match('/(.+,)\((\d+)[a-z]?[-–](\d+)[a-z]?\)(\d+)[-–](\d+)/', $reference, $matches)) {
-                // Format: Buch Kapitel,(StartKlammer-EndeKlammer)StartRest-EndeRest
-                $prefix = $matches[1];      // "Phil 3,"
-                $klammerStart = $matches[2]; // "4"
-                $klammerEnd = $matches[3];   // "6"
-                $restStart = $matches[4];    // "7"
-                $restEnd = $matches[5];      // "14"
+            // Behandle Klammern-Referenzen wie "(4b-6)7-14" -> wird zu "4-14"
+            // Wichtig: Die Klammern enthalten zusätzliche optionale Verse, die zum Gesamtbereich gehören
+            if (preg_match('/\((\d+)[a-z]?[-–](\d+)[a-z]?\)(\d+)[-–](\d+)/', $reference, $matches)) {
+                // Klammer-Start und -Ende
+                $klammerStart = (int)$matches[1]; // 4
+                $klammerEnd = (int)$matches[2];   // 6
+                $restStart = (int)$matches[3];    // 7
+                $restEnd = (int)$matches[4];      // 14
                 
-                // Verwende den kleinsten Start und größten End
-                $gesamtStart = min((int)$klammerStart, (int)$restStart);
-                $gesamtEnd = max((int)$klammerEnd, (int)$restEnd);
+                // Erstelle einen durchgehenden Bereich vom kleinsten zum größten Vers
+                $newStart = min($klammerStart, $restStart);
+                $newEnd = max($klammerEnd, $restEnd);
                 
-                $reference = $prefix . $gesamtStart . '–' . $gesamtEnd;
+                // Ersetze die komplexe Referenz durch einen einfachen Bereich
+                $reference = preg_replace('/\(\d+[a-z]?[-–]\d+[a-z]?\)\d+[-–]\d+/', $newStart . '-' . $newEnd, $reference);
             } else {
                 // Für andere Fälle, entferne einfach die Klammern
-                $reference = preg_replace('/\(([^)]+)\)/', '$1', $reference);
+                $reference = preg_replace('/\([^)]+\)/', '', $reference);
             }
         }
         
