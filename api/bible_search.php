@@ -488,6 +488,31 @@ class BibleSearchAPI {
     }
     
     /**
+     * Get translation name from code
+     */
+    private function getTranslationName($code) {
+        $translations = [
+            'LUT' => 'Lutherbibel 2017',
+            'ELB' => 'Elberfelder Bibel',
+            'HFA' => 'Hoffnung für Alle',
+            'SLT' => 'Schlachter 2000',
+            'ZB' => 'Zürcher Bibel',
+            'GNB' => 'Gute Nachricht Bibel',
+            'NGÜ' => 'Neue Genfer Übersetzung',
+            'EU' => 'Einheitsübersetzung 2016',
+            'NLB' => 'Neues Leben Bibel',
+            'VXB' => 'VolxBibel',
+            'NeÜ' => 'Neue evangelistische Übersetzung',
+            'BIGS' => 'Bibel in gerechter Sprache',
+            'NIV' => 'New International Version',
+            'ESV' => 'English Standard Version',
+            'LSG' => 'Louis Segond'
+        ];
+        
+        return $translations[$code] ?? $code;
+    }
+    
+    /**
      * Vergleiche zwei Referenzen
      */
     private function referencesMatch($ref1, $ref2) {
