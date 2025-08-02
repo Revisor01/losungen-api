@@ -165,20 +165,20 @@ class BibleSearchAPI {
         // - "Mt 5,1" (mit DB-Abkürzungen)
         // - "2. Mose 16,2–3.11–18" (komplexere Referenzen)
         
-        // Erweiterte Patterns für komplexere Referenzen
+        // Erweiterte Patterns für komplexere Referenzen - Reihenfolge wichtig!
         $patterns = [
-            // Mit Leerzeichen nach Komma: "Markus 3, 16-18"
-            '/^(.+?)\s+(\d+),\s+(\d+)(?:[-–]\s*(\d+))?$/u',
-            // Standard: "Buch Kapitel,Vers" oder "Buch Kapitel,Vers-Vers"  
-            '/^(.+?)\s+(\d+),(\d+)(?:[-–](\d+))?$/u',
-            // Mit Gedankenstrichen: "Ps 107,1–9"
-            '/^(.+?)\s+(\d+),(\d+)–(\d+)$/u',
             // Komplexe Referenzen mit Punkten und Leerzeichen: "Joh 8, 8-12.14-17"
             '/^(.+?)\s+(\d+),\s*(\d+)[-–](\d+)\.(\d+)[-–](\d+)$/u',
             // Komplexe Referenzen mit Punkten ohne Leerzeichen: "Johannes 3,16-18.20-22"
             '/^(.+?)\s+(\d+),(\d+)[-–](\d+)\.(\d+)[-–](\d+)$/u',
-            // Einfache Komplexe: "Johannes 3, 16-18"
-            '/^(.+?)\s+(\d+),\s*(\d+)[-–](\d+)$/u',
+            // Mit Leerzeichen nach Komma und Bindestrich: "Ps 107, 1-9"
+            '/^(.+?)\s+(\d+),\s+(\d+)[-–](\d+)$/u',
+            // Mit Leerzeichen nach Komma: "Markus 3, 16"
+            '/^(.+?)\s+(\d+),\s+(\d+)$/u',
+            // Standard mit Bindestrich: "Buch Kapitel,Vers-Vers"  
+            '/^(.+?)\s+(\d+),(\d+)[-–](\d+)$/u',
+            // Standard einzeln: "Buch Kapitel,Vers"
+            '/^(.+?)\s+(\d+),(\d+)$/u',
             // Fallback für alles andere
             '/^(.+?)\s+(\d+),(.+)$/u'
         ];
