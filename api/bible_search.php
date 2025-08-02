@@ -67,7 +67,7 @@ class BibleSearchAPI {
     private $db;
     private $supportedTranslations = [
         // Deutsche Übersetzungen  
-        'LUT', 'ELB', 'HFA', 'SLT', 'ZB', 'GNB', 'NGÜ', 'EU', 'NLB', 'NeÜ', 'BIGS',
+        'LUT', 'ELB', 'HFA', 'SLT', 'ZB', 'GNB', 'NGÜ', 'EU', 'NLB', 'VXB', 'NeÜ', 'BIGS',
         // Funktionierende Fremdsprachen
         'NIV', 'ESV', 'LSG',
         // Weitere Fremdsprachen
@@ -169,10 +169,16 @@ class BibleSearchAPI {
         $patterns = [
             // Mit Leerzeichen nach Komma: "Markus 3, 16-18"
             '/^(.+?)\s+(\d+),\s+(\d+)(?:[-–]\s*(\d+))?$/u',
-            // Standard: "Buch Kapitel,Vers" oder "Buch Kapitel,Vers-Vers"
+            // Standard: "Buch Kapitel,Vers" oder "Buch Kapitel,Vers-Vers"  
             '/^(.+?)\s+(\d+),(\d+)(?:[-–](\d+))?$/u',
-            // Komplexe Referenzen wie "Johannes 3, 16-18.20-22"
-            '/^(.+?)\s+(\d+),\s*(.+)$/u'
+            // Mit Gedankenstrichen: "Ps 107,1–9"
+            '/^(.+?)\s+(\d+),(\d+)–(\d+)$/u',
+            // Komplexe Referenzen mit Punkten: "Johannes 3, 16-18.20-22"
+            '/^(.+?)\s+(\d+),\s*(\d+)[-–](\d+)\.(\d+)[-–](\d+)$/u',
+            // Einfache Komplexe: "Johannes 3, 16-18"
+            '/^(.+?)\s+(\d+),\s*(\d+)[-–](\d+)$/u',
+            // Fallback für alles andere
+            '/^(.+?)\s+(\d+),(.+)$/u'
         ];
         
         foreach ($patterns as $pattern) {
@@ -182,20 +188,31 @@ class BibleSearchAPI {
                 
                 $chapter = (int)$matches[2];
                 
-                // Für einfache Formate
+                // Für alle Formate - bestimme Start- und Endvers
                 if (isset($matches[3]) && is_numeric($matches[3])) {
+                    $startVerse = (int)$matches[3];
+                    $endVerse = $startVerse; // Default: nur ein Vers
+                    
+                    // Schaue nach Endvers in match[4], [5] oder [6]
+                    if (isset($matches[4]) && is_numeric($matches[4])) {
+                        $endVerse = (int)$matches[4];
+                    } elseif (isset($matches[6]) && is_numeric($matches[6])) {
+                        // Für komplexe Pattern wie "16-18.20-22" nehmen wir den letzten Vers
+                        $endVerse = (int)$matches[6];
+                    }
+                    
                     return [
                         'book' => $resolvedBook['name'],
                         'testament' => $resolvedBook['testament'],
                         'chapter' => $chapter,
-                        'start_verse' => (int)$matches[3],
-                        'end_verse' => isset($matches[4]) && is_numeric($matches[4]) ? (int)$matches[4] : (int)$matches[3],
+                        'start_verse' => $startVerse,
+                        'end_verse' => $endVerse,
                         'original' => $reference,
                         'original_book' => $bookInput
                     ];
                 }
                 
-                // Für komplexe Formate - verwende einfach das erste gefundene Kapitel/Vers
+                // Fallback für nicht-numerische Inhalte
                 if (isset($matches[3])) {
                     $versePart = $matches[3];
                     // Extrahiere ersten Vers
@@ -205,7 +222,7 @@ class BibleSearchAPI {
                             'testament' => $resolvedBook['testament'],
                             'chapter' => $chapter,
                             'start_verse' => (int)$verseMatch[1],
-                            'end_verse' => (int)$verseMatch[1], // Vereinfachung
+                            'end_verse' => (int)$verseMatch[1],
                             'original' => $reference,
                             'original_book' => $bookInput
                         ];

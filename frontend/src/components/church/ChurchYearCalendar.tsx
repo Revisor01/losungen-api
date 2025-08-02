@@ -372,7 +372,7 @@ export const ChurchYearCalendar: React.FC = () => {
                   )}
 
                   {/* Event Header */}
-                  <div className="mb-6 mt-12">
+                  <div className="mb-6 mt-4">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <h2 className="font-heading text-2xl font-bold text-gray-900 mb-2">
@@ -544,8 +544,8 @@ export const ChurchYearCalendar: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Biblical Texts */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                  {/* Wochenspruch - volle Breite */}
+                  <div className="mb-4">
                     {selectedEvent.weeklyVerse && (
                       <div className="bg-gray-50 rounded-lg p-4">
                         <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
@@ -569,7 +569,10 @@ export const ChurchYearCalendar: React.FC = () => {
                         )}
                       </div>
                     )}
-                    
+                  </div>
+
+                  {/* 2x2 Grid: Psalm, AT, Epistel, Evangelium */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     {selectedEvent.psalm && (
                       <div className="bg-gray-50 hover:bg-gray-100 rounded-lg p-4 transition-colors">
                         <div className="flex items-center justify-between">
@@ -624,6 +627,76 @@ export const ChurchYearCalendar: React.FC = () => {
                     )}
                   </div>
 
+                  {/* Wochenlieder 1x2 Grid */}  
+                  {(isEditing || selectedEvent.hymn1 || selectedEvent.hymn2 || selectedEvent.hymn) && (
+                    <div className="mb-6">
+                      <h4 className="font-semibold text-purple-900 mb-3 flex items-center">
+                        <MusicalNoteIcon className="w-4 h-4 mr-2" />
+                        Wochenlieder
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {/* Hymn 1 Card */}
+                        {(selectedEvent.hymn1 || isEditing) && (
+                          <div className="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-400">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center mb-2">
+                                  <MusicalNoteIcon className="w-4 h-4 text-purple-600 mr-2" />
+                                  <span className="text-sm font-medium text-purple-700">Lied 1</span>
+                                  {selectedEvent.hymn1_eg && (
+                                    <span className="ml-2 px-2 py-1 bg-purple-200 text-purple-800 text-xs rounded-full">
+                                      {selectedEvent.hymn1_eg}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-purple-900 font-medium">
+                                  {selectedEvent.hymn1 || (isEditing ? '(Leer - Bitte bearbeiten)' : 'Nicht gesetzt')}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Hymn 2 Card */}
+                        {(selectedEvent.hymn2 || isEditing) && (
+                          <div className="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-400">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center mb-2">
+                                  <MusicalNoteIcon className="w-4 h-4 text-purple-600 mr-2" />
+                                  <span className="text-sm font-medium text-purple-700">Lied 2</span>
+                                  {selectedEvent.hymn2_eg && (
+                                    <span className="ml-2 px-2 py-1 bg-purple-200 text-purple-800 text-xs rounded-full">
+                                      {selectedEvent.hymn2_eg}
+                                    </span>
+                                  )}
+                                </div>
+                                <p className="text-purple-900 font-medium">
+                                  {selectedEvent.hymn2 || (isEditing ? '(Leer - Bitte bearbeiten)' : 'Nicht gesetzt')}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {/* Legacy hymn field - only show if no hymn1/hymn2 */}
+                        {selectedEvent.hymn && !selectedEvent.hymn1 && !selectedEvent.hymn2 && (
+                          <div className="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-400 md:col-span-2">
+                            <div className="flex items-start justify-between">
+                              <div className="flex-1">
+                                <div className="flex items-center mb-2">
+                                  <MusicalNoteIcon className="w-4 h-4 text-purple-600 mr-2" />
+                                  <span className="text-sm font-medium text-purple-700">Lied</span>
+                                </div>
+                                <p className="text-purple-900 font-medium">{selectedEvent.hymn}</p>
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
                   {/* Perikopen */}
                   {selectedEvent.perikopen && Object.keys(selectedEvent.perikopen).length > 0 && (
                     <div className="mb-6">
@@ -670,86 +743,10 @@ export const ChurchYearCalendar: React.FC = () => {
                     </div>
                   )}
 
-                  {/* Additional Information */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    {/* Hymns - show as individual cards */}
-                    {(isEditing || selectedEvent.hymn1 || selectedEvent.hymn2 || selectedEvent.hymn) && (
-                      <div className="space-y-3">
-                        <h4 className="font-semibold text-purple-900 mb-3 flex items-center">
-                          <MusicalNoteIcon className="w-4 h-4 mr-2" />
-                          Wochenlieder
-                        </h4>
-                        
-                        {/* Hymn 1 Card */}
-                        {(selectedEvent.hymn1 || isEditing) && (
-                          <div className="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-400">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center mb-2">
-                                  <MusicalNoteIcon className="w-4 h-4 text-purple-600 mr-2" />
-                                  <span className="text-sm font-medium text-purple-700">Lied 1</span>
-                                  {selectedEvent.hymn1_eg && (
-                                    <span className="ml-2 px-2 py-1 bg-purple-200 text-purple-800 text-xs rounded-full">
-                                      {selectedEvent.hymn1_eg}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-purple-900 font-medium">
-                                  {selectedEvent.hymn1 || (isEditing ? '(Leer - Bitte bearbeiten)' : 'Nicht gesetzt')}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Hymn 2 Card */}
-                        {(selectedEvent.hymn2 || isEditing) && (
-                          <div className="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-400">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center mb-2">
-                                  <MusicalNoteIcon className="w-4 h-4 text-purple-600 mr-2" />
-                                  <span className="text-sm font-medium text-purple-700">Lied 2</span>
-                                  {selectedEvent.hymn2_eg && (
-                                    <span className="ml-2 px-2 py-1 bg-purple-200 text-purple-800 text-xs rounded-full">
-                                      {selectedEvent.hymn2_eg}
-                                    </span>
-                                  )}
-                                </div>
-                                <p className="text-purple-900 font-medium">
-                                  {selectedEvent.hymn2 || (isEditing ? '(Leer - Bitte bearbeiten)' : 'Nicht gesetzt')}
-                                </p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {/* Legacy hymn field - only show if no hymn1/hymn2 or if explicitly set */}
-                        {selectedEvent.hymn && !selectedEvent.hymn1 && !selectedEvent.hymn2 && (
-                          <div className="bg-purple-50 rounded-lg p-4 border-l-4 border-purple-400">
-                            <div className="flex items-start justify-between">
-                              <div className="flex-1">
-                                <div className="flex items-center mb-2">
-                                  <MusicalNoteIcon className="w-4 h-4 text-purple-600 mr-2" />
-                                  <span className="text-sm font-medium text-purple-700">Lied (Legacy)</span>
-                                </div>
-                                <p className="text-purple-900 font-medium">{selectedEvent.hymn}</p>
-                              </div>
-                            </div>
-                          </div>
-                        )}
-                        
-                        {isEditing && (
-                          <p className="text-xs text-purple-600 mt-2 italic">
-                            Hinweis: Leere Felder werden beim Bearbeiten angezeigt und können ausgefüllt werden.
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    
-                    {selectedEvent.url && (
-                      <div className="flex justify-center md:justify-start items-center">
-                        <a
+                  {/* Link */}
+                  {selectedEvent.url && (
+                    <div className="flex justify-center items-center">
+                      <a
                           href={selectedEvent.url}
                           target="_blank"
                           rel="noopener noreferrer"
@@ -758,9 +755,8 @@ export const ChurchYearCalendar: React.FC = () => {
                           <span>Mehr Informationen</span>
                           <ArrowTopRightOnSquareIcon className="w-4 h-4" />
                         </a>
-                      </div>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </motion.div>
               ) : (
                 <motion.div
