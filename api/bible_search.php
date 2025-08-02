@@ -574,11 +574,27 @@ class BibleSearchAPI {
             }
         }
         
-        // Füge ausgeschlossene Verse als markiert hinzu (ohne Text, nur als Platzhalter)
+        // Hole auch die ausgeschlossenen Verse vom Scraper
         foreach ($excludedVerses as $excludedVerse) {
+            $simpleRef = "$book $chapter,$excludedVerse";
+            
+            // Scrape einzelnen ausgeschlossenen Vers
+            $command = "/opt/venv/bin/python3 /var/www/html/bible_scraper.py " . 
+                      escapeshellarg($simpleRef) . " " .
+                      escapeshellarg($translation) . " " .
+                      escapeshellarg($parsedRef['testament']) . " 2>&1";
+            
+            $output = shell_exec($command);
+            $data = json_decode($output, true);
+            
+            $verseText = '';
+            if ($data && !isset($data['error']) && isset($data['text'])) {
+                $verseText = $data['text'];
+            }
+            
             $allVerses[] = [
                 'number' => $excludedVerse,
-                'text' => '',  // Kein Text für ausgelassene Verse
+                'text' => $verseText,
                 'excluded' => true
             ];
         }

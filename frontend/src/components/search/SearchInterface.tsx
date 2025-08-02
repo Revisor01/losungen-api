@@ -533,7 +533,7 @@ export const SearchInterface: React.FC = () => {
                               ? 'text-blue-700 italic'
                               : 'text-gray-700'
                           }`}>
-                            {verse.text || (verse.excluded ? '— Vers ausgelassen —' : '')}
+                            {verse.text || (verse.excluded ? '— Vers konnte nicht geladen werden —' : '')}
                           </p>
                         </motion.div>
                       );
