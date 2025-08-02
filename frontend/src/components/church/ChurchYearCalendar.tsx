@@ -372,7 +372,7 @@ export const ChurchYearCalendar: React.FC = () => {
                   )}
 
                   {/* Event Header */}
-                  <div className="mb-6 mt-4">
+                  <div className="mb-6 mt-2">
                     <div className="flex items-start justify-between mb-4">
                       <div className="flex-1">
                         <h2 className="font-heading text-2xl font-bold text-gray-900 mb-2">
