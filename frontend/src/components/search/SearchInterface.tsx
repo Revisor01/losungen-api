@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MagnifyingGlassIcon, BookOpenIcon, ClockIcon, CheckIcon, CalendarIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, BookOpenIcon, ClockIcon, CheckIcon, CalendarIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { BibleTextDisplay } from '../bible/BibleTextDisplay';
 import { TranslationSelector } from '../bible/TranslationSelector';
 import { FormatSelector } from './FormatSelector';
@@ -25,6 +25,8 @@ export const SearchInterface: React.FC = () => {
   const [suggestions, setSuggestions] = useState<string[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [nextEvent, setNextEvent] = useState<ChurchEvent | null>(null);
+  const [showExcludedVerses, setShowExcludedVerses] = useState(true);
+  const [showOptionalVerses, setShowOptionalVerses] = useState(true);
 
   const availableTranslations = apiService.getAvailableTranslations();
 
@@ -460,26 +462,95 @@ export const SearchInterface: React.FC = () => {
                   transition={{ delay: 0.2 }}
                   className="card p-6"
                 >
-                  <h3 className="font-heading text-lg font-semibold text-gray-900 mb-4">
-                    Einzelverse im Detail
-                  </h3>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className="font-heading text-lg font-semibold text-gray-900">
+                      Einzelverse im Detail
+                    </h3>
+                    <div className="flex items-center space-x-2">
+                      {/* Toggle für ausgeschlossene Verse */}
+                      {searchResult.verses.some(verse => verse.excluded) && (
+                        <button
+                          onClick={() => setShowExcludedVerses(!showExcludedVerses)}
+                          className="flex items-center space-x-2 px-3 py-2 bg-gray-100 hover:bg-gray-200 rounded-lg text-sm text-gray-700 transition-colors"
+                          title={showExcludedVerses ? 'Ausgeschlossene Verse ausblenden' : 'Ausgeschlossene Verse anzeigen'}
+                        >
+                          {showExcludedVerses ? (
+                            <EyeSlashIcon className="w-4 h-4" />
+                          ) : (
+                            <EyeIcon className="w-4 h-4" />
+                          )}
+                          <span>
+                            {showExcludedVerses ? 'Ausgeschlossene ausblenden' : 'Ausgeschlossene anzeigen'}
+                          </span>
+                        </button>
+                      )}
+                      
+                      {/* Toggle für optionale Verse */}
+                      {searchResult.verses.some(verse => verse.optional) && (
+                        <button
+                          onClick={() => setShowOptionalVerses(!showOptionalVerses)}
+                          className="flex items-center space-x-2 px-3 py-2 bg-blue-100 hover:bg-blue-200 rounded-lg text-sm text-blue-700 transition-colors"
+                          title={showOptionalVerses ? 'Optionale Verse ausblenden' : 'Optionale Verse anzeigen'}
+                        >
+                          {showOptionalVerses ? (
+                            <EyeSlashIcon className="w-4 h-4" />
+                          ) : (
+                            <EyeIcon className="w-4 h-4" />
+                          )}
+                          <span>
+                            {showOptionalVerses ? 'Optionale ausblenden' : 'Optionale anzeigen'}
+                          </span>
+                        </button>
+                      )}
+                    </div>
+                  </div>
                   <div className="space-y-4">
-                    {searchResult.verses.map((verse, index) => (
-                      <motion.div
-                        key={verse.number}
-                        initial={{ opacity: 0, x: -20 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: 0.3 + index * 0.1 }}
-                        className="flex space-x-4 py-3 border-b border-gray-100 last:border-b-0"
-                      >
-                        <span className="flex-shrink-0 w-8 h-8 bg-royal-100 text-royal-700 rounded-full flex items-center justify-center text-sm font-semibold">
-                          {verse.number}
-                        </span>
-                        <p className="flex-1 text-gray-700 leading-relaxed">
-                          {verse.text}
-                        </p>
-                      </motion.div>
-                    ))}
+                    {searchResult.verses.map((verse, index) => {
+                      // Zeige ausgeschlossene Verse nur wenn Toggle aktiviert ist
+                      if (verse.excluded && !showExcludedVerses) {
+                        return null;
+                      }
+                      
+                      // Zeige optionale Verse nur wenn Toggle aktiviert ist
+                      if (verse.optional && !showOptionalVerses) {
+                        return null;
+                      }
+                      
+                      return (
+                        <motion.div
+                          key={verse.number}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: 0.3 + index * 0.1 }}
+                          className={`flex space-x-4 py-3 border-b border-gray-100 last:border-b-0 ${
+                            verse.excluded 
+                              ? 'opacity-50 bg-gray-50 rounded-lg px-3 border-l-4 border-orange-300' 
+                              : verse.optional
+                              ? 'bg-blue-50 rounded-lg px-3 border-l-4 border-blue-300'
+                              : ''
+                          }`}
+                        >
+                          <span className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-semibold ${
+                            verse.excluded 
+                              ? 'bg-orange-100 text-orange-700'
+                              : verse.optional
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-royal-100 text-royal-700'
+                          }`}>
+                            {verse.number}
+                          </span>
+                          <p className={`flex-1 leading-relaxed ${
+                            verse.excluded 
+                              ? 'text-gray-500 italic'
+                              : verse.optional
+                              ? 'text-blue-700 italic'
+                              : 'text-gray-700'
+                          }`}>
+                            {verse.text}
+                          </p>
+                        </motion.div>
+                      );
+                    })}
                   </div>
                 </motion.div>
               )}

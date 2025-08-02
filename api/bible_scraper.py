@@ -41,9 +41,35 @@ class BibleScraper:
         }
     
     def parse_reference(self, reference: str) -> Optional[Dict]:
-        """Parse Bibelstellen-Referenz"""
+        """Parse Bibelstellen-Referenz mit Unterstützung für Klammern und Buchstaben-Suffixe"""
+        # Speichere Original-Referenz
+        original_ref = reference
+        
+        # Finde optionale Verse in Klammern
+        optional_verses = []
+        parentheses_match = re.findall(r'\(([^)]+)\)', reference)
+        if parentheses_match:
+            for match in parentheses_match:
+                # Extrahiere Verse aus Klammern (z.B. "4b-6" aus "(4b-6)")
+                verse_range = re.findall(r'(\d+)[a-z]?(?:-(\d+)[a-z]?)?', match)
+                for v in verse_range:
+                    start = int(v[0])
+                    end = int(v[1]) if v[1] else start
+                    optional_verses.extend(range(start, end + 1))
+            
+            # Entferne Klammern aus Referenz für normales Parsing
+            reference = re.sub(r'\([^)]+\)', '', reference)
+        
+        # Entferne Buchstaben-Suffixe von Versen (z.B. 15a → 15)
+        reference = re.sub(r'(\d+)[a-z]', r'\1', reference)
+        
+        # Normalisiere Leerzeichen und Bindestriche
+        reference = re.sub(r'\s*-\s*', '-', reference)
+        reference = re.sub(r'\s+', ' ', reference).strip()
+        
+        # Parse normale Referenz
         pattern = r'^(.+?)\s+(\d+),(\d+)(?:-(\d+))?$'
-        match = re.match(pattern, reference.strip())
+        match = re.match(pattern, reference)
         
         if match:
             return {
@@ -51,11 +77,12 @@ class BibleScraper:
                 'chapter': int(match.group(2)),
                 'start_verse': int(match.group(3)),
                 'end_verse': int(match.group(4)) if match.group(4) else int(match.group(3)),
-                'original': reference
+                'original': original_ref,
+                'optional_verses': optional_verses  # Liste der Verse in Klammern
             }
         return None
     
-    def scrape_bibleserver(self, reference: Dict, translation: str) -> Optional[Dict]:
+    def scrape_bibleserver(self, reference: Dict, translation: str, testament_override: str = None) -> Optional[Dict]:
         """Scrape von ERF Bibleserver mit Unterstützung für Versbereiche"""
         try:
             book = reference['book']
@@ -106,10 +133,17 @@ class BibleScraper:
                             if verse_text:
                                 # Klammer-Entfernung
                                 verse_text = self._clean_text(verse_text)
+                                
+                                # Markiere optionale Verse
+                                is_optional = verse_num in reference.get('optional_verses', [])
+                                if is_optional:
+                                    verse_text = f"[OPTIONAL]{verse_text}[/OPTIONAL]"
+                                
                                 verse_texts.append(verse_text)
                                 verses_data.append({
                                     'number': verse_num,
-                                    'text': verse_text
+                                    'text': verse_text,
+                                    'optional': is_optional
                                 })
             
             if verse_texts:
@@ -125,7 +159,7 @@ class BibleScraper:
                     },
                     'source': 'ERF Bibleserver',
                     'url': url,
-                    'testament': self._get_testament(reference['book']),
+                    'testament': testament_override or self._get_testament(reference['book']),
                     'verses': verses_data if len(verses_data) > 1 else None
                 }
             
@@ -134,7 +168,7 @@ class BibleScraper:
         except Exception as e:
             return None
     
-    def scrape_bigs(self, reference: Dict) -> Optional[Dict]:
+    def scrape_bigs(self, reference: Dict, testament_override: str = None) -> Optional[Dict]:
         """Scrape von BIGS mit Unterstützung für Versbereiche"""
         try:
             book = reference['book']
@@ -186,10 +220,17 @@ class BibleScraper:
                         verse_text = self._extract_bigs_verse_text(vers_span)
                         if verse_text:
                             verse_text = self._clean_text(verse_text)
+                            
+                            # Markiere optionale Verse
+                            is_optional = verse_num in reference.get('optional_verses', [])
+                            if is_optional:
+                                verse_text = f"[OPTIONAL]{verse_text}[/OPTIONAL]"
+                            
                             verse_texts.append(verse_text)
                             verses_data.append({
                                 'number': verse_num,
-                                'text': verse_text
+                                'text': verse_text,
+                                'optional': is_optional
                             })
             
             if verse_texts:
@@ -205,7 +246,7 @@ class BibleScraper:
                     },
                     'source': 'Bibel in gerechter Sprache',
                     'url': url,
-                    'testament': self._get_testament(reference['book']),
+                    'testament': testament_override or self._get_testament(reference['book']),
                     'verses': verses_data if len(verses_data) > 1 else None
                 }
             
@@ -327,14 +368,15 @@ class BibleScraper:
 def main():
     if len(sys.argv) < 3:
         error_result = {
-            "error": "Usage: python3 bible_scraper.py 'reference' 'translation'",
-            "example": "python3 bible_scraper.py 'Johannes 3,16' 'LUT'"
+            "error": "Usage: python3 bible_scraper.py 'reference' 'translation' [testament]",
+            "example": "python3 bible_scraper.py 'Johannes 3,16' 'LUT' 'NT'"
         }
         print(json.dumps(error_result, ensure_ascii=False))
         return
     
     reference_str = sys.argv[1]
     translation = sys.argv[2]
+    testament_override = sys.argv[3] if len(sys.argv) > 3 else None
     
     scraper = BibleScraper()
     
@@ -352,9 +394,9 @@ def main():
     result = None
     
     if translation == 'BIGS':
-        result = scraper.scrape_bigs(parsed_ref)
+        result = scraper.scrape_bigs(parsed_ref, testament_override)
     else:
-        result = scraper.scrape_bibleserver(parsed_ref, translation)
+        result = scraper.scrape_bibleserver(parsed_ref, translation, testament_override)
     
     if result:
         print(json.dumps(result, ensure_ascii=False))

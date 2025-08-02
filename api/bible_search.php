@@ -164,6 +164,39 @@ class BibleSearchAPI {
         // - "Römer 8,28-29"
         // - "Mt 5,1" (mit DB-Abkürzungen)
         // - "2. Mose 16,2–3.11–18" (komplexere Referenzen)
+        // - "Phil 3,(4b–6)7–14" (mit optionalen Versen in Klammern)
+        // - "2. Sam 12,1–10.13–15a" (mit Buchstaben-Suffixen)
+        
+        $originalReference = $reference;
+        
+        // Finde optionale Verse in Klammern
+        $optionalVerses = [];
+        if (preg_match_all('/\(([^)]+)\)/', $reference, $parenthesesMatches)) {
+            foreach ($parenthesesMatches[1] as $match) {
+                // Entferne zuerst Buchstaben-Suffixe auch aus Klammern
+                $cleanMatch = preg_replace('/(\d+)[a-z]/', '$1', $match);
+                
+                // Extrahiere Verse aus Klammern (z.B. "4-6" aus "(4b-6)")
+                if (preg_match_all('/(\d+)(?:[-–](\d+))?/', $cleanMatch, $verseMatches)) {
+                    foreach ($verseMatches[0] as $idx => $vm) {
+                        $start = (int)$verseMatches[1][$idx];
+                        $end = !empty($verseMatches[2][$idx]) ? (int)$verseMatches[2][$idx] : $start;
+                        for ($v = $start; $v <= $end; $v++) {
+                            $optionalVerses[] = $v;
+                        }
+                    }
+                }
+            }
+            
+            // Entferne Klammern für normale Verarbeitung
+            $reference = preg_replace('/\([^)]+\)/', '', $reference);
+        }
+        
+        // Entferne Buchstaben-Suffixe von Versen (z.B. 15a → 15, auch außerhalb von Klammern)
+        $reference = preg_replace('/(\d+)[a-z]/', '$1', $reference);
+        
+        // Normalisiere Leerzeichen
+        $reference = preg_replace('/\s+/', ' ', trim($reference));
         
         // Erweiterte Patterns für komplexere Referenzen - Reihenfolge wichtig!
         $patterns = [
@@ -226,7 +259,8 @@ class BibleSearchAPI {
                         'start_verse' => $startVerse,
                         'end_verse' => $endVerse,
                         'excluded_verses' => $excludedVerses,
-                        'original' => $reference,
+                        'optional_verses' => $optionalVerses,
+                        'original' => $originalReference,
                         'original_book' => $bookInput
                     ];
                 }
@@ -243,7 +277,8 @@ class BibleSearchAPI {
                             'start_verse' => (int)$verseMatch[1],
                             'end_verse' => (int)$verseMatch[1],
                             'excluded_verses' => [],
-                            'original' => $reference,
+                            'optional_verses' => $optionalVerses,
+                            'original' => $originalReference,
                             'original_book' => $bookInput
                         ];
                     }
@@ -351,13 +386,19 @@ class BibleSearchAPI {
             return $this->scrapeComplexReference($parsedRef, $translation);
         }
         
+        // Für Referenzen mit optionalen Versen
+        if (!empty($parsedRef['optional_verses'])) {
+            return $this->scrapeOptionalReference($parsedRef, $translation);
+        }
+        
         // Normalisiere Referenz für Python-Scraper (füge Leerzeichen hinzu falls nötig)
         $normalizedRef = $this->normalizeReferenceForScraper($parsedRef);
         
-        // Python-Scraper mit normalisierten Parametern aufrufen
+        // Python-Scraper mit normalisierten Parametern aufrufen (inkl. Testament)
         $command = "/opt/venv/bin/python3 $pythonScript " . 
                   escapeshellarg($normalizedRef) . " " .
-                  escapeshellarg($translation) . " 2>&1";
+                  escapeshellarg($translation) . " " .
+                  escapeshellarg($parsedRef['testament']) . " 2>&1";
         
         $output = shell_exec($command);
         
@@ -370,6 +411,55 @@ class BibleSearchAPI {
         if (!$data || isset($data['error'])) {
             $error = isset($data['error']) ? $data['error'] : 'JSON decode failed';
             throw new Exception($error);
+        }
+        
+        return $data;
+    }
+    
+    /**
+     * Verarbeite Referenzen mit optionalen Versen in Klammern
+     */
+    private function scrapeOptionalReference($parsedRef, $translation) {
+        $book = $parsedRef['book'];
+        $chapter = $parsedRef['chapter'];
+        $startVerse = $parsedRef['start_verse'];
+        $endVerse = $parsedRef['end_verse'];
+        $optionalVerses = $parsedRef['optional_verses'];
+        
+        // Erstelle Referenz ohne Klammern für Python-Scraper
+        $normalizedRef = $this->normalizeReferenceForScraper($parsedRef);
+        
+        // Python-Scraper aufrufen (inkl. Testament)
+        $pythonScript = '/var/www/html/bible_scraper.py';
+        $command = "/opt/venv/bin/python3 $pythonScript " . 
+                  escapeshellarg($normalizedRef) . " " .
+                  escapeshellarg($translation) . " " .
+                  escapeshellarg($parsedRef['testament']) . " 2>&1";
+        
+        $output = shell_exec($command);
+        $data = json_decode($output, true);
+        
+        if (!$data || isset($data['error'])) {
+            throw new Exception('Failed to scrape optional reference');
+        }
+        
+        // Markiere optionale Verse in den Daten
+        if (isset($data['verses']) && is_array($data['verses'])) {
+            foreach ($data['verses'] as &$verse) {
+                if (in_array($verse['number'], $optionalVerses)) {
+                    $verse['optional'] = true;
+                    $verse['text'] = "[OPTIONAL]" . $verse['text'] . "[/OPTIONAL]";
+                } else {
+                    $verse['optional'] = false;
+                }
+            }
+        }
+        
+        // Markiere optionale Verse auch im kombinierten Text
+        if (isset($data['text'])) {
+            $data['text'] = preg_replace_callback('/\[OPTIONAL\](.*?)\[\/OPTIONAL\]/', function($matches) {
+                return $matches[1]; // Entferne Marker für jetzt, Frontend wird sie als kursiv darstellen
+            }, $data['text']);
         }
         
         return $data;
@@ -399,10 +489,11 @@ class BibleSearchAPI {
             }
             
             
-            // Scrape einzelnen Bereich
+            // Scrape einzelnen Bereich (inkl. Testament)
             $command = "/opt/venv/bin/python3 /var/www/html/bible_scraper.py " . 
                       escapeshellarg($simpleRef) . " " .
-                      escapeshellarg($translation) . " 2>&1";
+                      escapeshellarg($translation) . " " .
+                      escapeshellarg($parsedRef['testament']) . " 2>&1";
             
             $output = shell_exec($command);
             $data = json_decode($output, true);
@@ -443,7 +534,7 @@ class BibleSearchAPI {
                 'language' => 'German'
             ],
             'source' => 'ERF Bibleserver (Complex)',
-            'url' => "https://www.bibleserver.com/$translation/" . urlencode($parsedRef['original']),
+            'url' => $this->generateBibleserverUrl($parsedRef['original'], $translation),
             'testament' => $parsedRef['testament'],
             'verses' => $allVerses
         ];
@@ -495,6 +586,160 @@ class BibleSearchAPI {
         return $normalized;
     }
     
+    /**
+     * Generiere korrekte Bibleserver-URL (PHP-Port der Python-Funktion)
+     */
+    private function generateBibleserverUrl($reference, $translation) {
+        // Spezialbehandlung für BIGS
+        if ($translation === 'BIGS') {
+            return $this->generateBigsUrl($reference);
+        }
+        
+        // Parse Referenz
+        $pattern = '/^(.+?)\s+(\d+),(\d+)(?:-(\d+))?$/';
+        if (!preg_match($pattern, trim($reference), $matches)) {
+            // Fallback für ungültige Referenzen
+            return "https://www.bibleserver.com/$translation/" . urlencode($reference);
+        }
+        
+        $book = trim($matches[1]);
+        $chapter = $matches[2];
+        $verse_start = $matches[3];
+        $verse_end = isset($matches[4]) ? $matches[4] : null;
+        
+        // Buchname normalisieren
+        $book_normalized = $this->normalizeBibleserverBookName($book);
+        
+        // Verse-Teil zusammenbauen
+        if ($verse_end) {
+            $verse_part = "$chapter,$verse_start-$verse_end";
+        } else {
+            $verse_part = "$chapter,$verse_start";
+        }
+        
+        // URL zusammenbauen
+        return "https://www.bibleserver.com/$translation/$book_normalized$verse_part";
+    }
+    
+    /**
+     * Normalisiert Buchname für ERF Bibleserver URLs
+     */
+    private function normalizeBibleserverBookName($book) {
+        $book_mappings = [
+            // Altes Testament
+            '1. Mose' => '1.Mose',
+            '2. Mose' => '2.Mose', 
+            '3. Mose' => '3.Mose',
+            '4. Mose' => '4.Mose',
+            '5. Mose' => '5.Mose',
+            'Richter' => 'Richter',
+            '1. Samuel' => '1.Samuel',
+            '2. Samuel' => '2.Samuel', 
+            '1. Könige' => '1.Koenige',
+            '2. Könige' => '2.Koenige',
+            '1. Chronik' => '1.Chronik',
+            '2. Chronik' => '2.Chronik',
+            'Esra' => 'Esra',
+            'Nehemia' => 'Nehemia',
+            'Ester' => 'Ester',
+            'Hiob' => 'Hiob',
+            'Psalm' => 'Psalm',
+            'Sprüche' => 'Sprueche',
+            'Prediger' => 'Prediger',
+            'Hohelied' => 'Hohelied',
+            'Jesaja' => 'Jesaja',
+            'Jeremia' => 'Jeremia',
+            'Klagelieder' => 'Klagelieder',
+            'Hesekiel' => 'Hesekiel',
+            'Daniel' => 'Daniel',
+            'Hosea' => 'Hosea',
+            'Joel' => 'Joel',
+            'Amos' => 'Amos',
+            'Obadja' => 'Obadja',
+            'Jona' => 'Jona',
+            'Micha' => 'Micha',
+            'Nahum' => 'Nahum',
+            'Habakuk' => 'Habakuk',
+            'Zefanja' => 'Zefanja',
+            'Haggai' => 'Haggai',
+            'Sacharja' => 'Sacharja',
+            'Maleachi' => 'Maleachi',
+            
+            // Neues Testament
+            'Matthäus' => 'Matthaeus',
+            'Markus' => 'Markus',
+            'Lukas' => 'Lukas',
+            'Johannes' => 'Johannes',
+            'Apostelgeschichte' => 'Apostelgeschichte',
+            'Römer' => 'Roemer',
+            '1. Korinther' => '1.Korinther',
+            '2. Korinther' => '2.Korinther',
+            'Galater' => 'Galater',
+            'Epheser' => 'Epheser',
+            'Philipper' => 'Philipper',
+            'Kolosser' => 'Kolosser',
+            '1. Thessalonicher' => '1.Thessalonicher',
+            '2. Thessalonicher' => '2.Thessalonicher',
+            '1. Timotheus' => '1.Timotheus',
+            '2. Timotheus' => '2.Timotheus',
+            'Titus' => 'Titus',
+            'Philemon' => 'Philemon',
+            'Hebräer' => 'Hebraeer',
+            'Jakobus' => 'Jakobus',
+            '1. Petrus' => '1.Petrus',
+            '2. Petrus' => '2.Petrus',
+            '1. Johannes' => '1.Johannes',
+            '2. Johannes' => '2.Johannes',
+            '3. Johannes' => '3.Johannes',
+            'Judas' => 'Judas',
+            'Offenbarung' => 'Offenbarung'
+        ];
+        
+        return $book_mappings[$book] ?? $book;
+    }
+    
+    /**
+     * Generiere BIGS-URL
+     */
+    private function generateBigsUrl($reference) {
+        // Parse Referenz für BIGS
+        $pattern = '/^(.+?)\s+(\d+),(\d+)(?:-(\d+))?$/';
+        if (!preg_match($pattern, trim($reference), $matches)) {
+            return "https://www.bibel-in-gerechter-sprache.de/";
+        }
+        
+        $book = trim($matches[1]);
+        $chapter = $matches[2];
+        $verse = $matches[3];
+        
+        // BIGS Buchkürzel
+        $book_mappings = [
+            'Genesis' => 'Gen', '1. Mose' => 'Gen', 'Exodus' => 'Ex', '2. Mose' => 'Ex',
+            'Levitikus' => 'Lev', '3. Mose' => 'Lev', 'Numeri' => 'Num', '4. Mose' => 'Num',
+            'Deuteronomium' => 'Dtn', '5. Mose' => 'Dtn', 'Josua' => 'Jos', 'Richter' => 'Ri',
+            'Rut' => 'Rut', '1. Samuel' => '1-Sam', '2. Samuel' => '2-Sam',
+            '1. Könige' => '1-Koen', '2. Könige' => '2-Koen', '1. Chronik' => '1-Chr', '2. Chronik' => '2-Chr',
+            'Esra' => 'Esr', 'Nehemia' => 'Neh', 'Ester' => 'Est', 'Hiob' => 'Hiob', 'Job' => 'Hiob',
+            'Psalm' => 'Ps', 'Psalmen' => 'Ps', 'Sprichwörter' => 'Spr', 'Prediger' => 'Koh',
+            'Hoheslied' => 'Hld', 'Jesaja' => 'Jes', 'Jeremia' => 'Jer', 'Klagelieder' => 'Klgl',
+            'Hesekiel' => 'Ez-Hes', 'Ezechiel' => 'Ez-Hes', 'Daniel' => 'Dan', 'Hosea' => 'Hos',
+            'Joel' => 'Joel', 'Amos' => 'Am', 'Obadja' => 'Ob', 'Jona' => 'Jona', 'Micha' => 'Mi',
+            'Nahum' => 'Nah', 'Habakuk' => 'Hab', 'Zefanja' => 'Zef', 'Haggai' => 'Hag',
+            'Sacharja' => 'Sach', 'Maleachi' => 'Mal',
+            'Matthäus' => 'Mt', 'Markus' => 'Mk', 'Lukas' => 'Lk', 'Johannes' => 'Joh',
+            'Apostelgeschichte' => 'Apg', 'Römer' => 'Roem', '1. Korinther' => '1-Kor',
+            '2. Korinther' => '2-Kor', 'Galater' => 'Gal', 'Epheser' => 'Eph', 'Philipper' => 'Phil',
+            'Kolosser' => 'Kol', '1. Thessalonicher' => '1-Thess', '2. Thessalonicher' => '2-Thess',
+            '1. Timotheus' => '1-Tim', '2. Timotheus' => '2-Tim', 'Titus' => 'Tit',
+            'Philemon' => 'Phlm', 'Hebräer' => 'Hebr', 'Jakobus' => 'Jak', '1. Petrus' => '1-Petr',
+            '2. Petrus' => '2-Petr', '1. Johannes' => '1-Joh', '2. Johannes' => '2-Joh',
+            '3. Johannes' => '3-Joh', 'Judas' => 'Jud', 'Offenbarung' => 'Offb-Apk'
+        ];
+        
+        $book_abbrev = $book_mappings[$book] ?? $book;
+        return "https://www.bibel-in-gerechter-sprache.de/die-bibel/bigs-online/?$book_abbrev/$chapter/$verse/";
+    }
+
     /**
      * Get translation name from code
      */

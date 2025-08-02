@@ -57,6 +57,12 @@ export const BibleTextDisplay: React.FC<BibleTextDisplayProps> = ({
     }
   };
 
+  // Funktion um optionale Verse kursiv zu formatieren
+  const formatText = (text: string) => {
+    // Ersetze [OPTIONAL]...[/OPTIONAL] mit kursivem Text
+    return text.replace(/\[OPTIONAL\](.*?)\[\/OPTIONAL\]/g, '<em>$1</em>');
+  };
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
@@ -137,9 +143,12 @@ export const BibleTextDisplay: React.FC<BibleTextDisplayProps> = ({
       )}
 
       {/* Bible Text */}
-      <blockquote className="text-lg leading-relaxed text-gray-700 mb-4 font-body">
-        "{verse.text}"
-      </blockquote>
+      <blockquote 
+        className="text-lg leading-relaxed text-gray-700 mb-4 font-body"
+        dangerouslySetInnerHTML={{ 
+          __html: `"${formatText(verse.text)}"` 
+        }}
+      />
 
       {/* Source & Testament Info */}
       {showSource && (
