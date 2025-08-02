@@ -10,6 +10,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 }
 
 require_once __DIR__ . '/database.php';
+require_once __DIR__ . '/redis_cache.php';
 
 // API Key validation
 $apiKeys = [
@@ -60,12 +61,20 @@ try {
             echo json_encode(getCronStatus());
             break;
             
+        case 'clear_bible_cache':
+            echo json_encode(clearBibleCache());
+            break;
+            
+        case 'cache_stats':
+            echo json_encode(getCacheStats());
+            break;
+            
         default:
             http_response_code(400);
             echo json_encode([
                 'success' => false,
                 'error' => 'Invalid action',
-                'available_actions' => ['status', 'fetch', 'clear_cache', 'cron_status']
+                'available_actions' => ['status', 'fetch', 'clear_cache', 'cron_status', 'clear_bible_cache', 'cache_stats']
             ]);
     }
 } catch (Exception $e) {
@@ -154,6 +163,61 @@ function manualFetch($translation = 'ALL') {
         return [
             'success' => false,
             'error' => 'Fetch failed: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * Lösche Redis Bible Cache
+ */
+function clearBibleCache() {
+    try {
+        $cache = new RedisCache();
+        
+        if (!$cache->isEnabled()) {
+            return [
+                'success' => false,
+                'error' => 'Redis cache is not enabled or available'
+            ];
+        }
+        
+        $deletedEntries = $cache->flush();
+        
+        return [
+            'success' => true,
+            'data' => [
+                'deleted_entries' => $deletedEntries,
+                'timestamp' => date('Y-m-d H:i:s')
+            ],
+            'message' => "Bible cache cleared: $deletedEntries entries deleted"
+        ];
+        
+    } catch (Exception $e) {
+        return [
+            'success' => false,
+            'error' => 'Cache clear failed: ' . $e->getMessage()
+        ];
+    }
+}
+
+/**
+ * Cache-Statistiken
+ */
+function getCacheStats() {
+    try {
+        $cache = new RedisCache();
+        $stats = $cache->getStats();
+        
+        return [
+            'success' => true,
+            'data' => $stats,
+            'timestamp' => date('Y-m-d H:i:s')
+        ];
+        
+    } catch (Exception $e) {
+        return [
+            'success' => false,
+            'error' => 'Stats failed: ' . $e->getMessage()
         ];
     }
 }

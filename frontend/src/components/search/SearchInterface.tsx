@@ -441,20 +441,7 @@ export const SearchInterface: React.FC = () => {
                 </div>
               </div>
 
-              {/* Bible Text Display */}
-              <BibleTextDisplay
-                verse={{
-                  text: searchResult.text,
-                  reference: searchResult.reference,
-                  testament: searchResult.verses && searchResult.verses.length > 0 ? 'AT' : 'NT', // Vereinfacht
-                  translation_source: searchResult.source,
-                  bibleserver_url: searchResult.url
-                }}
-                showReference={true}
-                showSource={true}
-              />
-
-              {/* Multiple Verses Display */}
+              {/* Multiple Verses Display - Moved to top */}
               {searchResult.verses && searchResult.verses.length > 1 && (
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
@@ -554,6 +541,19 @@ export const SearchInterface: React.FC = () => {
                   </div>
                 </motion.div>
               )}
+
+              {/* Bible Text Display - Moved below verses */}
+              <BibleTextDisplay
+                verse={{
+                  text: searchResult.text,
+                  reference: searchResult.reference,
+                  testament: searchResult.verses && searchResult.verses.length > 0 ? 'AT' : 'NT', // Vereinfacht
+                  translation_source: searchResult.source,
+                  bibleserver_url: searchResult.url
+                }}
+                showReference={true}
+                showSource={true}
+              />
 
               {/* Format Output (for non-JSON formats) */}
               {selectedFormat !== 'json' && (

@@ -16,8 +16,10 @@ RUN apt-get update && apt-get install -y \
 RUN ln -sf /usr/share/zoneinfo/Europe/Berlin /etc/localtime \
     && echo "Europe/Berlin" > /etc/timezone
 
-# Install PHP extensions
-RUN docker-php-ext-install pdo pdo_pgsql
+# Install PHP extensions including Redis
+RUN docker-php-ext-install pdo pdo_pgsql \
+    && pecl install redis \
+    && docker-php-ext-enable redis
 
 # Create Python virtual environment and install packages
 RUN python3 -m venv /opt/venv \

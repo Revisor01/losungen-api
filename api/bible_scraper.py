@@ -134,10 +134,8 @@ class BibleScraper:
                                 # Klammer-Entfernung
                                 verse_text = self._clean_text(verse_text)
                                 
-                                # Markiere optionale Verse
+                                # Markiere optionale Verse (nur für Verse-Array, nicht im Text)
                                 is_optional = verse_num in reference.get('optional_verses', [])
-                                if is_optional:
-                                    verse_text = f"[OPTIONAL]{verse_text}[/OPTIONAL]"
                                 
                                 verse_texts.append(verse_text)
                                 verses_data.append({
@@ -221,10 +219,8 @@ class BibleScraper:
                         if verse_text:
                             verse_text = self._clean_text(verse_text)
                             
-                            # Markiere optionale Verse
+                            # Markiere optionale Verse (nur für Verse-Array, nicht im Text) 
                             is_optional = verse_num in reference.get('optional_verses', [])
-                            if is_optional:
-                                verse_text = f"[OPTIONAL]{verse_text}[/OPTIONAL]"
                             
                             verse_texts.append(verse_text)
                             verses_data.append({

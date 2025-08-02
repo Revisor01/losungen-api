@@ -15,6 +15,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
 
 require_once 'auth.php';
 require_once 'database.php';
+require_once 'redis_cache.php';
 
 /**
  * Testament-Erkennung basierend auf Buchnamen
@@ -65,6 +66,7 @@ if (!validateApiKey()) {
 
 class BibleSearchAPI {
     private $db;
+    private $cache;
     private $supportedTranslations = [
         // Deutsche Übersetzungen  
         'LUT', 'ELB', 'HFA', 'SLT', 'ZB', 'GNB', 'NGÜ', 'EU', 'NLB', 'VXB', 'NeÜ', 'BIGS',
@@ -77,6 +79,7 @@ class BibleSearchAPI {
     
     public function __construct() {
         $this->db = new LosungenDatabase();
+        $this->cache = new RedisCache();
     }
     
     /**
@@ -99,9 +102,38 @@ class BibleSearchAPI {
                 return $this->errorResponse('Invalid reference format: ' . $reference);
             }
             
-            // Suche in Cache (für heutige Losungen)
+            // 1. Redis Cache-Suche
+            $redisResult = $this->cache->get($reference, $translation);
+            if ($redisResult) {
+                // Formatierung für Redis-Cache-Ergebnisse anwenden
+                $formattedRedis = $this->formatResult($redisResult, $format);
+                
+                // Für text/markdown/html Formate: direkte Ausgabe ohne JSON wrapper
+                if (in_array($format, ['text', 'markdown', 'html'])) {
+                    if ($format === 'html') {
+                        header('Content-Type: text/html; charset=utf-8');
+                    } else {
+                        header('Content-Type: text/plain; charset=utf-8');
+                    }
+                    echo $formattedRedis;
+                    exit;
+                }
+                
+                // Für JSON: normale Antwort
+                echo json_encode([
+                    'success' => true,
+                    'data' => $formattedRedis,
+                    'source' => 'Redis Cache',
+                    'timestamp' => date('c')
+                ], JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+                exit;
+            }
+            
+            // 2. Suche in PostgreSQL Cache (für heutige Losungen)
             $cachedResult = $this->searchInCache($parsedRef, $translation);
             if ($cachedResult) {
+                // Speichere auch im Redis Cache für nächstes Mal
+                $this->cache->set($reference, $translation, $cachedResult);
                 // Formatierung auch für Cache-Ergebnisse anwenden
                 $formattedCached = $this->formatResult($cachedResult, $format);
                 
@@ -130,6 +162,9 @@ class BibleSearchAPI {
             if (!isset($scrapedResult['testament']) || empty($scrapedResult['testament'])) {
                 $scrapedResult['testament'] = $parsedRef['testament'] ?? detectTestament($parsedRef['book']);
             }
+            
+            // Speichere Ergebnis im Redis Cache
+            $this->cache->set($reference, $translation, $scrapedResult);
             
             // Formatierung anwenden
             $formattedResult = $this->formatResult($scrapedResult, $format);
@@ -169,20 +204,32 @@ class BibleSearchAPI {
         
         $originalReference = $reference;
         
-        // Finde optionale Verse in Klammern
+        // Finde optionale Verse in Klammern mit a/b-Suffixen
         $optionalVerses = [];
+        $optionalSuffixes = []; // z.B. ['19' => 'b'] für 19b
+        
         if (preg_match_all('/\(([^)]+)\)/', $reference, $parenthesesMatches)) {
             foreach ($parenthesesMatches[1] as $match) {
-                // Entferne zuerst Buchstaben-Suffixe auch aus Klammern
-                $cleanMatch = preg_replace('/(\d+)[a-z]/', '$1', $match);
-                
-                // Extrahiere Verse aus Klammern (z.B. "4-6" aus "(4b-6)")
-                if (preg_match_all('/(\d+)(?:[-–](\d+))?/', $cleanMatch, $verseMatches)) {
+                // Extrahiere Verse mit Suffixen aus Klammern (z.B. "19b-22" aus "(19b-22)")
+                if (preg_match_all('/(\d+)([a-z])?(?:[-–](\d+)([a-z])?)?/', $match, $verseMatches)) {
                     foreach ($verseMatches[0] as $idx => $vm) {
                         $start = (int)$verseMatches[1][$idx];
-                        $end = !empty($verseMatches[2][$idx]) ? (int)$verseMatches[2][$idx] : $start;
+                        $startSuffix = $verseMatches[2][$idx] ?? '';
+                        $end = !empty($verseMatches[3][$idx]) ? (int)$verseMatches[3][$idx] : $start;
+                        $endSuffix = $verseMatches[4][$idx] ?? '';
+                        
+                        // Behandle Verse mit Suffixen
+                        if ($startSuffix) {
+                            $optionalSuffixes[$start] = $startSuffix;
+                            $optionalVerses[] = $start;
+                        }
+                        
                         for ($v = $start; $v <= $end; $v++) {
+                            if ($v == $start && $startSuffix) continue; // Bereits hinzugefügt
                             $optionalVerses[] = $v;
+                            if ($v == $end && $endSuffix) {
+                                $optionalSuffixes[$v] = $endSuffix;
+                            }
                         }
                     }
                 }
@@ -443,23 +490,20 @@ class BibleSearchAPI {
             throw new Exception('Failed to scrape optional reference');
         }
         
-        // Markiere optionale Verse in den Daten
+        // Markiere optionale Verse in den Daten (ohne Tags im Text)
         if (isset($data['verses']) && is_array($data['verses'])) {
             foreach ($data['verses'] as &$verse) {
                 if (in_array($verse['number'], $optionalVerses)) {
                     $verse['optional'] = true;
-                    $verse['text'] = "[OPTIONAL]" . $verse['text'] . "[/OPTIONAL]";
                 } else {
                     $verse['optional'] = false;
                 }
             }
         }
         
-        // Markiere optionale Verse auch im kombinierten Text
+        // Entferne [OPTIONAL] Tags aus kombiniertem Text - Frontend macht sie kursiv
         if (isset($data['text'])) {
-            $data['text'] = preg_replace_callback('/\[OPTIONAL\](.*?)\[\/OPTIONAL\]/', function($matches) {
-                return $matches[1]; // Entferne Marker für jetzt, Frontend wird sie als kursiv darstellen
-            }, $data['text']);
+            $data['text'] = preg_replace('/\[OPTIONAL\](.*?)\[\/OPTIONAL\]/s', '$1', $data['text']);
         }
         
         return $data;
