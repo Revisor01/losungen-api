@@ -173,8 +173,10 @@ class BibleSearchAPI {
             '/^(.+?)\s+(\d+),(\d+)(?:[-–](\d+))?$/u',
             // Mit Gedankenstrichen: "Ps 107,1–9"
             '/^(.+?)\s+(\d+),(\d+)–(\d+)$/u',
-            // Komplexe Referenzen mit Punkten: "Johannes 3, 16-18.20-22" oder "Joh 8, 8-12.14-17"
+            // Komplexe Referenzen mit Punkten und Leerzeichen: "Joh 8, 8-12.14-17"
             '/^(.+?)\s+(\d+),\s*(\d+)[-–](\d+)\.(\d+)[-–](\d+)$/u',
+            // Komplexe Referenzen mit Punkten ohne Leerzeichen: "Johannes 3,16-18.20-22"
+            '/^(.+?)\s+(\d+),(\d+)[-–](\d+)\.(\d+)[-–](\d+)$/u',
             // Einfache Komplexe: "Johannes 3, 16-18"
             '/^(.+?)\s+(\d+),\s*(\d+)[-–](\d+)$/u',
             // Fallback für alles andere
