@@ -199,6 +199,7 @@ class BibleSearchAPI {
                 $resolvedBook = $this->resolveBookAbbreviation($bookInput);
                 
                 $chapter = (int)$matches[2];
+                error_log("Processing chapter $chapter, total matches: " . count($matches));
                 
                 // Für alle Formate - bestimme Start- und Endvers
                 if (isset($matches[3]) && is_numeric($matches[3])) {
