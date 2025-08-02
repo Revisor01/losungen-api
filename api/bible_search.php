@@ -352,6 +352,7 @@ class BibleSearchAPI {
      * Live-Scraping ausführen
      */
     private function scrapeReference($parsedRef, $translation) {
+        error_log("scrapeReference called with: " . json_encode($parsedRef));
         $pythonScript = '/var/www/html/bible_scraper.py';
         
         if (!file_exists($pythonScript)) {
@@ -360,6 +361,7 @@ class BibleSearchAPI {
         
         // Für komplexe Referenzen mit ausgeschlossenen Versen
         if (!empty($parsedRef['excluded_verses'])) {
+            error_log("Using complex reference processing");
             return $this->scrapeComplexReference($parsedRef, $translation);
         }
         
