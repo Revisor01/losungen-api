@@ -235,26 +235,53 @@ class BibleSearchAPI {
                 }
             }
             
-            // Behandle Klammern-Referenzen wie "(4b-6)7-14" -> wird zu "4-14"
-            // Wichtig: Die Klammern enthalten zusätzliche optionale Verse, die zum Gesamtbereich gehören
+            // Behandle verschiedene Klammer-Positionen
+            
+            // Fall 1: Klammern in der Mitte "(4b-6)7-14" -> wird zu "4-14"
             if (preg_match('/\((\d+)[a-z]?[-–](\d+)[a-z]?\)(\d+)[-–](\d+)/', $reference, $matches)) {
-                // Klammer-Start und -Ende
-                $klammerStart = (int)$matches[1]; // 4
-                $klammerEnd = (int)$matches[2];   // 6
-                $restStart = (int)$matches[3];    // 7
-                $restEnd = (int)$matches[4];      // 14
+                $klammerStart = (int)$matches[1];
+                $klammerEnd = (int)$matches[2];
+                $restStart = (int)$matches[3];
+                $restEnd = (int)$matches[4];
                 
-                // Erstelle einen durchgehenden Bereich vom kleinsten zum größten Vers
                 $newStart = min($klammerStart, $restStart);
                 $newEnd = max($klammerEnd, $restEnd);
                 
-                // Ersetze die komplexe Referenz durch einen einfachen Bereich
                 $reference = preg_replace('/\(\d+[a-z]?[-–]\d+[a-z]?\)\d+[-–]\d+/', $newStart . '-' . $newEnd, $reference);
-            } else {
+            }
+            // Fall 2: Klammern am Ende "1-8(9-12)" -> wird zu "1-12" 
+            elseif (preg_match('/(\d+)[-–](\d+)\((\d+)[-–](\d+)\)/', $reference, $matches)) {
+                $mainStart = (int)$matches[1];  // 1
+                $mainEnd = (int)$matches[2];    // 8
+                $klammerStart = (int)$matches[3]; // 9
+                $klammerEnd = (int)$matches[4];   // 12
+                
+                // Die Klammern enthalten weitere Verse, also erweitere den Bereich
+                $newStart = min($mainStart, $klammerStart);
+                $newEnd = max($mainEnd, $klammerEnd);
+                
+                $reference = preg_replace('/\d+[-–]\d+\(\d+[-–]\d+\)/', $newStart . '-' . $newEnd, $reference);
+            }
+            // Fall 3: Klammern am Anfang "(1-3)4-8" -> wird zu "1-8"
+            elseif (preg_match('/\((\d+)[-–](\d+)\)(\d+)[-–](\d+)/', $reference, $matches)) {
+                $klammerStart = (int)$matches[1];
+                $klammerEnd = (int)$matches[2];
+                $mainStart = (int)$matches[3];
+                $mainEnd = (int)$matches[4];
+                
+                $newStart = min($klammerStart, $mainStart);
+                $newEnd = max($klammerEnd, $mainEnd);
+                
+                $reference = preg_replace('/\(\d+[-–]\d+\)\d+[-–]\d+/', $newStart . '-' . $newEnd, $reference);
+            }
+            else {
                 // Für andere Fälle, entferne einfach die Klammern
                 $reference = preg_replace('/\([^)]+\)/', '', $reference);
             }
         }
+        
+        // Behandle speziellen Fall: Punkt vor Klammern "1-3.6-8.(10-12)"
+        $reference = preg_replace('/\.(\([\d\-–]+\))/', '$1', $reference);
         
         // Erfasse Buchstaben-Suffixe bevor wir sie entfernen (für Johannes 3,16a-19.21b-24)
         // Suffixe in regulären Bereichen (nicht in Klammern)
@@ -277,7 +304,59 @@ class BibleSearchAPI {
         // Normalisiere Leerzeichen
         $reference = preg_replace('/\s+/', ' ', trim($reference));
         
-        // Erweiterte Patterns für komplexere Referenzen - Reihenfolge wichtig!
+        // Prüfe zuerst auf mehrfache Punkt-getrennte Bereiche (Mt 1, 1-3.5-8.12-16)
+        if (preg_match('/^(.+?)\s+(\d+),\s*(.+)$/u', $reference, $baseMatch)) {
+            $bookInput = trim($baseMatch[1]);
+            $chapter = (int)$baseMatch[2];
+            $versePart = trim($baseMatch[3]);
+            
+            // Prüfe ob es mehrere Punkt-getrennte Bereiche gibt
+            if (strpos($versePart, '.') !== false && preg_match_all('/(\d+)(?:[-–](\d+))?/', $versePart, $rangeMatches, PREG_SET_ORDER)) {
+                if (count($rangeMatches) > 2) {
+                    // Mehrfache Bereiche gefunden
+                    $resolvedBook = $this->resolveBookAbbreviation($bookInput);
+                    $allVerses = [];
+                    $excludedVerses = [];
+                    
+                    // Sammle alle Verse aus allen Bereichen
+                    $lastEnd = 0;
+                    foreach ($rangeMatches as $range) {
+                        $start = (int)$range[1];
+                        $end = isset($range[2]) && $range[2] !== '' ? (int)$range[2] : $start;
+                        
+                        // Füge ausgeschlossene Verse zwischen Bereichen hinzu
+                        if ($lastEnd > 0) {
+                            for ($v = $lastEnd + 1; $v < $start; $v++) {
+                                $excludedVerses[] = $v;
+                            }
+                        }
+                        
+                        // Füge Verse des aktuellen Bereichs hinzu
+                        for ($v = $start; $v <= $end; $v++) {
+                            $allVerses[] = $v;
+                        }
+                        
+                        $lastEnd = $end;
+                    }
+                    
+                    return [
+                        'book' => $resolvedBook['name'],
+                        'testament' => $resolvedBook['testament'],
+                        'chapter' => $chapter,
+                        'start_verse' => min($allVerses),
+                        'end_verse' => max($allVerses),
+                        'excluded_verses' => $excludedVerses,
+                        'optional_verses' => $optionalVerses,
+                        'optional_suffixes' => $optionalSuffixes,
+                        'suffixes' => $suffixes,
+                        'original' => $originalReference,
+                        'original_book' => $bookInput
+                    ];
+                }
+            }
+        }
+        
+        // Erweiterte Patterns für normale Referenzen - Reihenfolge wichtig!
         $patterns = [
             // Komplexe Referenzen mit Punkten und Leerzeichen: "Joh 8, 8-12.14-17"
             '/^(.+?)\s+(\d+),\s*(\d+)[-–](\d+)\.(\d+)[-–](\d+)$/u',
