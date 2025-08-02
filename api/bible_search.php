@@ -121,7 +121,9 @@ class BibleSearchAPI {
             }
             
             // Live-Scraping ausführen
+            error_log("About to call scrapeReference with parsedRef: " . json_encode($parsedRef));
             $scrapedResult = $this->scrapeReference($parsedRef, $translation);
+            error_log("scrapeReference returned: " . ($scrapedResult ? 'success' : 'null/false'));
             if (!$scrapedResult) {
                 return $this->errorResponse('Failed to retrieve text for: ' . $reference);
             }
