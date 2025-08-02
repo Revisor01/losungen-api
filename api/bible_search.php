@@ -121,9 +121,7 @@ class BibleSearchAPI {
             }
             
             // Live-Scraping ausführen
-            error_log("About to call scrapeReference with parsedRef: " . json_encode($parsedRef));
             $scrapedResult = $this->scrapeReference($parsedRef, $translation);
-            error_log("scrapeReference returned: " . ($scrapedResult ? 'success' : 'null/false'));
             if (!$scrapedResult) {
                 return $this->errorResponse('Failed to retrieve text for: ' . $reference);
             }
@@ -193,15 +191,10 @@ class BibleSearchAPI {
         
         foreach ($patterns as $pattern) {
             if (preg_match($pattern, trim($reference), $matches)) {
-                // Debug logging
-                error_log("Bible search pattern matched: $pattern for reference: $reference");
-                error_log("Matches: " . json_encode($matches));
                 $bookInput = trim($matches[1]);
-                error_log("Extracted book input: '$bookInput'");
                 $resolvedBook = $this->resolveBookAbbreviation($bookInput);
                 
                 $chapter = (int)$matches[2];
-                error_log("Processing chapter $chapter, total matches: " . count($matches));
                 
                 // Für alle Formate - bestimme Start- und Endvers
                 if (isset($matches[3]) && is_numeric($matches[3])) {
@@ -221,7 +214,6 @@ class BibleSearchAPI {
                             $excludedVerses[] = $v;
                         }
                         
-                        error_log("Complex reference detected - excluded verses: " . json_encode($excludedVerses));
                     } elseif (isset($matches[4]) && is_numeric($matches[4])) {
                         // Einfacher Bereich ohne ausgeschlossene Verse
                         $endVerse = (int)$matches[4];
@@ -259,8 +251,6 @@ class BibleSearchAPI {
             }
         }
         
-        // Debug: Kein Pattern matched
-        error_log("No bible search pattern matched for reference: $reference");
         return null;
     }
     
@@ -269,20 +259,16 @@ class BibleSearchAPI {
      */
     private function resolveBookAbbreviation($bookInput) {
         try {
-            error_log("Resolving book abbreviation for: '$bookInput'");
             $pdo = getDatabase();
             $stmt = $pdo->prepare("SELECT german_name, testament FROM bible_abbreviations WHERE LOWER(abbreviation) = LOWER(?) OR LOWER(german_name) = LOWER(?)");
             $stmt->execute([$bookInput, $bookInput]);
             $result = $stmt->fetch();
             
             if ($result) {
-                error_log("Found book: '{$result['german_name']}' testament: '{$result['testament']}'");
                 return [
                     'name' => $result['german_name'],
                     'testament' => $result['testament']
                 ];
-            } else {
-                error_log("No book found for: '$bookInput'");
             }
             
             return [
@@ -354,7 +340,6 @@ class BibleSearchAPI {
      * Live-Scraping ausführen
      */
     private function scrapeReference($parsedRef, $translation) {
-        error_log("scrapeReference called with: " . json_encode($parsedRef));
         $pythonScript = '/var/www/html/bible_scraper.py';
         
         if (!file_exists($pythonScript)) {
@@ -363,7 +348,6 @@ class BibleSearchAPI {
         
         // Für komplexe Referenzen mit ausgeschlossenen Versen
         if (!empty($parsedRef['excluded_verses'])) {
-            error_log("Using complex reference processing");
             return $this->scrapeComplexReference($parsedRef, $translation);
         }
         
@@ -395,7 +379,6 @@ class BibleSearchAPI {
      * Verarbeite komplexe Referenzen mit ausgeschlossenen Versen
      */
     private function scrapeComplexReference($parsedRef, $translation) {
-        error_log("Scraping complex reference with excluded verses: " . json_encode($parsedRef['excluded_verses']));
         
         $book = $parsedRef['book'];
         $chapter = $parsedRef['chapter'];
@@ -415,7 +398,6 @@ class BibleSearchAPI {
                 $simpleRef .= "-{$range['end']}";
             }
             
-            error_log("Scraping simple reference: $simpleRef");
             
             // Scrape einzelnen Bereich
             $command = "/opt/venv/bin/python3 /var/www/html/bible_scraper.py " . 
@@ -510,7 +492,6 @@ class BibleSearchAPI {
             $normalized .= "-$endVerse";
         }
         
-        error_log("Normalized reference: '{$parsedRef['original']}' -> '$normalized'");
         return $normalized;
     }
     
