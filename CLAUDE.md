@@ -93,3 +93,6 @@ docker exec -i losungen-postgres psql -U losungen_user -d losungen_db < db/schem
 - Testing performed via SSH at root@server.godsapp.de
 - Project directory on remote server: `/home/users/revisor/www/simon/losung`
 - Testing URL: losung-konfi-quest.de
+
+## Memories
+- a

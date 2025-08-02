@@ -117,8 +117,30 @@ class BibleScraper:
             verse_texts = []
             verses_data = []
             
+            # Bei ganzen Kapiteln: Sammle alle verfügbaren Verse
+            is_whole_chapter = reference.get('whole_chapter', False)
+            
+            if is_whole_chapter:
+                # Finde alle Verse im Kapitel dynamisch
+                all_verse_elements = soup.find_all('span', class_='verse-number')
+                verse_numbers = []
+                for elem in all_verse_elements:
+                    try:
+                        verse_num = int(elem.get_text().strip())
+                        verse_numbers.append(verse_num)
+                    except (ValueError, AttributeError):
+                        continue
+                
+                if verse_numbers:
+                    start_verse = min(verse_numbers)
+                    end_verse = max(verse_numbers)
+            
             for verse_num in range(start_verse, end_verse + 1):
                 verse_element = self._find_verse_element(soup, verse_num)
+                
+                # Bei ganzen Kapiteln: Stoppe wenn keine weiteren Verse gefunden werden
+                if is_whole_chapter and verse_element is None and verse_num > start_verse:
+                    break
                 
                 if verse_element:
                     verse_content = verse_element.find('span', class_='verse-content')
@@ -222,7 +244,10 @@ class BibleScraper:
                     except ValueError:
                         continue
                     
-                    if start_verse <= verse_num <= end_verse:
+                    # Bei ganzen Kapiteln: Akzeptiere alle gefundenen Verse
+                    is_whole_chapter = reference.get('whole_chapter', False)
+                    
+                    if is_whole_chapter or (start_verse <= verse_num <= end_verse):
                         # Extrahiere Text für diesen Vers
                         verse_text = self._extract_bigs_verse_text(vers_span)
                         if verse_text:

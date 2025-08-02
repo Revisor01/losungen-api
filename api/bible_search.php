@@ -254,7 +254,20 @@ class BibleSearchAPI {
                 
                 $reference = preg_replace('/\(\d+[a-z]?[-–]\d+[a-z]?\)\d+[-–]\d+/', $newStart . '-' . $newEnd, $reference);
             }
-            // Fall 2: Klammern am Ende "1-8(9-12)" -> wird zu "1-12" 
+            // Fall 2: Klammern mit weiterem Vers "7-14(15-18)19" -> wird zu "7-19"
+            elseif (preg_match('/(\d+)[-–](\d+)\((\d+)[-–](\d+)\)(\d+)/', $reference, $matches)) {
+                $firstStart = (int)$matches[1];  // 7
+                $firstEnd = (int)$matches[2];    // 14
+                $klammerStart = (int)$matches[3]; // 15
+                $klammerEnd = (int)$matches[4];   // 18
+                $lastVerse = (int)$matches[5];    // 19
+                
+                $newStart = min($firstStart, $klammerStart, $lastVerse);
+                $newEnd = max($firstEnd, $klammerEnd, $lastVerse);
+                
+                $reference = preg_replace('/\d+[-–]\d+\(\d+[-–]\d+\)\d+/', $newStart . '-' . $newEnd, $reference);
+            }
+            // Fall 3: Klammern am Ende "1-8(9-12)" -> wird zu "1-12" 
             elseif (preg_match('/(\d+)[-–](\d+)\((\d+)[-–](\d+)\)/', $reference, $matches)) {
                 $mainStart = (int)$matches[1];  // 1
                 $mainEnd = (int)$matches[2];    // 8
@@ -359,6 +372,29 @@ class BibleSearchAPI {
                     ];
                 }
             }
+        }
+        
+        // Prüfe zuerst auf ganzes Kapitel (Röm 3) 
+        if (preg_match('/^(.+?)\s+(\d+)$/u', $reference, $chapterMatch)) {
+            $bookInput = trim($chapterMatch[1]);
+            $chapter = (int)$chapterMatch[2];
+            $resolvedBook = $this->resolveBookAbbreviation($bookInput);
+            
+            // Für ganze Kapitel verwenden wir 1-999 (wird vom Scraper begrenzt)
+            return [
+                'book' => $resolvedBook['name'],
+                'testament' => $resolvedBook['testament'],
+                'chapter' => $chapter,
+                'start_verse' => 1,
+                'end_verse' => 999, // Scraper wird die tatsächliche Anzahl begrenzen
+                'excluded_verses' => [],
+                'optional_verses' => $optionalVerses,
+                'optional_suffixes' => $optionalSuffixes,
+                'suffixes' => $suffixes,
+                'original' => $originalReference,
+                'original_book' => $bookInput,
+                'whole_chapter' => true
+            ];
         }
         
         // Erweiterte Patterns für normale Referenzen - Reihenfolge wichtig!
