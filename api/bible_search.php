@@ -254,7 +254,21 @@ class BibleSearchAPI {
                 
                 $reference = preg_replace('/\(\d+[a-z]?[-–]\d+[a-z]?\)\d+[-–]\d+/', $newStart . '-' . $newEnd, $reference);
             }
-            // Fall 2: Klammern mit weiterem Vers "7-14(15-18)19" -> wird zu "7-19"
+            // Fall 2a: Komplexe Klammern mit zwei Bereichen "1-3(4-5)6-8" -> wird zu "1-8"
+            elseif (preg_match('/(\d+)[-–](\d+)\((\d+)[-–](\d+)\)(\d+)[-–](\d+)/', $reference, $matches)) {
+                $firstStart = (int)$matches[1];  // 1
+                $firstEnd = (int)$matches[2];    // 3
+                $klammerStart = (int)$matches[3]; // 4
+                $klammerEnd = (int)$matches[4];   // 5
+                $lastStart = (int)$matches[5];    // 6
+                $lastEnd = (int)$matches[6];      // 8
+                
+                $newStart = min($firstStart, $klammerStart, $lastStart);
+                $newEnd = max($firstEnd, $klammerEnd, $lastEnd);
+                
+                $reference = preg_replace('/\d+[-–]\d+\(\d+[-–]\d+\)\d+[-–]\d+/', $newStart . '-' . $newEnd, $reference);
+            }
+            // Fall 2b: Klammern mit weiterem einzelnen Vers "7-14(15-18)19" -> wird zu "7-19"
             elseif (preg_match('/(\d+)[-–](\d+)\((\d+)[-–](\d+)\)(\d+)/', $reference, $matches)) {
                 $firstStart = (int)$matches[1];  // 7
                 $firstEnd = (int)$matches[2];    // 14
@@ -280,17 +294,29 @@ class BibleSearchAPI {
                 
                 $reference = preg_replace('/\d+[-–]\d+\(\d+[-–]\d+\)/', $newStart . '-' . $newEnd, $reference);
             }
-            // Fall 3: Klammern am Anfang "(1-3)4-8" -> wird zu "1-8"
-            elseif (preg_match('/\((\d+)[-–](\d+)\)(\d+)[-–](\d+)/', $reference, $matches)) {
+            // Fall 4: Klammern am Anfang mit nachfolgenden Bereichen "(1-6)9-14" -> wird zu "1-14"
+            elseif (preg_match('/\((\d+)[-–](\d+)\)(\d+)(?:[-–](\d+))?/', $reference, $matches)) {
                 $klammerStart = (int)$matches[1];
                 $klammerEnd = (int)$matches[2];
                 $mainStart = (int)$matches[3];
-                $mainEnd = (int)$matches[4];
+                $mainEnd = isset($matches[4]) && $matches[4] !== '' ? (int)$matches[4] : $mainStart;
                 
                 $newStart = min($klammerStart, $mainStart);
                 $newEnd = max($klammerEnd, $mainEnd);
                 
-                $reference = preg_replace('/\(\d+[-–]\d+\)\d+[-–]\d+/', $newStart . '-' . $newEnd, $reference);
+                $reference = preg_replace('/\(\d+[-–]\d+\)\d+(?:[-–]\d+)?/', $newStart . '-' . $newEnd, $reference);
+            }
+            // Fall 5: Klammern am Anfang mit Punkt-getrennten Bereichen "(1-6).9-14" -> wird zu "1-14"
+            elseif (preg_match('/\((\d+)[-–](\d+)\)\.(\d+)(?:[-–](\d+))?/', $reference, $matches)) {
+                $klammerStart = (int)$matches[1];  // 1
+                $klammerEnd = (int)$matches[2];    // 6
+                $mainStart = (int)$matches[3];     // 9
+                $mainEnd = isset($matches[4]) && $matches[4] !== '' ? (int)$matches[4] : $mainStart; // 14 oder 9
+                
+                $newStart = min($klammerStart, $mainStart);
+                $newEnd = max($klammerEnd, $mainEnd);
+                
+                $reference = preg_replace('/\(\d+[-–]\d+\)\.(\d+)(?:[-–](\d+))?/', $newStart . '-' . $newEnd, $reference);
             }
             else {
                 // Für andere Fälle, entferne einfach die Klammern
