@@ -135,8 +135,7 @@ class LosungenService {
                 ot_text,
                 ot_reference,
                 nt_text,
-                nt_reference,
-                translations_updated_at
+                nt_reference
             FROM losungen 
             WHERE date = ?
         ");
