@@ -121,6 +121,32 @@ export const AdminPanel: React.FC = () => {
     setClearLoading(false);
   };
 
+  const clearBibleCache = async () => {
+    if (!window.confirm('Möchtest du wirklich den gesamten Bibeltext-Cache leeren? Dies kann die Performance vorübergehend beeinträchtigen.')) {
+      return;
+    }
+    
+    setClearLoading(true);
+    try {
+      const baseUrl = process.env.NODE_ENV === 'production' 
+        ? '/api'
+        : 'http://localhost:8374';
+        
+      const response = await fetch(`${baseUrl}/admin.php?action=clear_bible_cache&api_key=${apiKey}`);
+      const data = await response.json();
+      
+      if (data.success) {
+        setLastAction(`✓ Bible Cache geleert: ${data.data.deleted_entries} Einträge gelöscht`);
+        loadStatus(); // Refresh status
+      } else {
+        setLastAction(`✗ Bible Cache Clear failed: ${data.error}`);
+      }
+    } catch (error) {
+      setLastAction(`✗ Bible Cache Clear error: ${error}`);
+    }
+    setClearLoading(false);
+  };
+
   const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
@@ -151,7 +177,7 @@ export const AdminPanel: React.FC = () => {
         </div>
 
         {/* Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
           <div className="card p-6">
             <div className="flex items-center space-x-3 mb-4">
               <PlayIcon className="w-6 h-6 text-royal-600" />
@@ -201,6 +227,32 @@ export const AdminPanel: React.FC = () => {
                 <TrashIcon className="w-4 h-4" />
               )}
               <span>{clearLoading ? 'Clearing...' : 'Clear Today'}</span>
+            </motion.button>
+          </div>
+
+          <div className="card p-6">
+            <div className="flex items-center space-x-3 mb-4">
+              <TrashIcon className="w-6 h-6 text-orange-600" />
+              <h3 className="font-heading text-lg font-semibold">Bible Cache</h3>
+            </div>
+            
+            <p className="text-sm text-gray-600 mb-4">
+              Löscht den gesamten Bibeltext-Cache (Redis). Alle Suchanfragen werden neu geladen.
+            </p>
+            
+            <motion.button
+              onClick={clearBibleCache}
+              disabled={clearLoading}
+              whileHover={{ scale: 1.02 }}
+              whileTap={{ scale: 0.98 }}
+              className="btn-secondary w-full flex items-center justify-center space-x-2 hover:bg-orange-50 hover:text-orange-600"
+            >
+              {clearLoading ? (
+                <ArrowPathIcon className="w-4 h-4 animate-spin" />
+              ) : (
+                <TrashIcon className="w-4 h-4" />
+              )}
+              <span>{clearLoading ? 'Leere Cache...' : 'Bibeltext-Cache leeren'}</span>
             </motion.button>
           </div>
 
