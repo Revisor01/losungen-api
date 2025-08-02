@@ -72,7 +72,7 @@ class BibleSearchAPI {
         'NIV', 'ESV', 'LSG',
         // Weitere Fremdsprachen
         'NLT', 'MSG', 'CEV', 'GNT', 'NKJV', 'KJV', 'NASB', 'CSB', 
-        'BDS', 'S21', 'RVR60', 'NVI', 'DHH', 'RVR95', 'LBLA', 'NVT'
+        'BDS', 'S21', 'RVR60', 'NVI', 'DHH', 'RVR95', 'LBLA'
     ];
     
     public function __construct() {
@@ -217,9 +217,21 @@ class BibleSearchAPI {
      * Löse Buchabkürzung über Datenbank auf
      */
     private function resolveBookAbbreviation($bookInput) {
-        // Für jetzt erstmal deaktiviert - einfach das Original zurückgeben
-        // TODO: DB-Abkürzungen später implementieren wenn Basis-Funktionalität wieder läuft
-        return null;
+        try {
+            $pdo = getDatabase();
+            $stmt = $pdo->prepare("SELECT german_name FROM bible_abbreviations WHERE LOWER(abbreviation) = LOWER(?) OR LOWER(german_name) = LOWER(?)");
+            $stmt->execute([$bookInput, $bookInput]);
+            $result = $stmt->fetch();
+            
+            if ($result) {
+                return $result['german_name'];
+            }
+            
+            return $bookInput; // Fallback zum Original
+        } catch (Exception $e) {
+            error_log("Bible abbreviation resolution failed: " . $e->getMessage());
+            return $bookInput; // Fallback zum Original
+        }
     }
     
     /**
