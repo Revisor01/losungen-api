@@ -67,7 +67,7 @@ class BibleSearchAPI {
     private $db;
     private $supportedTranslations = [
         // Deutsche Übersetzungen  
-        'LUT', 'ELB', 'HFA', 'SLT', 'ZB', 'GNB', 'NGÜ', 'EU', 'NLB', 'VXB', 'NeÜ', 'BIGS',
+        'LUT', 'ELB', 'HFA', 'SLT', 'ZB', 'GNB', 'NGÜ', 'EU', 'NLB', 'NeÜ', 'BIGS',
         // Funktionierende Fremdsprachen
         'NIV', 'ESV', 'LSG',
         // Weitere Fremdsprachen
