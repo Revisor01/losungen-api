@@ -192,8 +192,10 @@ class BibleSearchAPI {
         foreach ($patterns as $pattern) {
             if (preg_match($pattern, trim($reference), $matches)) {
                 // Debug logging
-                error_log("Bible search pattern matched: $pattern for reference: $reference");                
+                error_log("Bible search pattern matched: $pattern for reference: $reference");
+                error_log("Matches: " . json_encode($matches));
                 $bookInput = trim($matches[1]);
+                error_log("Extracted book input: '$bookInput'");
                 $resolvedBook = $this->resolveBookAbbreviation($bookInput);
                 
                 $chapter = (int)$matches[2];
