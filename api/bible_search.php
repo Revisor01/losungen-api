@@ -197,325 +197,129 @@ class BibleSearchAPI {
      * Parse Bibelstellen-Referenz mit DB-Abkürzungen
      */
     private function parseReference($reference) {
-        // Unterstützte Formate:
-        // - "Johannes 3,16"
-        // - "1. Korinther 13,4-8"  
-        // - "Psalm 23,1-6"
-        // - "Römer 8,28-29"
-        // - "Mt 5,1" (mit DB-Abkürzungen)
-        // - "2. Mose 16,2–3.11–18" (komplexere Referenzen)
-        // - "Phil 3,(4b–6)7–14" (mit optionalen Versen in Klammern)
-        // - "2. Sam 12,1–10.13–15a" (mit Buchstaben-Suffixen)
-        
         $originalReference = $reference;
-        
-        // Finde optionale Verse in Klammern mit a/b-Suffixen
+
+        // 1. Initialer Split: Buch/Kapitel vom Rest trennen
+        if (!preg_match('/^(.+?)\s+(\d+),?\s*(.*)$/u', trim($reference), $matches)) {
+            // Fallback für ganze Kapitel wie "Römer 8"
+            if (preg_match('/^(.+?)\s+(\d+)$/u', trim($reference), $chapterMatch)) {
+                $bookInput = trim($chapterMatch[1]);
+                $resolvedBook = $this->resolveBookAbbreviation($bookInput);
+                return [
+                    'book' => $resolvedBook['name'],
+                    'testament' => $resolvedBook['testament'],
+                    'chapter' => (int)$chapterMatch[2],
+                    'start_verse' => 1,
+                    'end_verse' => 999, // Scraper wird das begrenzen
+                    'excluded_verses' => [],
+                    'optional_verses' => [],
+                    'suffixes' => [],
+                    'optional_suffixes' => [],
+                    'original' => $originalReference,
+                    'original_book' => $bookInput,
+                    'whole_chapter' => true
+                ];
+            }
+            return null; // Ungültiges Format
+        }
+
+        $bookInput = trim($matches[1]);
+        $chapter = (int)$matches[2];
+        $verseStr = $matches[3];
+
+        // 2. Tokenizer: Zerlege den Vers-String in seine Bestandteile
+        $tokenRegex = '/(?<range>(\d+)([a-z])?(?:[-–](\d+)([a-z])?)?)|(?<paren>[\(\)])|(?<sep>[\.,;])/';
+        preg_match_all($tokenRegex, $verseStr, $tokens, PREG_SET_ORDER | PREG_UNMATCHED_AS_NULL);
+
+        $allVerses = [];
         $optionalVerses = [];
-        $optionalSuffixes = []; // z.B. ['19' => 'b'] für 19b
-        
-        if (preg_match_all('/\(([^)]+)\)/', $reference, $parenthesesMatches)) {
-            foreach ($parenthesesMatches[1] as $match) {
-                // Extrahiere Verse mit Suffixen aus Klammern (z.B. "19b-22" aus "(19b-22)")
-                if (preg_match_all('/(\d+)([a-z])?(?:[-–](\d+)([a-z])?)?/', $match, $verseMatches)) {
-                    foreach ($verseMatches[0] as $idx => $vm) {
-                        $start = (int)$verseMatches[1][$idx];
-                        $startSuffix = $verseMatches[2][$idx] ?? '';
-                        $end = !empty($verseMatches[3][$idx]) ? (int)$verseMatches[3][$idx] : $start;
-                        $endSuffix = $verseMatches[4][$idx] ?? '';
-                        
-                        // Behandle Verse mit Suffixen
-                        if ($startSuffix) {
-                            $optionalSuffixes[$start] = $startSuffix;
-                            $optionalVerses[] = $start;
-                        }
-                        
-                        for ($v = $start; $v <= $end; $v++) {
-                            if ($v == $start && $startSuffix) continue; // Bereits hinzugefügt
-                            $optionalVerses[] = $v;
-                            if ($v == $end && $endSuffix) {
-                                $optionalSuffixes[$v] = $endSuffix;
-                            }
-                        }
-                    }
+        $suffixes = [];
+        $optionalSuffixes = [];
+
+        $isOptional = false; // Zustandsautomat: Sind wir innerhalb einer Klammer?
+
+        // 3. Parser: Verarbeite die Tokens
+        foreach ($tokens as $token) {
+            if (!is_null($token['paren'])) {
+                // Zustand ändern bei Klammern
+                if ($token['paren'] === '(') {
+                    $isOptional = true;
+                } else {
+                    $isOptional = false;
                 }
-            }
-            
-            // Behandle verschiedene Klammer-Positionen
-            
-            // Fall 1: Klammern in der Mitte "(4b-6)7-14" -> wird zu "4-14"
-            if (preg_match('/\((\d+)[a-z]?[-–](\d+)[a-z]?\)(\d+)[-–](\d+)/', $reference, $matches)) {
-                $klammerStart = (int)$matches[1];
-                $klammerEnd = (int)$matches[2];
-                $restStart = (int)$matches[3];
-                $restEnd = (int)$matches[4];
+            } elseif (!is_null($token['range'])) {
+                // Verarbeite einen Vers oder einen Versbereich
+                preg_match('/(\d+)([a-z])?(?:[-–](\d+)([a-z])?)?/', $token['range'], $rangeMatches);
                 
-                $newStart = min($klammerStart, $restStart);
-                $newEnd = max($klammerEnd, $restEnd);
-                
-                $reference = preg_replace('/\(\d+[a-z]?[-–]\d+[a-z]?\)\d+[-–]\d+/', $newStart . '-' . $newEnd, $reference);
-            }
-            // Fall 2a: Komplexe Klammern mit zwei Bereichen "1-3(4-5)6-8" -> wird zu "1-8"
-            elseif (preg_match('/(\d+)[-–](\d+)\((\d+)[-–](\d+)\)(\d+)[-–](\d+)/', $reference, $matches)) {
-                $firstStart = (int)$matches[1];  // 1
-                $firstEnd = (int)$matches[2];    // 3
-                $klammerStart = (int)$matches[3]; // 4
-                $klammerEnd = (int)$matches[4];   // 5
-                $lastStart = (int)$matches[5];    // 6
-                $lastEnd = (int)$matches[6];      // 8
-                
-                $newStart = min($firstStart, $klammerStart, $lastStart);
-                $newEnd = max($firstEnd, $klammerEnd, $lastEnd);
-                
-                $reference = preg_replace('/\d+[-–]\d+\(\d+[-–]\d+\)\d+[-–]\d+/', $newStart . '-' . $newEnd, $reference);
-            }
-            // Fall 2b: Klammern mit weiterem einzelnen Vers "7-14(15-18)19" -> wird zu "7-19"
-            elseif (preg_match('/(\d+)[-–](\d+)\((\d+)[-–](\d+)\)(\d+)/', $reference, $matches)) {
-                $firstStart = (int)$matches[1];  // 7
-                $firstEnd = (int)$matches[2];    // 14
-                $klammerStart = (int)$matches[3]; // 15
-                $klammerEnd = (int)$matches[4];   // 18
-                $lastVerse = (int)$matches[5];    // 19
-                
-                $newStart = min($firstStart, $klammerStart, $lastVerse);
-                $newEnd = max($firstEnd, $klammerEnd, $lastVerse);
-                
-                $reference = preg_replace('/\d+[-–]\d+\(\d+[-–]\d+\)\d+/', $newStart . '-' . $newEnd, $reference);
-            }
-            // Fall 3: Klammern am Ende "1-8(9-12)" -> wird zu "1-12" 
-            elseif (preg_match('/(\d+)[-–](\d+)\((\d+)[-–](\d+)\)/', $reference, $matches)) {
-                $mainStart = (int)$matches[1];  // 1
-                $mainEnd = (int)$matches[2];    // 8
-                $klammerStart = (int)$matches[3]; // 9
-                $klammerEnd = (int)$matches[4];   // 12
-                
-                // Die Klammern enthalten weitere Verse, also erweitere den Bereich
-                $newStart = min($mainStart, $klammerStart);
-                $newEnd = max($mainEnd, $klammerEnd);
-                
-                $reference = preg_replace('/\d+[-–]\d+\(\d+[-–]\d+\)/', $newStart . '-' . $newEnd, $reference);
-            }
-            // Fall 4: Klammern am Anfang mit nachfolgenden Bereichen "(1-6)9-14" -> wird zu "1-14"
-            elseif (preg_match('/\((\d+)[-–](\d+)\)(\d+)(?:[-–](\d+))?/', $reference, $matches)) {
-                $klammerStart = (int)$matches[1];
-                $klammerEnd = (int)$matches[2];
-                $mainStart = (int)$matches[3];
-                $mainEnd = isset($matches[4]) && $matches[4] !== '' ? (int)$matches[4] : $mainStart;
-                
-                $newStart = min($klammerStart, $mainStart);
-                $newEnd = max($klammerEnd, $mainEnd);
-                
-                $reference = preg_replace('/\(\d+[-–]\d+\)\d+(?:[-–]\d+)?/', $newStart . '-' . $newEnd, $reference);
-            }
-            // Fall 5: Klammern am Anfang mit Punkt-getrennten Bereichen "(1-6).9-14" -> wird zu "1-14"
-            elseif (preg_match('/\((\d+)[-–](\d+)\)\.(\d+)(?:[-–](\d+))?/', $reference, $matches)) {
-                $klammerStart = (int)$matches[1];  // 1
-                $klammerEnd = (int)$matches[2];    // 6
-                $mainStart = (int)$matches[3];     // 9
-                $mainEnd = isset($matches[4]) && $matches[4] !== '' ? (int)$matches[4] : $mainStart; // 14 oder 9
-                
-                $newStart = min($klammerStart, $mainStart);
-                $newEnd = max($klammerEnd, $mainEnd);
-                
-                $reference = preg_replace('/\(\d+[-–]\d+\)\.(\d+)(?:[-–](\d+))?/', $newStart . '-' . $newEnd, $reference);
-            }
-            else {
-                // Für andere Fälle, entferne einfach die Klammern
-                $reference = preg_replace('/\([^)]+\)/', '', $reference);
-            }
-        }
-        
-        // Behandle speziellen Fall: Punkt vor Klammern "1-3.6-8.(10-12)"
-        $reference = preg_replace('/\.(\([\d\-–]+\))/', '$1', $reference);
-        
-        // Erfasse Buchstaben-Suffixe bevor wir sie entfernen (für Johannes 3,16a-19.21b-24)
-        // Suffixe in regulären Bereichen (nicht in Klammern)
-        $suffixes = []; // Speichert alle Suffixe inkl. der aus Klammern
-        
-        // Finde alle Verse mit Suffixen außerhalb von Klammern
-        preg_match_all('/(\d+)([a-z])(?=[-–\.]|$)/', $reference, $suffixMatches, PREG_SET_ORDER);
-        foreach ($suffixMatches as $match) {
-            $verseNum = (int)$match[1];
-            $suffix = $match[2];
-            $suffixes[$verseNum] = $suffix;
-        }
-        
-        // Kombiniere mit optionalen Suffixen aus Klammern
-        $suffixes = array_merge($suffixes, $optionalSuffixes);
-        
-        // Entferne Buchstaben-Suffixe von Versen (z.B. 15a → 15)
-        $reference = preg_replace('/(\d+)[a-z]/', '$1', $reference);
-        
-        // Normalisiere Leerzeichen
-        $reference = preg_replace('/\s+/', ' ', trim($reference));
-        
-        // Prüfe zuerst auf mehrfache Punkt-getrennte Bereiche (Mt 1, 1-3.5-8.12-16)
-        if (preg_match('/^(.+?)\s+(\d+),\s*(.+)$/u', $reference, $baseMatch)) {
-            $bookInput = trim($baseMatch[1]);
-            $chapter = (int)$baseMatch[2];
-            $versePart = trim($baseMatch[3]);
-            
-            // Prüfe ob es mehrere Punkt-getrennte Bereiche gibt
-            if (strpos($versePart, '.') !== false && preg_match_all('/(\d+)(?:[-–](\d+))?/', $versePart, $rangeMatches, PREG_SET_ORDER)) {
-                if (count($rangeMatches) > 2) {
-                    // Mehrfache Bereiche gefunden
-                    $resolvedBook = $this->resolveBookAbbreviation($bookInput);
-                    $allVerses = [];
-                    $excludedVerses = [];
-                    
-                    // Sammle alle Verse aus allen Bereichen
-                    $lastEnd = 0;
-                    foreach ($rangeMatches as $range) {
-                        $start = (int)$range[1];
-                        $end = isset($range[2]) && $range[2] !== '' ? (int)$range[2] : $start;
-                        
-                        // Füge ausgeschlossene Verse zwischen Bereichen hinzu
-                        if ($lastEnd > 0) {
-                            for ($v = $lastEnd + 1; $v < $start; $v++) {
-                                $excludedVerses[] = $v;
-                            }
+                $startNum = (int)$rangeMatches[1];
+                $startSuffix = $rangeMatches[2] ?? null;
+                $endNum = isset($rangeMatches[3]) && $rangeMatches[3] !== '' ? (int)$rangeMatches[3] : $startNum;
+                $endSuffix = $rangeMatches[4] ?? null;
+
+                // Verse innerhalb des Bereichs durchgehen
+                for ($v = $startNum; $v <= $endNum; $v++) {
+                    if ($isOptional) {
+                        if (!in_array($v, $optionalVerses)) {
+                            $optionalVerses[] = $v;
                         }
-                        
-                        // Füge Verse des aktuellen Bereichs hinzu
-                        for ($v = $start; $v <= $end; $v++) {
+                        // Suffixe zuordnen
+                        if ($v === $startNum && $startSuffix) {
+                            $optionalSuffixes[$v] = $startSuffix;
+                        }
+                        if ($v === $endNum && $endSuffix) {
+                            $optionalSuffixes[$v] = $endSuffix;
+                        }
+                    } else {
+                        if (!in_array($v, $allVerses)) {
                             $allVerses[] = $v;
                         }
-                        
-                        $lastEnd = $end;
-                    }
-                    
-                    return [
-                        'book' => $resolvedBook['name'],
-                        'testament' => $resolvedBook['testament'],
-                        'chapter' => $chapter,
-                        'start_verse' => min($allVerses),
-                        'end_verse' => max($allVerses),
-                        'excluded_verses' => $excludedVerses,
-                        'optional_verses' => $optionalVerses,
-                        'optional_suffixes' => $optionalSuffixes,
-                        'suffixes' => $suffixes,
-                        'original' => $originalReference,
-                        'original_book' => $bookInput
-                    ];
-                }
-            }
-        }
-        
-        // Prüfe zuerst auf ganzes Kapitel (Röm 3) 
-        if (preg_match('/^(.+?)\s+(\d+)$/u', $reference, $chapterMatch)) {
-            $bookInput = trim($chapterMatch[1]);
-            $chapter = (int)$chapterMatch[2];
-            $resolvedBook = $this->resolveBookAbbreviation($bookInput);
-            
-            // Für ganze Kapitel verwenden wir 1-999 (wird vom Scraper begrenzt)
-            return [
-                'book' => $resolvedBook['name'],
-                'testament' => $resolvedBook['testament'],
-                'chapter' => $chapter,
-                'start_verse' => 1,
-                'end_verse' => 999, // Scraper wird die tatsächliche Anzahl begrenzen
-                'excluded_verses' => [],
-                'optional_verses' => $optionalVerses,
-                'optional_suffixes' => $optionalSuffixes,
-                'suffixes' => $suffixes,
-                'original' => $originalReference,
-                'original_book' => $bookInput,
-                'whole_chapter' => true
-            ];
-        }
-        
-        // Erweiterte Patterns für normale Referenzen - Reihenfolge wichtig!
-        $patterns = [
-            // Komplexe Referenzen mit Punkten und Leerzeichen: "Joh 8, 8-12.14-17"
-            '/^(.+?)\s+(\d+),\s*(\d+)[-–](\d+)\.(\d+)[-–](\d+)$/u',
-            // Komplexe Referenzen mit Punkten ohne Leerzeichen: "Johannes 3,16-18.20-22"
-            '/^(.+?)\s+(\d+),(\d+)[-–](\d+)\.(\d+)[-–](\d+)$/u',
-            // Ohne Leerzeichen zwischen Buch und Kapitel, komplex: "Mt4,1-3.6-9"
-            '/^([^\d]+)(\d+),(\d+)[-–](\d+)\.(\d+)[-–](\d+)$/u',
-            // Mit Leerzeichen nach Komma und Bindestrich: "Ps 107, 1-9"
-            '/^(.+?)\s+(\d+),\s+(\d+)[-–](\d+)$/u',
-            // Mit Leerzeichen nach Komma: "Markus 3, 16"
-            '/^(.+?)\s+(\d+),\s+(\d+)$/u',
-            // Standard mit Bindestrich: "Buch Kapitel,Vers-Vers"  
-            '/^(.+?)\s+(\d+),(\d+)[-–](\d+)$/u',
-            // Ohne Leerzeichen zwischen Buch und Kapitel: "Mt4,1-9"
-            '/^([^\d]+)(\d+),(\d+)[-–](\d+)$/u',
-            // Standard einzeln: "Buch Kapitel,Vers"
-            '/^(.+?)\s+(\d+),(\d+)$/u',
-            // Ohne Leerzeichen einzeln: "Mt4,1"
-            '/^([^\d]+)(\d+),(\d+)$/u',
-            // Fallback für alles andere
-            '/^(.+?)\s+(\d+),(.+)$/u'
-        ];
-        
-        foreach ($patterns as $pattern) {
-            if (preg_match($pattern, trim($reference), $matches)) {
-                $bookInput = trim($matches[1]);
-                $resolvedBook = $this->resolveBookAbbreviation($bookInput);
-                
-                $chapter = (int)$matches[2];
-                
-                // Für alle Formate - bestimme Start- und Endvers
-                if (isset($matches[3]) && is_numeric($matches[3])) {
-                    $startVerse = (int)$matches[3];
-                    $endVerse = $startVerse; // Default: nur ein Vers
-                    
-                    // Schaue nach Endvers in match[4], [5] oder [6]
-                    $excludedVerses = [];
-                    if (isset($matches[6]) && is_numeric($matches[6])) {
-                        // Komplexe Pattern wie "1-3.6-9" 
-                        $firstEnd = (int)$matches[4];   // 3
-                        $secondStart = (int)$matches[5]; // 6  
-                        $endVerse = (int)$matches[6];   // 9
-                        
-                        // Berechne ausgelassene Verse (4,5 in diesem Fall)
-                        for ($v = $firstEnd + 1; $v < $secondStart; $v++) {
-                            $excludedVerses[] = $v;
+                        // Suffixe zuordnen
+                        if ($v === $startNum && $startSuffix) {
+                            $suffixes[$v] = $startSuffix;
                         }
-                        
-                    } elseif (isset($matches[4]) && is_numeric($matches[4])) {
-                        // Einfacher Bereich ohne ausgeschlossene Verse
-                        $endVerse = (int)$matches[4];
-                    }
-                    
-                    return [
-                        'book' => $resolvedBook['name'],
-                        'testament' => $resolvedBook['testament'],
-                        'chapter' => $chapter,
-                        'start_verse' => $startVerse,
-                        'end_verse' => $endVerse,
-                        'excluded_verses' => $excludedVerses,
-                        'optional_verses' => $optionalVerses,
-                        'optional_suffixes' => $optionalSuffixes,
-                        'suffixes' => $suffixes,
-                        'original' => $originalReference,
-                        'original_book' => $bookInput
-                    ];
-                }
-                
-                // Fallback für nicht-numerische Inhalte
-                if (isset($matches[3])) {
-                    $versePart = $matches[3];
-                    // Extrahiere ersten Vers
-                    if (preg_match('/^(\d+)/', $versePart, $verseMatch)) {
-                        return [
-                            'book' => $resolvedBook['name'],
-                            'testament' => $resolvedBook['testament'],
-                            'chapter' => $chapter,
-                            'start_verse' => (int)$verseMatch[1],
-                            'end_verse' => (int)$verseMatch[1],
-                            'excluded_verses' => [],
-                            'optional_verses' => $optionalVerses,
-                            'optional_suffixes' => $optionalSuffixes,
-                            'suffixes' => $suffixes,
-                            'original' => $originalReference,
-                            'original_book' => $bookInput
-                        ];
+                        if ($v === $endNum && $endSuffix) {
+                            $suffixes[$v] = $endSuffix;
+                        }
                     }
                 }
             }
+            // Trenner (sep) werden einfach ignoriert, sie haben ihren Zweck beim Tokenizing erfüllt.
         }
         
-        return null;
+        // 4. Ergebnis zusammenbauen
+        if (empty($allVerses) && empty($optionalVerses)) {
+            return null; // Kein Vers gefunden
+        }
+
+        $allVerseNumbers = array_merge($allVerses, $optionalVerses);
+        sort($allVerseNumbers);
+        $allVerseNumbers = array_unique($allVerseNumbers);
+        
+        // Ausgeschlossene Verse berechnen
+        $excludedVerses = [];
+        if (!empty($allVerseNumbers)) {
+            $min = min($allVerseNumbers);
+            $max = max($allVerseNumbers);
+            $fullRange = range($min, $max);
+            // Ausgeschlossen ist, was im Gesamtbereich liegt, aber weder in allVerses noch optionalVerses ist
+            $excludedVerses = array_diff($fullRange, $allVerseNumbers);
+        }
+        
+        $resolvedBook = $this->resolveBookAbbreviation($bookInput);
+
+        return [
+            'book' => $resolvedBook['name'],
+            'testament' => $resolvedBook['testament'],
+            'chapter' => $chapter,
+            'start_verse' => !empty($allVerseNumbers) ? min($allVerseNumbers) : 0,
+            'end_verse' => !empty($allVerseNumbers) ? max($allVerseNumbers) : 0,
+            'excluded_verses' => array_values($excludedVerses),
+            'optional_verses' => array_values(array_unique($optionalVerses)),
+            'suffixes' => $suffixes,
+            'optional_suffixes' => $optionalSuffixes,
+            'original' => $originalReference,
+            'original_book' => $bookInput
+        ];
     }
     
     /**
