@@ -112,6 +112,13 @@ class LosungenService {
             // BIGS needs special URLs even without API key
             if ($this->bibleserverApiKey || $translation === 'BIGS') {
                 $losungData = $this->enhanceWithBibleserver($losungData, $translation);
+            } else {
+                // Even without API key, add translation object
+                $losungData['translation'] = [
+                    'code' => $translation,
+                    'name' => $this->getTranslationName($translation),
+                    'language' => $this->getTranslationLanguage($translation)
+                ];
             }
             
             // For BIGS, scraper already provides correct URLs, no need to override
@@ -194,7 +201,8 @@ class LosungenService {
             ],
             
             'source' => 'Herrnhuter Losungen 2025',
-            'fetched_at' => date('c')
+            'fetched_at' => date('c'),
+            'url' => 'https://www.losungen.de/'
         ];
     }
     
@@ -245,6 +253,11 @@ class LosungenService {
                 
                 $data['lehrtext']['text'] = $cachedTranslation['lehrtext']['text'] ?? $data['lehrtext']['text'];
                 $data['lehrtext']['translation_source'] = $cachedTranslation['lehrtext']['translation_source'] ?? $translation;
+                
+                // Add cached_at timestamp
+                if (isset($cachedTranslation['cached_at'])) {
+                    $data['cached_at'] = $cachedTranslation['cached_at'];
+                }
                 
                 return $data;
             }
@@ -323,7 +336,12 @@ class LosungenService {
             $data['lehrtext']['bibleserver_url'] = $lehrtextUrl;
         }
         
-        $data['translation'] = $translation;
+        // Add translation as object
+        $data['translation'] = [
+            'code' => $translation,
+            'name' => $this->getTranslationName($translation),
+            'language' => $this->getTranslationLanguage($translation)
+        ];
         
         return $data;
     }
@@ -351,6 +369,48 @@ class LosungenService {
         $reference = urlencode($reference);
         
         return "https://www.bibleserver.com/{$translation}/{$reference}";
+    }
+    
+    private function getTranslationName($code) {
+        $translations = [
+            'LUT' => 'Lutherbibel 2017',
+            'ELB' => 'Elberfelder Bibel',
+            'HFA' => 'Hoffnung für Alle',
+            'SLT' => 'Schlachter 2000',
+            'ZB' => 'Zürcher Bibel',
+            'GNB' => 'Gute Nachricht Bibel',
+            'NGÜ' => 'Neue Genfer Übersetzung',
+            'EU' => 'Einheitsübersetzung 2016',
+            'NLB' => 'Neues Leben Bibel',
+            'NeÜ' => 'Neue evangelistische Übersetzung',
+            'BIGS' => 'Bibel in gerechter Sprache',
+            'NIV' => 'New International Version',
+            'ESV' => 'English Standard Version',
+            'LSG' => 'Louis Segond'
+        ];
+        
+        return $translations[$code] ?? $code;
+    }
+    
+    private function getTranslationLanguage($code) {
+        $languages = [
+            'LUT' => 'Deutsch',
+            'ELB' => 'Deutsch',
+            'HFA' => 'Deutsch',
+            'SLT' => 'Deutsch',
+            'ZB' => 'Deutsch',
+            'GNB' => 'Deutsch',
+            'NGÜ' => 'Deutsch',
+            'EU' => 'Deutsch',
+            'NLB' => 'Deutsch',
+            'NeÜ' => 'Deutsch',
+            'BIGS' => 'Deutsch',
+            'NIV' => 'English',
+            'ESV' => 'English',
+            'LSG' => 'Français'
+        ];
+        
+        return $languages[$code] ?? 'Unknown';
     }
     
     private function buildBigsUrl($reference) {
