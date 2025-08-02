@@ -264,16 +264,20 @@ class BibleSearchAPI {
      */
     private function resolveBookAbbreviation($bookInput) {
         try {
+            error_log("Resolving book abbreviation for: '$bookInput'");
             $pdo = getDatabase();
             $stmt = $pdo->prepare("SELECT german_name, testament FROM bible_abbreviations WHERE LOWER(abbreviation) = LOWER(?) OR LOWER(german_name) = LOWER(?)");
             $stmt->execute([$bookInput, $bookInput]);
             $result = $stmt->fetch();
             
             if ($result) {
+                error_log("Found book: '{$result['german_name']}' testament: '{$result['testament']}'");
                 return [
                     'name' => $result['german_name'],
                     'testament' => $result['testament']
                 ];
+            } else {
+                error_log("No book found for: '$bookInput'");
             }
             
             return [
