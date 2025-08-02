@@ -48,6 +48,8 @@ export interface BibleSearchResult {
   verses?: Array<{
     number: number;
     text: string;
+    excluded?: boolean;
+    optional?: boolean;
   }>;
 }
 
