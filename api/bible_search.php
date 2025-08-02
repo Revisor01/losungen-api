@@ -363,9 +363,12 @@ class BibleSearchAPI {
             return $this->scrapeComplexReference($parsedRef, $translation);
         }
         
-        // Python-Scraper mit erweiterten Parametern aufrufen
+        // Normalisiere Referenz für Python-Scraper (füge Leerzeichen hinzu falls nötig)
+        $normalizedRef = $this->normalizeReferenceForScraper($parsedRef);
+        
+        // Python-Scraper mit normalisierten Parametern aufrufen
         $command = "/opt/venv/bin/python3 $pythonScript " . 
-                  escapeshellarg($parsedRef['original']) . " " .
+                  escapeshellarg($normalizedRef) . " " .
                   escapeshellarg($translation) . " 2>&1";
         
         $output = shell_exec($command);
@@ -486,6 +489,25 @@ class BibleSearchAPI {
         }
         
         return $ranges;
+    }
+    
+    /**
+     * Normalisiere Referenz für Python-Scraper (füge Leerzeichen zwischen Buch und Kapitel hinzu)
+     */
+    private function normalizeReferenceForScraper($parsedRef) {
+        $book = $parsedRef['book'];
+        $chapter = $parsedRef['chapter'];
+        $startVerse = $parsedRef['start_verse'];
+        $endVerse = $parsedRef['end_verse'];
+        
+        // Erstelle normalisierte Referenz mit Leerzeichen
+        $normalized = "$book $chapter,$startVerse";
+        if ($startVerse != $endVerse) {
+            $normalized .= "-$endVerse";
+        }
+        
+        error_log("Normalized reference: '{$parsedRef['original']}' -> '$normalized'");
+        return $normalized;
     }
     
     /**
