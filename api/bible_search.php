@@ -446,6 +446,24 @@ class BibleSearchAPI {
             throw new Exception($error);
         }
         
+        // Füge Suffixe zu den Versen hinzu, falls vorhanden
+        if (isset($data['verses']) && is_array($data['verses'])) {
+            foreach ($data['verses'] as &$verse) {
+                // Füge Suffixe hinzu
+                $suffixes = $parsedRef['suffixes'] ?? [];
+                $optionalSuffixes = $parsedRef['optional_suffixes'] ?? [];
+                $allSuffixes = array_merge($suffixes, $optionalSuffixes);
+                
+                if (isset($allSuffixes[$verse['number']])) {
+                    $verse['suffix'] = $allSuffixes[$verse['number']];
+                }
+                
+                // Für normale Referenzen sind alle Verse optional=false und excluded=false
+                $verse['optional'] = false;
+                $verse['excluded'] = false;
+            }
+        }
+        
         return $data;
     }
     
@@ -476,13 +494,22 @@ class BibleSearchAPI {
             throw new Exception('Failed to scrape optional reference');
         }
         
-        // Markiere optionale Verse in den Daten (ohne Tags im Text)
+        // Markiere optionale Verse und füge Suffixe hinzu
         if (isset($data['verses']) && is_array($data['verses'])) {
             foreach ($data['verses'] as &$verse) {
                 if (in_array($verse['number'], $optionalVerses)) {
                     $verse['optional'] = true;
                 } else {
                     $verse['optional'] = false;
+                }
+                
+                // Füge Suffixe aus dem Parsing hinzu
+                $suffixes = $parsedRef['suffixes'] ?? [];
+                $optionalSuffixes = $parsedRef['optional_suffixes'] ?? [];
+                $allSuffixes = array_merge($suffixes, $optionalSuffixes);
+                
+                if (isset($allSuffixes[$verse['number']])) {
+                    $verse['suffix'] = $allSuffixes[$verse['number']];
                 }
             }
         }
@@ -532,6 +559,20 @@ class BibleSearchAPI {
                 if (isset($data['verses'])) {
                     foreach ($data['verses'] as $verse) {
                         $verse['excluded'] = false; // Diese Verse sind nicht ausgeschlossen
+                        
+                        // Füge Suffixe hinzu
+                        $suffixes = $parsedRef['suffixes'] ?? [];
+                        $optionalSuffixes = $parsedRef['optional_suffixes'] ?? [];
+                        $allSuffixes = array_merge($suffixes, $optionalSuffixes);
+                        
+                        if (isset($allSuffixes[$verse['number']])) {
+                            $verse['suffix'] = $allSuffixes[$verse['number']];
+                        }
+                        
+                        // Prüfe ob der Vers optional ist
+                        $optionalVerses = $parsedRef['optional_verses'] ?? [];
+                        $verse['optional'] = in_array($verse['number'], $optionalVerses);
+                        
                         $allVerses[] = $verse;
                     }
                 }
