@@ -207,21 +207,21 @@ class BibleSearchAPI {
                     
                     // Schaue nach Endvers in match[4], [5] oder [6]
                     $excludedVerses = [];
-                    if (isset($matches[4]) && is_numeric($matches[4])) {
-                        $endVerse = (int)$matches[4];
-                    } elseif (isset($matches[6]) && is_numeric($matches[6])) {
-                        // Für komplexe Pattern wie "8-12.14-17" 
-                        $firstEnd = (int)$matches[4];   // 12
-                        $secondStart = (int)$matches[5]; // 14  
-                        $endVerse = (int)$matches[6];   // 17
+                    if (isset($matches[6]) && is_numeric($matches[6])) {
+                        // Komplexe Pattern wie "1-3.6-9" 
+                        $firstEnd = (int)$matches[4];   // 3
+                        $secondStart = (int)$matches[5]; // 6  
+                        $endVerse = (int)$matches[6];   // 9
                         
-                        // Berechne ausgelassene Verse (13 in diesem Fall)
+                        // Berechne ausgelassene Verse (4,5 in diesem Fall)
                         for ($v = $firstEnd + 1; $v < $secondStart; $v++) {
                             $excludedVerses[] = $v;
                         }
                         
-                        // Erweitere Bereich um den ganzen Bereich zu holen
-                        $endVerse = (int)$matches[6];
+                        error_log("Complex reference detected - excluded verses: " . json_encode($excludedVerses));
+                    } elseif (isset($matches[4]) && is_numeric($matches[4])) {
+                        // Einfacher Bereich ohne ausgeschlossene Verse
+                        $endVerse = (int)$matches[4];
                     }
                     
                     return [
