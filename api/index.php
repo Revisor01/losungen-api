@@ -136,7 +136,6 @@ class LosungenService {
                 ot_reference,
                 nt_text,
                 nt_reference,
-                ot_text_bigs,
                 nt_text_bigs,
                 ot_text_ngu,
                 nt_text_ngu,
