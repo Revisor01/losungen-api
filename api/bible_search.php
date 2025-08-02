@@ -307,6 +307,7 @@ class BibleSearchAPI {
                         'end_verse' => $endVerse,
                         'excluded_verses' => $excludedVerses,
                         'optional_verses' => $optionalVerses,
+                        'optional_suffixes' => $optionalSuffixes,
                         'original' => $originalReference,
                         'original_book' => $bookInput
                     ];
@@ -325,6 +326,7 @@ class BibleSearchAPI {
                             'end_verse' => (int)$verseMatch[1],
                             'excluded_verses' => [],
                             'optional_verses' => $optionalVerses,
+                            'optional_suffixes' => $optionalSuffixes,
                             'original' => $originalReference,
                             'original_book' => $bookInput
                         ];
