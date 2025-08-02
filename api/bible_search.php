@@ -99,6 +99,7 @@ class BibleSearchAPI {
             // Parse Bibelstelle
             $parsedRef = $this->parseReference($reference);
             if (!$parsedRef) {
+                // Bei Parsing-Fehlern nicht cachen - könnte später behoben werden
                 return $this->errorResponse('Invalid reference format: ' . $reference);
             }
             
@@ -132,8 +133,10 @@ class BibleSearchAPI {
             // 2. Suche in PostgreSQL Cache (für heutige Losungen)
             $cachedResult = $this->searchInCache($parsedRef, $translation);
             if ($cachedResult) {
-                // Speichere auch im Redis Cache für nächstes Mal
-                $this->cache->set($reference, $translation, $cachedResult);
+                // Speichere auch im Redis Cache für nächstes Mal (nur bei erfolgreichen Ergebnissen)
+                if (!isset($cachedResult['error']) && !empty($cachedResult['text'])) {
+                    $this->cache->set($reference, $translation, $cachedResult);
+                }
                 // Formatierung auch für Cache-Ergebnisse anwenden
                 $formattedCached = $this->formatResult($cachedResult, $format);
                 
@@ -163,8 +166,10 @@ class BibleSearchAPI {
                 $scrapedResult['testament'] = $parsedRef['testament'] ?? detectTestament($parsedRef['book']);
             }
             
-            // Speichere Ergebnis im Redis Cache
-            $this->cache->set($reference, $translation, $scrapedResult);
+            // Speichere nur erfolgreiche Ergebnisse im Redis Cache
+            if ($scrapedResult && !isset($scrapedResult['error']) && !empty($scrapedResult['text'])) {
+                $this->cache->set($reference, $translation, $scrapedResult);
+            }
             
             // Formatierung anwenden
             $formattedResult = $this->formatResult($scrapedResult, $format);
