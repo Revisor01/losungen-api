@@ -163,6 +163,10 @@ class BibleScraper:
                                 suffixes = reference.get('suffixes', {})
                                 suffix = suffixes.get(str(verse_num)) or suffixes.get(verse_num)
                                 
+                                # Bei Suffixen: Text am ersten Satzende abschneiden
+                                if suffix:
+                                    verse_text = self._apply_suffix_to_text(verse_text, suffix)
+                                
                                 verse_data = {
                                     'number': verse_num,
                                     'text': verse_text,
@@ -260,6 +264,10 @@ class BibleScraper:
                             suffixes = reference.get('suffixes', {})
                             suffix = suffixes.get(str(verse_num)) or suffixes.get(verse_num)
                             
+                            # Bei Suffixen: Text am ersten Satzende abschneiden
+                            if suffix:
+                                verse_text = self._apply_suffix_to_text(verse_text, suffix)
+                            
                             verse_data = {
                                 'number': verse_num,
                                 'text': verse_text,
@@ -355,6 +363,34 @@ class BibleScraper:
         text = re.sub(r'\s+', ' ', text)             # Mehrfache Leerzeichen normalisieren
         
         return text.strip()
+    
+    def _apply_suffix_to_text(self, text: str, suffix: str) -> str:
+        """Schneide Text bei Suffixen am ersten Satzende ab"""
+        if not suffix or suffix not in ['a', 'b', 'c']:
+            return text
+        
+        # Finde das erste Satzende (.!?;)
+        import re
+        sentence_end_pattern = r'[.!?;]'
+        match = re.search(sentence_end_pattern, text)
+        
+        if match:
+            # Schneide beim ersten Satzende ab (inklusive Satzzeichen)
+            cut_position = match.end()
+            cut_text = text[:cut_position].strip()
+            
+            # Stelle sicher, dass der Text nicht leer ist
+            if len(cut_text) > 10:  # Mindestens ein paar Wörter
+                return cut_text
+        
+        # Fallback: Wenn kein Satzende gefunden wird oder Text zu kurz ist
+        # Schneide nach etwa der Hälfte des Textes ab
+        words = text.split()
+        if len(words) > 4:
+            half_words = words[:len(words)//2]
+            return ' '.join(half_words) + '...'
+        
+        return text
     
     def _get_translation_name(self, code: str) -> str:
         """Hole vollständigen Namen der Übersetzung"""
