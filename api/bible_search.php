@@ -357,6 +357,11 @@ class BibleSearchAPI {
             throw new Exception('Bible scraper not found');
         }
         
+        // Für komplexe Referenzen mit ausgeschlossenen Versen
+        if (!empty($parsedRef['excluded_verses'])) {
+            return $this->scrapeComplexReference($parsedRef, $translation);
+        }
+        
         // Python-Scraper mit erweiterten Parametern aufrufen
         $command = "/opt/venv/bin/python3 $pythonScript " . 
                   escapeshellarg($parsedRef['original']) . " " .
@@ -376,6 +381,110 @@ class BibleSearchAPI {
         }
         
         return $data;
+    }
+    
+    /**
+     * Verarbeite komplexe Referenzen mit ausgeschlossenen Versen
+     */
+    private function scrapeComplexReference($parsedRef, $translation) {
+        error_log("Scraping complex reference with excluded verses: " . json_encode($parsedRef['excluded_verses']));
+        
+        $book = $parsedRef['book'];
+        $chapter = $parsedRef['chapter'];
+        $startVerse = $parsedRef['start_verse'];
+        $endVerse = $parsedRef['end_verse'];
+        $excludedVerses = $parsedRef['excluded_verses'];
+        
+        $allVerses = [];
+        $combinedText = '';
+        
+        // Bestimme Vers-Bereiche ohne ausgeschlossene Verse
+        $ranges = $this->calculateVerseRanges($startVerse, $endVerse, $excludedVerses);
+        
+        foreach ($ranges as $range) {
+            $simpleRef = "$book $chapter,{$range['start']}";
+            if ($range['start'] != $range['end']) {
+                $simpleRef .= "-{$range['end']}";
+            }
+            
+            error_log("Scraping simple reference: $simpleRef");
+            
+            // Scrape einzelnen Bereich
+            $command = "/opt/venv/bin/python3 /var/www/html/bible_scraper.py " . 
+                      escapeshellarg($simpleRef) . " " .
+                      escapeshellarg($translation) . " 2>&1";
+            
+            $output = shell_exec($command);
+            $data = json_decode($output, true);
+            
+            if ($data && !isset($data['error'])) {
+                if (isset($data['verses'])) {
+                    foreach ($data['verses'] as $verse) {
+                        $verse['excluded'] = false; // Diese Verse sind nicht ausgeschlossen
+                        $allVerses[] = $verse;
+                    }
+                }
+                if (!empty($data['text'])) {
+                    $combinedText .= ($combinedText ? ' ' : '') . $data['text'];
+                }
+            }
+        }
+        
+        // Füge ausgeschlossene Verse als markiert hinzu
+        foreach ($excludedVerses as $excludedVerse) {
+            $allVerses[] = [
+                'number' => $excludedVerse,
+                'text' => "[Vers $excludedVerse ausgelassen]",
+                'excluded' => true
+            ];
+        }
+        
+        // Sortiere Verse nach Nummer
+        usort($allVerses, function($a, $b) {
+            return $a['number'] - $b['number'];
+        });
+        
+        return [
+            'reference' => $parsedRef['original'],
+            'text' => $combinedText,
+            'translation' => [
+                'code' => $translation,
+                'name' => $this->getTranslationName($translation),
+                'language' => 'German'
+            ],
+            'source' => 'ERF Bibleserver (Complex)',
+            'url' => "https://www.bibleserver.com/$translation/" . urlencode($parsedRef['original']),
+            'testament' => $parsedRef['testament'],
+            'verses' => $allVerses
+        ];
+    }
+    
+    /**
+     * Berechne Vers-Bereiche ohne ausgeschlossene Verse
+     */
+    private function calculateVerseRanges($startVerse, $endVerse, $excludedVerses) {
+        $ranges = [];
+        $current = $startVerse;
+        
+        while ($current <= $endVerse) {
+            if (in_array($current, $excludedVerses)) {
+                $current++;
+                continue;
+            }
+            
+            $rangeStart = $current;
+            $rangeEnd = $current;
+            
+            // Erweitere Bereich bis zum nächsten ausgeschlossenen Vers
+            while ($rangeEnd + 1 <= $endVerse && !in_array($rangeEnd + 1, $excludedVerses)) {
+                $rangeEnd++;
+            }
+            
+            $ranges[] = ['start' => $rangeStart, 'end' => $rangeEnd];
+            $current = $rangeEnd + 1;
+        }
+        
+        return $ranges;
     }
     
     /**
