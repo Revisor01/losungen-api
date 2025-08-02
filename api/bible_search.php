@@ -172,7 +172,7 @@ class BibleSearchAPI {
             // Komplexe Referenzen mit Punkten ohne Leerzeichen: "Johannes 3,16-18.20-22"
             '/^(.+?)\s+(\d+),(\d+)[-–](\d+)\.(\d+)[-–](\d+)$/u',
             // Ohne Leerzeichen zwischen Buch und Kapitel, komplex: "Mt4,1-3.6-9"
-            '/^(.+?)(\d+),(\d+)[-–](\d+)\.(\d+)[-–](\d+)$/u',
+            '/^([^\d]+)(\d+),(\d+)[-–](\d+)\.(\d+)[-–](\d+)$/u',
             // Mit Leerzeichen nach Komma und Bindestrich: "Ps 107, 1-9"
             '/^(.+?)\s+(\d+),\s+(\d+)[-–](\d+)$/u',
             // Mit Leerzeichen nach Komma: "Markus 3, 16"
@@ -180,11 +180,11 @@ class BibleSearchAPI {
             // Standard mit Bindestrich: "Buch Kapitel,Vers-Vers"  
             '/^(.+?)\s+(\d+),(\d+)[-–](\d+)$/u',
             // Ohne Leerzeichen zwischen Buch und Kapitel: "Mt4,1-9"
-            '/^(.+?)(\d+),(\d+)[-–](\d+)$/u',
+            '/^([^\d]+)(\d+),(\d+)[-–](\d+)$/u',
             // Standard einzeln: "Buch Kapitel,Vers"
             '/^(.+?)\s+(\d+),(\d+)$/u',
             // Ohne Leerzeichen einzeln: "Mt4,1"
-            '/^(.+?)(\d+),(\d+)$/u',
+            '/^([^\d]+)(\d+),(\d+)$/u',
             // Fallback für alles andere
             '/^(.+?)\s+(\d+),(.+)$/u'
         ];
