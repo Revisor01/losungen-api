@@ -185,6 +185,8 @@ class BibleSearchAPI {
         
         foreach ($patterns as $pattern) {
             if (preg_match($pattern, trim($reference), $matches)) {
+                // Debug logging
+                error_log("Bible search pattern matched: $pattern for reference: $reference");                
                 $bookInput = trim($matches[1]);
                 $resolvedBook = $this->resolveBookAbbreviation($bookInput);
                 
@@ -246,6 +248,8 @@ class BibleSearchAPI {
             }
         }
         
+        // Debug: Kein Pattern matched
+        error_log("No bible search pattern matched for reference: $reference");
         return null;
     }
     
