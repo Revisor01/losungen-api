@@ -173,7 +173,7 @@ class BibleSearchAPI {
             '/^(.+?)\s+(\d+),(\d+)(?:[-–](\d+))?$/u',
             // Mit Gedankenstrichen: "Ps 107,1–9"
             '/^(.+?)\s+(\d+),(\d+)–(\d+)$/u',
-            // Komplexe Referenzen mit Punkten: "Johannes 3, 16-18.20-22"
+            // Komplexe Referenzen mit Punkten: "Johannes 3, 16-18.20-22" oder "Joh 8, 8-12.14-17"
             '/^(.+?)\s+(\d+),\s*(\d+)[-–](\d+)\.(\d+)[-–](\d+)$/u',
             // Einfache Komplexe: "Johannes 3, 16-18"
             '/^(.+?)\s+(\d+),\s*(\d+)[-–](\d+)$/u',
@@ -194,10 +194,21 @@ class BibleSearchAPI {
                     $endVerse = $startVerse; // Default: nur ein Vers
                     
                     // Schaue nach Endvers in match[4], [5] oder [6]
+                    $excludedVerses = [];
                     if (isset($matches[4]) && is_numeric($matches[4])) {
                         $endVerse = (int)$matches[4];
                     } elseif (isset($matches[6]) && is_numeric($matches[6])) {
-                        // Für komplexe Pattern wie "16-18.20-22" nehmen wir den letzten Vers
+                        // Für komplexe Pattern wie "8-12.14-17" 
+                        $firstEnd = (int)$matches[4];   // 12
+                        $secondStart = (int)$matches[5]; // 14  
+                        $endVerse = (int)$matches[6];   // 17
+                        
+                        // Berechne ausgelassene Verse (13 in diesem Fall)
+                        for ($v = $firstEnd + 1; $v < $secondStart; $v++) {
+                            $excludedVerses[] = $v;
+                        }
+                        
+                        // Erweitere Bereich um den ganzen Bereich zu holen
                         $endVerse = (int)$matches[6];
                     }
                     
@@ -207,6 +218,7 @@ class BibleSearchAPI {
                         'chapter' => $chapter,
                         'start_verse' => $startVerse,
                         'end_verse' => $endVerse,
+                        'excluded_verses' => $excludedVerses,
                         'original' => $reference,
                         'original_book' => $bookInput
                     ];
@@ -223,6 +235,7 @@ class BibleSearchAPI {
                             'chapter' => $chapter,
                             'start_verse' => (int)$verseMatch[1],
                             'end_verse' => (int)$verseMatch[1],
+                            'excluded_verses' => [],
                             'original' => $reference,
                             'original_book' => $bookInput
                         ];
