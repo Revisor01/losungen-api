@@ -136,17 +136,6 @@ class LosungenService {
                 ot_reference,
                 nt_text,
                 nt_reference,
-                nt_text_bigs,
-                ot_text_ngu,
-                nt_text_ngu,
-                ot_text_hfa,
-                nt_text_hfa,
-                ot_text_eu,
-                nt_text_eu,
-                ot_text_elb,
-                nt_text_elb,
-                ot_text_esv,
-                nt_text_esv,
                 translations_updated_at
             FROM losungen 
             WHERE date = ?
