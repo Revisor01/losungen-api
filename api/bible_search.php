@@ -126,9 +126,9 @@ class BibleSearchAPI {
                 return $this->errorResponse('Failed to retrieve text for: ' . $reference);
             }
             
-            // Testament-Erkennung für Live-Scraping
-            if (isset($scrapedResult['testament'])) {
-                $scrapedResult['testament'] = detectTestament($parsedRef['book']);
+            // Testament-Erkennung für Live-Scraping - verwende Testament aus parsedRef falls vorhanden
+            if (!isset($scrapedResult['testament']) || empty($scrapedResult['testament'])) {
+                $scrapedResult['testament'] = $parsedRef['testament'] ?? detectTestament($parsedRef['book']);
             }
             
             // Formatierung anwenden
@@ -167,10 +167,12 @@ class BibleSearchAPI {
         
         // Erweiterte Patterns für komplexere Referenzen
         $patterns = [
+            // Mit Leerzeichen nach Komma: "Markus 3, 16-18"
+            '/^(.+?)\s+(\d+),\s+(\d+)(?:[-–]\s*(\d+))?$/u',
             // Standard: "Buch Kapitel,Vers" oder "Buch Kapitel,Vers-Vers"
             '/^(.+?)\s+(\d+),(\d+)(?:[-–](\d+))?$/u',
-            // Komplexe Referenzen wie "2. Mose 16,2–3.11–18"
-            '/^(.+?)\s+(\d+),(.+)$/u'
+            // Komplexe Referenzen wie "Johannes 3, 16-18.20-22"
+            '/^(.+?)\s+(\d+),\s*(.+)$/u'
         ];
         
         foreach ($patterns as $pattern) {
@@ -183,7 +185,8 @@ class BibleSearchAPI {
                 // Für einfache Formate
                 if (isset($matches[3]) && is_numeric($matches[3])) {
                     return [
-                        'book' => $resolvedBook ?: $bookInput,
+                        'book' => $resolvedBook['name'],
+                        'testament' => $resolvedBook['testament'],
                         'chapter' => $chapter,
                         'start_verse' => (int)$matches[3],
                         'end_verse' => isset($matches[4]) && is_numeric($matches[4]) ? (int)$matches[4] : (int)$matches[3],
@@ -198,7 +201,8 @@ class BibleSearchAPI {
                     // Extrahiere ersten Vers
                     if (preg_match('/^(\d+)/', $versePart, $verseMatch)) {
                         return [
-                            'book' => $resolvedBook ?: $bookInput,
+                            'book' => $resolvedBook['name'],
+                            'testament' => $resolvedBook['testament'],
                             'chapter' => $chapter,
                             'start_verse' => (int)$verseMatch[1],
                             'end_verse' => (int)$verseMatch[1], // Vereinfachung
@@ -214,23 +218,32 @@ class BibleSearchAPI {
     }
     
     /**
-     * Löse Buchabkürzung über Datenbank auf
+     * Löse Buchabkürzung über Datenbank auf und gebe auch Testament zurück
      */
     private function resolveBookAbbreviation($bookInput) {
         try {
             $pdo = getDatabase();
-            $stmt = $pdo->prepare("SELECT german_name FROM bible_abbreviations WHERE LOWER(abbreviation) = LOWER(?) OR LOWER(german_name) = LOWER(?)");
+            $stmt = $pdo->prepare("SELECT german_name, testament FROM bible_abbreviations WHERE LOWER(abbreviation) = LOWER(?) OR LOWER(german_name) = LOWER(?)");
             $stmt->execute([$bookInput, $bookInput]);
             $result = $stmt->fetch();
             
             if ($result) {
-                return $result['german_name'];
+                return [
+                    'name' => $result['german_name'],
+                    'testament' => $result['testament']
+                ];
             }
             
-            return $bookInput; // Fallback zum Original
+            return [
+                'name' => $bookInput,
+                'testament' => detectTestament($bookInput)
+            ];
         } catch (Exception $e) {
             error_log("Bible abbreviation resolution failed: " . $e->getMessage());
-            return $bookInput; // Fallback zum Original
+            return [
+                'name' => $bookInput,
+                'testament' => detectTestament($bookInput)
+            ];
         }
     }
     
@@ -262,7 +275,7 @@ class BibleSearchAPI {
                 ],
                 'source' => $cacheResult['losung_source'] ?? 'Database Cache',
                 'url' => $cacheResult['losung_url'],
-                'testament' => detectTestament($parsedRef['book']),
+                'testament' => $parsedRef['testament'] ?? detectTestament($parsedRef['book']),
                 'cached_at' => $cacheResult['created_at']
             ];
         }
@@ -278,7 +291,7 @@ class BibleSearchAPI {
                 ],
                 'source' => $cacheResult['lehrtext_source'] ?? 'Database Cache',
                 'url' => $cacheResult['lehrtext_url'],
-                'testament' => detectTestament($parsedRef['book']),
+                'testament' => $parsedRef['testament'] ?? detectTestament($parsedRef['book']),
                 'cached_at' => $cacheResult['created_at']
             ];
         }

@@ -334,9 +334,9 @@ export const ChurchYearCalendar: React.FC = () => {
                   exit={{ opacity: 0, y: -20 }}
                   className="card p-8"
                 >
-                  {/* Edit Controls - positioned to not overlap liturgical color */}
+                  {/* Edit Controls - positioned bottom right */}
                   {isAuthenticated && (
-                    <div className="absolute top-4 left-4 flex space-x-2">
+                    <div className="absolute bottom-4 right-4 flex space-x-2">
                       {isEditing ? (
                         <>
                           <motion.button
