@@ -137,24 +137,6 @@ class BibleScraper:
                                 # Markiere optionale Verse (nur für Verse-Array, nicht im Text)
                                 is_optional = verse_num in reference.get('optional_verses', [])
                                 
-                                # Prüfe auf a/b-Suffixe und splitte den Vers entsprechend
-                                optional_suffixes = reference.get('optional_suffixes', {})
-                                if verse_num in optional_suffixes:
-                                    suffix = optional_suffixes[verse_num]
-                                    
-                                    # Splitten am ersten Punkt/Satzzeichen
-                                    parts = re.split(r'([.!?])', verse_text, 1)
-                                    if len(parts) >= 3:  # Text + Trennzeichen + Rest
-                                        first_part = parts[0] + parts[1]  # Text bis inkl. erstem Punkt
-                                        second_part = parts[2].strip()    # Text nach dem ersten Punkt
-                                        
-                                        if suffix == 'a':
-                                            # Nur ersten Teil nehmen (bis zum ersten Punkt)
-                                            verse_text = first_part
-                                        elif suffix == 'b':
-                                            # Nur zweiten Teil nehmen (nach dem ersten Punkt)
-                                            verse_text = second_part
-                                
                                 verse_texts.append(verse_text)
                                 verses_data.append({
                                     'number': verse_num,
@@ -239,24 +221,6 @@ class BibleScraper:
                             
                             # Markiere optionale Verse (nur für Verse-Array, nicht im Text) 
                             is_optional = verse_num in reference.get('optional_verses', [])
-                            
-                            # Prüfe auf a/b-Suffixe und splitte den Vers entsprechend
-                            optional_suffixes = reference.get('optional_suffixes', {})
-                            if verse_num in optional_suffixes:
-                                suffix = optional_suffixes[verse_num]
-                                
-                                # Splitten am ersten Punkt/Satzzeichen
-                                parts = re.split(r'([.!?])', verse_text, 1)
-                                if len(parts) >= 3:  # Text + Trennzeichen + Rest
-                                    first_part = parts[0] + parts[1]  # Text bis inkl. erstem Punkt
-                                    second_part = parts[2].strip()    # Text nach dem ersten Punkt
-                                    
-                                    if suffix == 'a':
-                                        # Nur ersten Teil nehmen (bis zum ersten Punkt)
-                                        verse_text = first_part
-                                    elif suffix == 'b':
-                                        # Nur zweiten Teil nehmen (nach dem ersten Punkt)
-                                        verse_text = second_part
                             
                             verse_texts.append(verse_text)
                             verses_data.append({

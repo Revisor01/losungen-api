@@ -235,8 +235,25 @@ class BibleSearchAPI {
                 }
             }
             
-            // Entferne Klammern für normale Verarbeitung
-            $reference = preg_replace('/\([^)]+\)/', '', $reference);
+            // Behandle Klammern speziell bei direkt anschließenden Versen
+            // z.B. "Phil 3,(4b–6)7–14" wird zu "Phil 3,4–14"
+            if (preg_match('/(.+,)\((\d+)[a-z]?[-–](\d+)[a-z]?\)(\d+)[-–](\d+)/', $reference, $matches)) {
+                // Format: Buch Kapitel,(StartKlammer-EndeKlammer)StartRest-EndeRest
+                $prefix = $matches[1];      // "Phil 3,"
+                $klammerStart = $matches[2]; // "4"
+                $klammerEnd = $matches[3];   // "6"
+                $restStart = $matches[4];    // "7"
+                $restEnd = $matches[5];      // "14"
+                
+                // Verwende den kleinsten Start und größten End
+                $gesamtStart = min((int)$klammerStart, (int)$restStart);
+                $gesamtEnd = max((int)$klammerEnd, (int)$restEnd);
+                
+                $reference = $prefix . $gesamtStart . '–' . $gesamtEnd;
+            } else {
+                // Für andere Fälle, entferne einfach die Klammern
+                $reference = preg_replace('/\(([^)]+)\)/', '$1', $reference);
+            }
         }
         
         // Entferne Buchstaben-Suffixe von Versen (z.B. 15a → 15, auch außerhalb von Klammern)
@@ -557,11 +574,11 @@ class BibleSearchAPI {
             }
         }
         
-        // Füge ausgeschlossene Verse als markiert hinzu
+        // Füge ausgeschlossene Verse als markiert hinzu (ohne Text, nur als Platzhalter)
         foreach ($excludedVerses as $excludedVerse) {
             $allVerses[] = [
                 'number' => $excludedVerse,
-                'text' => "[Vers $excludedVerse ausgelassen]",
+                'text' => '',  // Kein Text für ausgelassene Verse
                 'excluded' => true
             ];
         }
