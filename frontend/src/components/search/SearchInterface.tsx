@@ -545,40 +545,56 @@ export const SearchInterface: React.FC = () => {
                 </motion.div>
               )}
 
-              {/* Bible Text Display - Moved below verses */}
-              <BibleTextDisplay
-                verse={{
-                  text: searchResult.text,
-                  reference: searchResult.reference,
-                  testament: searchResult.verses && searchResult.verses.length > 0 ? 'AT' : 'NT', // Vereinfacht
-                  translation_source: searchResult.source,
-                  bibleserver_url: searchResult.url
-                }}
-                showReference={true}
-                showSource={true}
-              />
-
-              {/* Format Output (for non-JSON formats) */}
-              {selectedFormat !== 'json' && (
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.3 }}
-                  className="card p-6"
-                >
-                  <h3 className="font-heading text-lg font-semibold text-gray-900 mb-4">
-                    {selectedFormat.toUpperCase()} Format
+              {/* Format Output - Zeigt je nach ausgewähltem Format */}
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.3 }}
+                className="card p-6"
+              >
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="font-heading text-lg font-semibold text-gray-900">
+                    Kopiervorlage ({selectedFormat.toUpperCase()})
                   </h3>
-                  <div className="bg-gray-50 rounded-lg p-4">
+                  <button
+                    onClick={() => {
+                      const content = selectedFormat === 'text' ? searchResult.text :
+                                    selectedFormat === 'markdown' ? `## ${searchResult.reference}\n\n> ${searchResult.text}\n\n*— ${searchResult.translation?.name}*` :
+                                    selectedFormat === 'html' ? `<div class="bible-verse">\n  <h3>${searchResult.reference}</h3>\n  <blockquote>${searchResult.text}</blockquote>\n  <footer>${searchResult.translation?.name}</footer>\n</div>` :
+                                    JSON.stringify(searchResult, null, 2);
+                      navigator.clipboard.writeText(content);
+                    }}
+                    className="btn-secondary text-sm"
+                  >
+                    In Zwischenablage kopieren
+                  </button>
+                </div>
+                <div className="bg-gray-50 rounded-lg p-4">
+                  {selectedFormat === 'text' ? (
+                    <p className="text-gray-700 leading-relaxed">{searchResult.text}</p>
+                  ) : selectedFormat === 'markdown' ? (
                     <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
-                      {selectedFormat === 'text' ? searchResult.text :
-                       selectedFormat === 'markdown' ? `## ${searchResult.reference}\n\n> ${searchResult.text}\n\n*— ${searchResult.translation?.name}*` :
-                       selectedFormat === 'html' ? `<div class="bible-verse">\n  <h3>${searchResult.reference}</h3>\n  <blockquote>${searchResult.text}</blockquote>\n  <footer>${searchResult.translation?.name}</footer>\n</div>` :
-                       JSON.stringify(searchResult, null, 2)}
+{`## ${searchResult.reference}
+
+> ${searchResult.text}
+
+*— ${searchResult.translation?.name}*`}
                     </pre>
-                  </div>
-                </motion.div>
-              )}
+                  ) : selectedFormat === 'html' ? (
+                    <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
+{`<div class="bible-verse">
+  <h3>${searchResult.reference}</h3>
+  <blockquote>${searchResult.text}</blockquote>
+  <footer>${searchResult.translation?.name}</footer>
+</div>`}
+                    </pre>
+                  ) : (
+                    <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
+                      {JSON.stringify(searchResult, null, 2)}
+                    </pre>
+                  )}
+                </div>
+              </motion.div>
             </motion.div>
           )}
         </AnimatePresence>
