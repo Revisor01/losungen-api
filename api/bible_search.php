@@ -414,14 +414,14 @@ class BibleSearchAPI {
             throw new Exception('Bible scraper not found');
         }
         
+        // Für Referenzen mit optionalen Versen (Priorität da besser implementiert)
+        if (!empty($parsedRef['optional_verses'])) {
+            return $this->scrapeOptionalReference($parsedRef, $translation);
+        }
+        
         // Für komplexe Referenzen mit ausgeschlossenen Versen
         if (!empty($parsedRef['excluded_verses'])) {
             return $this->scrapeComplexReference($parsedRef, $translation);
-        }
-        
-        // Für Referenzen mit optionalen Versen
-        if (!empty($parsedRef['optional_verses'])) {
-            return $this->scrapeOptionalReference($parsedRef, $translation);
         }
         
         // Normalisiere Referenz für Python-Scraper (füge Leerzeichen hinzu falls nötig)
