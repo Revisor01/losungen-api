@@ -307,6 +307,13 @@ class BibleSearchAPI {
         
         $resolvedBook = $this->resolveBookAbbreviation($bookInput);
 
+        // Debug: Log what was parsed
+        error_log("ParseReference Debug for: " . $originalReference);
+        error_log("All verses: " . json_encode($allVerses));
+        error_log("Optional verses: " . json_encode($optionalVerses));
+        error_log("Suffixes: " . json_encode($suffixes));
+        error_log("Optional suffixes: " . json_encode($optionalSuffixes));
+
         return [
             'book' => $resolvedBook['name'],
             'testament' => $resolvedBook['testament'],
