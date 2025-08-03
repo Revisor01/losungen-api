@@ -556,9 +556,22 @@ export const SearchInterface: React.FC = () => {
                   </h3>
                   <button
                     onClick={() => {
-                      const content = selectedFormat === 'text' ? searchResult.text :
-                                    selectedFormat === 'markdown' ? `## ${searchResult.reference}\n\n> ${searchResult.text}\n\n*— ${searchResult.translation?.name}*` :
-                                    selectedFormat === 'html' ? `<div class="bible-verse">\n  <h3>${searchResult.reference}</h3>\n  <blockquote>${searchResult.text}</blockquote>\n  <footer>${searchResult.translation?.name}</footer>\n</div>` :
+                      // Generiere gefilterten Text basierend auf Toggle-Settings
+                      let filteredText = '';
+                      if (searchResult.verses && searchResult.verses.length > 0) {
+                        const visibleVerses = searchResult.verses.filter(verse => {
+                          if (verse.excluded && !showExcludedVerses) return false;
+                          if (verse.optional && !showOptionalVerses) return false;
+                          return true;
+                        });
+                        filteredText = visibleVerses.map(v => v.text).join(' ');
+                      } else {
+                        filteredText = searchResult.text;
+                      }
+                      
+                      const content = selectedFormat === 'text' ? filteredText :
+                                    selectedFormat === 'markdown' ? `## ${searchResult.reference}\n\n> ${filteredText}\n\n*— ${searchResult.translation?.name}*` :
+                                    selectedFormat === 'html' ? `<div class="bible-verse">\n  <h3>${searchResult.reference}</h3>\n  <blockquote>${filteredText}</blockquote>\n  <footer>${searchResult.translation?.name}</footer>\n</div>` :
                                     JSON.stringify(searchResult, null, 2);
                       navigator.clipboard.writeText(content);
                     }}
@@ -568,29 +581,50 @@ export const SearchInterface: React.FC = () => {
                   </button>
                 </div>
                 <div className="bg-gray-50 rounded-lg p-4">
-                  {selectedFormat === 'text' ? (
-                    <p className="text-gray-700 leading-relaxed">{searchResult.text}</p>
-                  ) : selectedFormat === 'markdown' ? (
-                    <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
+                  {(() => {
+                    // Generiere gefilterten Text basierend auf Toggle-Settings für Anzeige
+                    let filteredText = '';
+                    if (searchResult.verses && searchResult.verses.length > 0) {
+                      const visibleVerses = searchResult.verses.filter(verse => {
+                        if (verse.excluded && !showExcludedVerses) return false;
+                        if (verse.optional && !showOptionalVerses) return false;
+                        return true;
+                      });
+                      filteredText = visibleVerses.map(v => v.text).join(' ');
+                    } else {
+                      filteredText = searchResult.text;
+                    }
+                    
+                    if (selectedFormat === 'text') {
+                      return <p className="text-gray-700 leading-relaxed">{filteredText}</p>;
+                    } else if (selectedFormat === 'markdown') {
+                      return (
+                        <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
 {`## ${searchResult.reference}
 
-> ${searchResult.text}
+> ${filteredText}
 
 *— ${searchResult.translation?.name}*`}
-                    </pre>
-                  ) : selectedFormat === 'html' ? (
-                    <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
+                        </pre>
+                      );
+                    } else if (selectedFormat === 'html') {
+                      return (
+                        <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
 {`<div class="bible-verse">
   <h3>${searchResult.reference}</h3>
-  <blockquote>${searchResult.text}</blockquote>
+  <blockquote>${filteredText}</blockquote>
   <footer>${searchResult.translation?.name}</footer>
 </div>`}
-                    </pre>
-                  ) : (
-                    <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
-                      {JSON.stringify(searchResult, null, 2)}
-                    </pre>
-                  )}
+                        </pre>
+                      );
+                    } else {
+                      return (
+                        <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
+                          {JSON.stringify(searchResult, null, 2)}
+                        </pre>
+                      );
+                    }
+                  })()}
                 </div>
               </motion.div>
             </motion.div>

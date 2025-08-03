@@ -22,7 +22,7 @@ require_once 'redis_cache.php';
  */
 function detectTestament($bookName) {
     $ntBooks = [
-        'matthäus', 'markus', 'lukas', 'johannes',
+        'matthäus', 'mt', 'markus', 'mk', 'lukas', 'lk', 'johannes', 'joh',
         'apostelgeschichte', 'apg', 'römer', 'rö', 'röm',
         '1 korinther', '1kor', '1. korinther', '1 kor', '1. kor',
         '2 korinther', '2kor', '2. korinther', '2 kor', '2. kor',
@@ -506,26 +506,66 @@ class BibleSearchAPI {
             throw new Exception('Failed to scrape optional reference');
         }
         
-        // Filtere nur die gewünschten Verse und markiere sie
+        // Erstelle Verse basierend auf normalem und optionalem Parsing
         $filteredVerses = [];
         $combinedText = '';
+        $verseLookup = [];
         
+        // Erstelle Lookup-Tabelle für Verse
         if (isset($data['verses']) && is_array($data['verses'])) {
             foreach ($data['verses'] as $verse) {
-                if (in_array($verse['number'], $allNeededVerses)) {
-                    $isOptional = in_array($verse['number'], $optionalVerses);
-                    $verse['optional'] = $isOptional;
-                    
-                    // Füge Suffixe aus dem Parsing hinzu - abhängig davon ob der Vers optional ist
-                    $suffixes = $parsedRef['suffixes'] ?? [];
-                    $optionalSuffixes = $parsedRef['optional_suffixes'] ?? [];
-                    
-                    if ($isOptional && isset($optionalSuffixes[$verse['number']])) {
-                        $verse['suffix'] = $optionalSuffixes[$verse['number']];
-                    } elseif (!$isOptional && isset($suffixes[$verse['number']])) {
-                        $verse['suffix'] = $suffixes[$verse['number']];
+                $verseLookup[$verse['number']] = $verse;
+            }
+        }
+        
+        $suffixes = $parsedRef['suffixes'] ?? [];
+        $optionalSuffixes = $parsedRef['optional_suffixes'] ?? [];
+        
+        // Erstelle einen einzigartigen Eintrag pro Vers, wobei Suffixe berücksichtigt werden
+        $processedVerses = []; // Track welche Verse+Suffix bereits hinzugefügt wurden
+        
+        // Erstelle Einträge für normale Verse (start_verse bis end_verse)
+        for ($v = $startVerse; $v <= $endVerse; $v++) {
+            if (isset($verseLookup[$v])) {
+                $verse = $verseLookup[$v];
+                $verse['optional'] = false;
+                $verse['excluded'] = false;
+                
+                $suffix = null;
+                if (isset($suffixes[$v])) {
+                    $suffix = $suffixes[$v];
+                    $verse['suffix'] = $suffix;
+                }
+                
+                // Eindeutiger Key: Versnummer + Suffix
+                $verseKey = $v . ($suffix ? $suffix : '');
+                if (!isset($processedVerses[$verseKey])) {
+                    $processedVerses[$verseKey] = true;
+                    $filteredVerses[] = $verse;
+                    if (!empty($verse['text'])) {
+                        $combinedText .= ($combinedText ? ' ' : '') . $verse['text'];
                     }
-                    
+                }
+            }
+        }
+        
+        // Erstelle Einträge für optionale Verse
+        foreach ($optionalVerses as $v) {
+            if (isset($verseLookup[$v])) {
+                $verse = $verseLookup[$v];
+                $verse['optional'] = true;
+                $verse['excluded'] = false;
+                
+                $suffix = null;
+                if (isset($optionalSuffixes[$v])) {
+                    $suffix = $optionalSuffixes[$v];
+                    $verse['suffix'] = $suffix;
+                }
+                
+                // Eindeutiger Key: Versnummer + Suffix  
+                $verseKey = $v . ($suffix ? $suffix : '');
+                if (!isset($processedVerses[$verseKey])) {
+                    $processedVerses[$verseKey] = true;
                     $filteredVerses[] = $verse;
                     if (!empty($verse['text'])) {
                         $combinedText .= ($combinedText ? ' ' : '') . $verse['text'];
