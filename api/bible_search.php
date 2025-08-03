@@ -474,14 +474,28 @@ class BibleSearchAPI {
         $startVerse = $parsedRef['start_verse'];
         $endVerse = $parsedRef['end_verse'];
         $optionalVerses = $parsedRef['optional_verses'];
-        
-        // Erstelle Referenz ohne Klammern für Python-Scraper
-        $normalizedRef = $this->normalizeReferenceForScraper($parsedRef);
-        
-        // Python-Scraper aufrufen (inkl. Testament)
         $pythonScript = '/var/www/html/bible_scraper.py';
+        
+        // Sammle alle benötigten Verse (normal + optional)
+        $allNeededVerses = [];
+        for ($v = $startVerse; $v <= $endVerse; $v++) {
+            $allNeededVerses[] = $v;
+        }
+        foreach ($optionalVerses as $optVerse) {
+            if (!in_array($optVerse, $allNeededVerses)) {
+                $allNeededVerses[] = $optVerse;
+            }
+        }
+        sort($allNeededVerses);
+        
+        // Hole alle Verse vom kleinsten zum größten
+        $minVerse = min($allNeededVerses);
+        $maxVerse = max($allNeededVerses);
+        $fullRef = "$book $chapter,$minVerse-$maxVerse";
+        
+        // Python-Scraper aufrufen für den gesamten Bereich
         $command = "/opt/venv/bin/python3 $pythonScript " . 
-                  escapeshellarg($normalizedRef) . " " .
+                  escapeshellarg($fullRef) . " " .
                   escapeshellarg($translation) . " " .
                   escapeshellarg($parsedRef['testament']) . " 2>&1";
         
@@ -492,28 +506,36 @@ class BibleSearchAPI {
             throw new Exception('Failed to scrape optional reference');
         }
         
-        // Markiere optionale Verse und füge Suffixe hinzu
+        // Filtere nur die gewünschten Verse und markiere sie
+        $filteredVerses = [];
+        $combinedText = '';
+        
         if (isset($data['verses']) && is_array($data['verses'])) {
-            foreach ($data['verses'] as &$verse) {
-                $isOptional = in_array($verse['number'], $optionalVerses);
-                $verse['optional'] = $isOptional;
-                
-                // Füge Suffixe aus dem Parsing hinzu - abhängig davon ob der Vers optional ist
-                $suffixes = $parsedRef['suffixes'] ?? [];
-                $optionalSuffixes = $parsedRef['optional_suffixes'] ?? [];
-                
-                if ($isOptional && isset($optionalSuffixes[$verse['number']])) {
-                    $verse['suffix'] = $optionalSuffixes[$verse['number']];
-                } elseif (!$isOptional && isset($suffixes[$verse['number']])) {
-                    $verse['suffix'] = $suffixes[$verse['number']];
+            foreach ($data['verses'] as $verse) {
+                if (in_array($verse['number'], $allNeededVerses)) {
+                    $isOptional = in_array($verse['number'], $optionalVerses);
+                    $verse['optional'] = $isOptional;
+                    
+                    // Füge Suffixe aus dem Parsing hinzu - abhängig davon ob der Vers optional ist
+                    $suffixes = $parsedRef['suffixes'] ?? [];
+                    $optionalSuffixes = $parsedRef['optional_suffixes'] ?? [];
+                    
+                    if ($isOptional && isset($optionalSuffixes[$verse['number']])) {
+                        $verse['suffix'] = $optionalSuffixes[$verse['number']];
+                    } elseif (!$isOptional && isset($suffixes[$verse['number']])) {
+                        $verse['suffix'] = $suffixes[$verse['number']];
+                    }
+                    
+                    $filteredVerses[] = $verse;
+                    if (!empty($verse['text'])) {
+                        $combinedText .= ($combinedText ? ' ' : '') . $verse['text'];
+                    }
                 }
             }
         }
         
-        // Entferne [OPTIONAL] Tags aus kombiniertem Text - Frontend macht sie kursiv
-        if (isset($data['text'])) {
-            $data['text'] = preg_replace('/\[OPTIONAL\](.*?)\[\/OPTIONAL\]/s', '$1', $data['text']);
-        }
+        $data['verses'] = $filteredVerses;
+        $data['text'] = $combinedText;
         
         return $data;
     }
