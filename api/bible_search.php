@@ -476,25 +476,25 @@ class BibleSearchAPI {
         $optionalVerses = $parsedRef['optional_verses'];
         $pythonScript = '/var/www/html/bible_scraper.py';
         
-        // Sammle alle benötigten Verse (normal + optional)
-        $allNeededVerses = [];
-        for ($v = $startVerse; $v <= $endVerse; $v++) {
-            $allNeededVerses[] = $v;
-        }
-        foreach ($optionalVerses as $optVerse) {
-            if (!in_array($optVerse, $allNeededVerses)) {
-                $allNeededVerses[] = $optVerse;
-            }
-        }
-        sort($allNeededVerses);
+        // Sammle alle tatsächlich gewünschten Verse (normale + optionale, aber nicht ausgeschlossene)
+        $normalVerses = [];
+        $excludedVerses = $parsedRef['excluded_verses'] ?? [];
         
-        // Hole alle Verse vom kleinsten zum größten
-        $minVerse = min($allNeededVerses);
-        $maxVerse = max($allNeededVerses);
+        // Berechne welche Verse im normalen Bereich sind (ohne ausgeschlossene)
+        $allVerseNumbers = array_merge(
+            range($parsedRef['start_verse'], $parsedRef['end_verse']),
+            $optionalVerses
+        );
+        $allVerseNumbers = array_unique($allVerseNumbers);
+        sort($allVerseNumbers);
         
-        // Erweitere den Bereich um 1 Vers nach oben um sicherzustellen, dass alle optionalen Verse geladen werden
-        $maxVerse = $maxVerse + 1;
+        // Entferne ausgeschlossene Verse
+        $allNeededVerses = array_diff($allVerseNumbers, $excludedVerses);
+        $allNeededVerses = array_values($allNeededVerses);
         
+        // Für Scraper: hole den gesamten Bereich (inklusive ausgeschlossene für vollständiges Scraping)
+        $minVerse = min($allVerseNumbers);
+        $maxVerse = max($allVerseNumbers);
         $fullRef = "$book $chapter,$minVerse-$maxVerse";
         
         // Python-Scraper aufrufen für den gesamten Bereich
@@ -510,53 +510,40 @@ class BibleSearchAPI {
             throw new Exception('Failed to scrape optional reference');
         }
         
-        // Erstelle Verse basierend auf normalem und optionalem Parsing
+        // Filtere nur die gewünschten Verse und markiere sie
         $filteredVerses = [];
         $combinedText = '';
-        $verseLookup = [];
         
-        // Erstelle Lookup-Tabelle für Verse
         if (isset($data['verses']) && is_array($data['verses'])) {
             foreach ($data['verses'] as $verse) {
-                $verseLookup[$verse['number']] = $verse;
-            }
-        }
-        
-        $suffixes = $parsedRef['suffixes'] ?? [];
-        $optionalSuffixes = $parsedRef['optional_suffixes'] ?? [];
-        
-        // Erstelle Einträge für normale Verse (start_verse bis end_verse)
-        for ($v = $startVerse; $v <= $endVerse; $v++) {
-            if (isset($verseLookup[$v])) {
-                $verse = $verseLookup[$v];
-                $verse['optional'] = false;
-                $verse['excluded'] = false;
+                $verseNum = $verse['number'];
                 
-                if (isset($suffixes[$v])) {
-                    $verse['suffix'] = $suffixes[$v];
-                }
+                // Prüfe ob dieser Vers gewünscht ist (normal oder optional)
+                $isOptional = in_array($verseNum, $optionalVerses);
+                $isExcluded = in_array($verseNum, $excludedVerses);
+                $isNormallyIncluded = in_array($verseNum, $allNeededVerses);
                 
-                $filteredVerses[] = $verse;
-                if (!empty($verse['text'])) {
-                    $combinedText .= ($combinedText ? ' ' : '') . $verse['text'];
-                }
-            }
-        }
-        
-        // Erstelle Einträge für optionale Verse
-        foreach ($optionalVerses as $v) {
-            if (isset($verseLookup[$v])) {
-                $verse = $verseLookup[$v];
-                $verse['optional'] = true;
-                $verse['excluded'] = false;
-                
-                if (isset($optionalSuffixes[$v])) {
-                    $verse['suffix'] = $optionalSuffixes[$v];
-                }
-                
-                $filteredVerses[] = $verse;
-                if (!empty($verse['text'])) {
-                    $combinedText .= ($combinedText ? ' ' : '') . $verse['text'];
+                // Nehme den Vers wenn er gewünscht ist ODER ausgeschlossen (für vollständige Darstellung)
+                if ($isNormallyIncluded || $isExcluded) {
+                    $verse['optional'] = $isOptional;
+                    $verse['excluded'] = $isExcluded;
+                    
+                    // Füge Suffixe aus dem Parsing hinzu - abhängig davon ob der Vers optional ist
+                    $suffixes = $parsedRef['suffixes'] ?? [];
+                    $optionalSuffixes = $parsedRef['optional_suffixes'] ?? [];
+                    
+                    if ($isOptional && isset($optionalSuffixes[$verseNum])) {
+                        $verse['suffix'] = $optionalSuffixes[$verseNum];
+                    } elseif (!$isOptional && isset($suffixes[$verseNum])) {
+                        $verse['suffix'] = $suffixes[$verseNum];
+                    }
+                    
+                    $filteredVerses[] = $verse;
+                    
+                    // Füge nur nicht-ausgeschlossene Verse zum Text hinzu
+                    if (!$isExcluded && !empty($verse['text'])) {
+                        $combinedText .= ($combinedText ? ' ' : '') . $verse['text'];
+                    }
                 }
             }
         }
