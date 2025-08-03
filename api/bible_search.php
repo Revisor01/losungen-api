@@ -491,6 +491,10 @@ class BibleSearchAPI {
         // Hole alle Verse vom kleinsten zum größten
         $minVerse = min($allNeededVerses);
         $maxVerse = max($allNeededVerses);
+        
+        // Erweitere den Bereich um 1 Vers nach oben um sicherzustellen, dass alle optionalen Verse geladen werden
+        $maxVerse = $maxVerse + 1;
+        
         $fullRef = "$book $chapter,$minVerse-$maxVerse";
         
         // Python-Scraper aufrufen für den gesamten Bereich
@@ -521,9 +525,6 @@ class BibleSearchAPI {
         $suffixes = $parsedRef['suffixes'] ?? [];
         $optionalSuffixes = $parsedRef['optional_suffixes'] ?? [];
         
-        // Erstelle einen einzigartigen Eintrag pro Vers, wobei Suffixe berücksichtigt werden
-        $processedVerses = []; // Track welche Verse+Suffix bereits hinzugefügt wurden
-        
         // Erstelle Einträge für normale Verse (start_verse bis end_verse)
         for ($v = $startVerse; $v <= $endVerse; $v++) {
             if (isset($verseLookup[$v])) {
@@ -531,20 +532,13 @@ class BibleSearchAPI {
                 $verse['optional'] = false;
                 $verse['excluded'] = false;
                 
-                $suffix = null;
                 if (isset($suffixes[$v])) {
-                    $suffix = $suffixes[$v];
-                    $verse['suffix'] = $suffix;
+                    $verse['suffix'] = $suffixes[$v];
                 }
                 
-                // Eindeutiger Key: Versnummer + Suffix
-                $verseKey = $v . ($suffix ? $suffix : '');
-                if (!isset($processedVerses[$verseKey])) {
-                    $processedVerses[$verseKey] = true;
-                    $filteredVerses[] = $verse;
-                    if (!empty($verse['text'])) {
-                        $combinedText .= ($combinedText ? ' ' : '') . $verse['text'];
-                    }
+                $filteredVerses[] = $verse;
+                if (!empty($verse['text'])) {
+                    $combinedText .= ($combinedText ? ' ' : '') . $verse['text'];
                 }
             }
         }
@@ -556,20 +550,13 @@ class BibleSearchAPI {
                 $verse['optional'] = true;
                 $verse['excluded'] = false;
                 
-                $suffix = null;
                 if (isset($optionalSuffixes[$v])) {
-                    $suffix = $optionalSuffixes[$v];
-                    $verse['suffix'] = $suffix;
+                    $verse['suffix'] = $optionalSuffixes[$v];
                 }
                 
-                // Eindeutiger Key: Versnummer + Suffix  
-                $verseKey = $v . ($suffix ? $suffix : '');
-                if (!isset($processedVerses[$verseKey])) {
-                    $processedVerses[$verseKey] = true;
-                    $filteredVerses[] = $verse;
-                    if (!empty($verse['text'])) {
-                        $combinedText .= ($combinedText ? ' ' : '') . $verse['text'];
-                    }
+                $filteredVerses[] = $verse;
+                if (!empty($verse['text'])) {
+                    $combinedText .= ($combinedText ? ' ' : '') . $verse['text'];
                 }
             }
         }
