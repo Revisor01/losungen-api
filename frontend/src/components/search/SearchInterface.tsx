@@ -20,6 +20,8 @@ export const SearchInterface: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [suggestions, setSuggestions] = useState<string[]>([]);
+  const [showSuggestions, setShowSuggestions] = useState(false);
   const [nextEvent, setNextEvent] = useState<ChurchEvent | null>(null);
   const [showExcludedVerses, setShowExcludedVerses] = useState(true);
   const [showOptionalVerses, setShowOptionalVerses] = useState(true);
