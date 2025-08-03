@@ -418,7 +418,7 @@ class BibleSearchAPI {
         // NEU: Logik zur Auswahl der Scraping-Methode korrigiert
         // scrapeComplexReference ist robuster und kann sowohl ausgeschlossene als auch optionale Verse verarbeiten.
         // Wir leiten alle komplexen Fälle an diese Funktion weiter.
-        if (!empty($parsedRef['excluded_verses']) || !empty($parsedRef['optional_verses'])) {
+        if (!empty($parsedRef['excluded_verses']) || !empty($parsedRef['optional_verses']) || !empty($parsedRef['suffixes'])) {
             // Diese Funktion wird nun für alle komplexen Fälle verwendet.
             // Sie ist angepasst, damit sie auch optionale Verse korrekt verarbeitet.
             return $this->scrapeComplexReference($parsedRef, $translation);
