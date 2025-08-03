@@ -307,13 +307,6 @@ class BibleSearchAPI {
         
         $resolvedBook = $this->resolveBookAbbreviation($bookInput);
 
-        // Debug: Log what was parsed
-        error_log("ParseReference Debug for: " . $originalReference);
-        error_log("All verses: " . json_encode($allVerses));
-        error_log("Optional verses: " . json_encode($optionalVerses));
-        error_log("Suffixes: " . json_encode($suffixes));
-        error_log("Optional suffixes: " . json_encode($optionalSuffixes));
-
         return [
             'book' => $resolvedBook['name'],
             'testament' => $resolvedBook['testament'],
@@ -456,13 +449,11 @@ class BibleSearchAPI {
         // Füge Suffixe zu den Versen hinzu, falls vorhanden
         if (isset($data['verses']) && is_array($data['verses'])) {
             foreach ($data['verses'] as &$verse) {
-                // Füge Suffixe hinzu
+                // Füge Suffixe hinzu - nur aus dem normalen suffixes Array
                 $suffixes = $parsedRef['suffixes'] ?? [];
-                $optionalSuffixes = $parsedRef['optional_suffixes'] ?? [];
-                $allSuffixes = array_merge($suffixes, $optionalSuffixes);
                 
-                if (isset($allSuffixes[$verse['number']])) {
-                    $verse['suffix'] = $allSuffixes[$verse['number']];
+                if (isset($suffixes[$verse['number']])) {
+                    $verse['suffix'] = $suffixes[$verse['number']];
                 }
                 
                 // Für normale Referenzen sind alle Verse optional=false und excluded=false
@@ -504,19 +495,17 @@ class BibleSearchAPI {
         // Markiere optionale Verse und füge Suffixe hinzu
         if (isset($data['verses']) && is_array($data['verses'])) {
             foreach ($data['verses'] as &$verse) {
-                if (in_array($verse['number'], $optionalVerses)) {
-                    $verse['optional'] = true;
-                } else {
-                    $verse['optional'] = false;
-                }
+                $isOptional = in_array($verse['number'], $optionalVerses);
+                $verse['optional'] = $isOptional;
                 
-                // Füge Suffixe aus dem Parsing hinzu
+                // Füge Suffixe aus dem Parsing hinzu - abhängig davon ob der Vers optional ist
                 $suffixes = $parsedRef['suffixes'] ?? [];
                 $optionalSuffixes = $parsedRef['optional_suffixes'] ?? [];
-                $allSuffixes = array_merge($suffixes, $optionalSuffixes);
                 
-                if (isset($allSuffixes[$verse['number']])) {
-                    $verse['suffix'] = $allSuffixes[$verse['number']];
+                if ($isOptional && isset($optionalSuffixes[$verse['number']])) {
+                    $verse['suffix'] = $optionalSuffixes[$verse['number']];
+                } elseif (!$isOptional && isset($suffixes[$verse['number']])) {
+                    $verse['suffix'] = $suffixes[$verse['number']];
                 }
             }
         }
@@ -567,18 +556,20 @@ class BibleSearchAPI {
                     foreach ($data['verses'] as $verse) {
                         $verse['excluded'] = false; // Diese Verse sind nicht ausgeschlossen
                         
-                        // Füge Suffixe hinzu
-                        $suffixes = $parsedRef['suffixes'] ?? [];
-                        $optionalSuffixes = $parsedRef['optional_suffixes'] ?? [];
-                        $allSuffixes = array_merge($suffixes, $optionalSuffixes);
-                        
-                        if (isset($allSuffixes[$verse['number']])) {
-                            $verse['suffix'] = $allSuffixes[$verse['number']];
-                        }
-                        
                         // Prüfe ob der Vers optional ist
                         $optionalVerses = $parsedRef['optional_verses'] ?? [];
-                        $verse['optional'] = in_array($verse['number'], $optionalVerses);
+                        $isOptional = in_array($verse['number'], $optionalVerses);
+                        $verse['optional'] = $isOptional;
+                        
+                        // Füge Suffixe hinzu - abhängig davon ob der Vers optional ist
+                        $suffixes = $parsedRef['suffixes'] ?? [];
+                        $optionalSuffixes = $parsedRef['optional_suffixes'] ?? [];
+                        
+                        if ($isOptional && isset($optionalSuffixes[$verse['number']])) {
+                            $verse['suffix'] = $optionalSuffixes[$verse['number']];
+                        } elseif (!$isOptional && isset($suffixes[$verse['number']])) {
+                            $verse['suffix'] = $suffixes[$verse['number']];
+                        }
                         
                         $allVerses[] = $verse;
                     }
