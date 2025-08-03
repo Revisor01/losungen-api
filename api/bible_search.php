@@ -454,6 +454,8 @@ class BibleSearchAPI {
                 
                 if (isset($suffixes[$verse['number']])) {
                     $verse['suffix'] = $suffixes[$verse['number']];
+                    // Wende Suffix-Kürzung auf den Text an
+                    $verse['text'] = $this->applySuffixToText($verse['text'], $verse['suffix']);
                 }
                 
                 // Für normale Referenzen sind alle Verse optional=false und excluded=false
