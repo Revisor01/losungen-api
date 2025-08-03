@@ -476,21 +476,27 @@ class BibleSearchAPI {
         $optionalVerses = $parsedRef['optional_verses'];
         $pythonScript = '/var/www/html/bible_scraper.py';
         
-        // Sammle alle tatsächlich gewünschten Verse (normale + optionale, aber nicht ausgeschlossene)
-        $normalVerses = [];
+        // Hole die korrekten Verse-Listen aus parseReference
         $excludedVerses = $parsedRef['excluded_verses'] ?? [];
         
-        // Berechne welche Verse im normalen Bereich sind (ohne ausgeschlossene)
-        $allVerseNumbers = array_merge(
-            range($parsedRef['start_verse'], $parsedRef['end_verse']),
-            $optionalVerses
-        );
+        // parseReference hat bereits die korrekte Berechnung gemacht
+        // Wir müssen nur die normalen Verse (ohne ausgeschlossene) und optionalen Verse kombinieren
+        $normalVerses = [];
+        for ($v = $parsedRef['start_verse']; $v <= $parsedRef['end_verse']; $v++) {
+            if (!in_array($v, $excludedVerses)) {
+                $normalVerses[] = $v;
+            }
+        }
+        
+        // Alle Verse die wir tatsächlich wollen (normale + optionale)
+        $allNeededVerses = array_merge($normalVerses, $optionalVerses);
+        $allNeededVerses = array_unique($allNeededVerses);
+        sort($allNeededVerses);
+        
+        // Alle Verse die wir scrapen müssen (inklusive ausgeschlossene für komplette Darstellung)
+        $allVerseNumbers = array_merge($normalVerses, $optionalVerses, $excludedVerses);
         $allVerseNumbers = array_unique($allVerseNumbers);
         sort($allVerseNumbers);
-        
-        // Entferne ausgeschlossene Verse
-        $allNeededVerses = array_diff($allVerseNumbers, $excludedVerses);
-        $allNeededVerses = array_values($allNeededVerses);
         
         // Für Scraper: hole den gesamten Bereich (inklusive ausgeschlossene für vollständiges Scraping)
         $minVerse = min($allVerseNumbers);
