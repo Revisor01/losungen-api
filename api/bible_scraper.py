@@ -304,11 +304,10 @@ class BibleScraper:
     
     def _find_verse_element(self, soup, verse_num):
         """Finde Vers-Element in ERF Bibleserver HTML"""
-        # Versuche verschiedene Selektoren
+        # Versuche präzise Selektoren (v{num} am Ende der Klasse)
         selectors = [
-            f'span[class*="v{verse_num}"]',
-            f'span.verse.v{verse_num}',
-            f'span[data-vid*="{verse_num}"]'
+            f'span.v{verse_num}',  # Direkte Klasse
+            f'span[class~="v{verse_num}"]',  # Exakte Klassen-Übereinstimmung
         ]
         
         for selector in selectors:
@@ -316,11 +315,14 @@ class BibleScraper:
             if element:
                 return element
         
-        # Fallback: Suche nach span mit Versnummer
+        # Fallback: Suche nach span mit exakter Versnummer im Text
         for span in soup.find_all('span', class_='verse'):
             verse_number_elem = span.find('span', class_='verse-number')
-            if verse_number_elem and str(verse_num) in verse_number_elem.get_text():
-                return span
+            if verse_number_elem:
+                # Prüfe auf exakte Übereinstimmung der Versnummer
+                verse_text = verse_number_elem.get_text().strip()
+                if verse_text == str(verse_num):
+                    return span
         
         return None
     

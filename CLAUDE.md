@@ -96,3 +96,4 @@ docker exec -i losungen-postgres psql -U losungen_user -d losungen_db < db/schem
 
 ## Memories
 - a
+- bei änderungen am frontend erst testen mit npm run build ob er erfolgreich ist und dann pushen.
