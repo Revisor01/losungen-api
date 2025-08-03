@@ -571,8 +571,23 @@ class BibleSearchAPI {
         $startVerse = $parsedRef['start_verse'];
         $endVerse = $parsedRef['end_verse'];
         
-        // Alle Verse, die wir scrapen und im Ergebnis haben wollen (inkl. der ausgeschlossenen für die Anzeige)
-        $allVerseNumbersInScope = range($startVerse, $endVerse);
+        // Berechne welche Verse tatsächlich gewünscht sind (normal + optional) und welche ausgeschlossen
+        $normalVerses = [];
+        for ($v = $startVerse; $v <= $endVerse; $v++) {
+            if (!in_array($v, $parsedRef['excluded_verses'])) {
+                $normalVerses[] = $v;
+            }
+        }
+        
+        $optionalVerses = $parsedRef['optional_verses'] ?? [];
+        $allWantedVerses = array_merge($normalVerses, $optionalVerses);
+        $allWantedVerses = array_unique($allWantedVerses);
+        sort($allWantedVerses);
+        
+        // Für vollständige Anzeige: Alle Verse von min bis max (inkl. ausgeschlossene)
+        $minVerse = min($allWantedVerses);
+        $maxVerse = max($allWantedVerses);
+        $allVerseNumbersInScope = range($minVerse, $maxVerse);
         
         $scrapedVerses = [];
         $combinedText = '';
@@ -629,6 +644,9 @@ class BibleSearchAPI {
             
             if (!empty($finalSuffix)) {
                 $verseEntry['suffix'] = $finalSuffix;
+                // Bei Suffixen: Text am ersten Satzzeichen abschneiden
+                $verseText = $this->applySuffixToText($verseText, $finalSuffix);
+                $verseEntry['text'] = $verseText;
             }
             
             $scrapedVerses[] = $verseEntry;
@@ -660,6 +678,38 @@ class BibleSearchAPI {
             'testament' => $parsedRef['testament'],
             'verses' => $scrapedVerses // enthält jetzt alle Verse, korrekt markiert
         ];
+    }
+    
+    /**
+     * Schneide Text bei Suffixen am ersten Satzzeichen ab (wie im Python-Scraper)
+     */
+    private function applySuffixToText($text, $suffix) {
+        if (empty($suffix) || !in_array($suffix, ['a', 'b', 'c', 'ab', 'bc', 'abc'])) {
+            return $text;
+        }
+        
+        // Finde das erste Satzende (.!?;)
+        $sentenceEndPattern = '/[.!?;]/';
+        if (preg_match($sentenceEndPattern, $text, $matches, PREG_OFFSET_CAPTURE)) {
+            // Schneide beim ersten Satzende ab (inklusive Satzzeichen)
+            $cutPosition = $matches[0][1] + 1;
+            $cutText = substr($text, 0, $cutPosition);
+            
+            // Stelle sicher, dass der Text nicht zu kurz ist
+            if (strlen(trim($cutText)) > 10) { // Mindestens ein paar Wörter
+                return trim($cutText);
+            }
+        }
+        
+        // Fallback: Wenn kein Satzende gefunden wird oder Text zu kurz ist
+        // Schneide nach etwa der Hälfte des Textes ab
+        $words = explode(' ', $text);
+        if (count($words) > 4) {
+            $halfWords = array_slice($words, 0, intval(count($words) / 2));
+            return implode(' ', $halfWords) . '...';
+        }
+        
+        return $text;
     }
     
     /**
