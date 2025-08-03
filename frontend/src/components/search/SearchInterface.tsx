@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MagnifyingGlassIcon, BookOpenIcon, ClockIcon, CheckIcon, CalendarIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
-import { BibleTextDisplay } from '../bible/BibleTextDisplay';
+import { MagnifyingGlassIcon, BookOpenIcon, ClockIcon, CalendarIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { TranslationSelector } from '../bible/TranslationSelector';
 import { FormatSelector } from './FormatSelector';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
@@ -10,11 +9,10 @@ import { apiService } from '../../services/api';
 import { BibleSearchRequest, BibleSearchResult } from '../../types';
 import { BibleReferenceParser } from '../../utils/bibleParser';
 import { ICSParser, ChurchEvent } from '../../utils/icsParser';
-import { useLocation, useNavigate } from 'react-router-dom';
+import { useLocation } from 'react-router-dom';
 
 export const SearchInterface: React.FC = () => {
   const location = useLocation();
-  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTranslation, setSelectedTranslation] = useState('LUT');
   const [selectedFormat, setSelectedFormat] = useState<'json' | 'text' | 'html' | 'markdown'>('json');
@@ -22,8 +20,6 @@ export const SearchInterface: React.FC = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchHistory, setSearchHistory] = useState<string[]>([]);
-  const [suggestions, setSuggestions] = useState<string[]>([]);
-  const [showSuggestions, setShowSuggestions] = useState(false);
   const [nextEvent, setNextEvent] = useState<ChurchEvent | null>(null);
   const [showExcludedVerses, setShowExcludedVerses] = useState(true);
   const [showOptionalVerses, setShowOptionalVerses] = useState(true);
