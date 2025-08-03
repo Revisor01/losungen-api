@@ -228,7 +228,8 @@ class BibleSearchAPI {
         $verseStr = $matches[3];
 
         // 2. Tokenizer: Zerlege den Vers-String in seine Bestandteile
-        $tokenRegex = '/(?<range>(\d+)([a-z])?(?:[-–](\d+)([a-z])?)?)|(?<paren>[\(\)])|(?<sep>[\.,;])/';
+        // Verbessertes Regex: Verhindert, dass Bereiche wie "20(" als ein Token erkannt werden
+        $tokenRegex = '/(?<paren>[\(\)])|(?<range>(\d+)([a-z])?(?:[-–](\d+)([a-z])?)?)|(?<sep>[\.,;])/';
         preg_match_all($tokenRegex, $verseStr, $tokens, PREG_SET_ORDER | PREG_UNMATCHED_AS_NULL);
 
         $allVerses = [];
