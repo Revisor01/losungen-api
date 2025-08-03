@@ -250,7 +250,7 @@ class BibleSearchAPI {
                 }
             } elseif (!is_null($token['range'])) {
                 // Verarbeite einen Vers oder einen Versbereich
-                preg_match('/(\d+)([a-z])?(?:[-–](\d+)([a-z])?)?/', $token['range'], $rangeMatches);
+                preg_match('/(\d+)([a-z])?(?:[\-–—](\d+)([a-z])?)?/u', $token['range'], $rangeMatches);
                 
                 $startNum = (int)$rangeMatches[1];
                 $startSuffix = $rangeMatches[2] ?? null;
