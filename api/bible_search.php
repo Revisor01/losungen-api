@@ -684,7 +684,7 @@ class BibleSearchAPI {
      * Schneide Text bei Suffixen am ersten Satzzeichen ab (wie im Python-Scraper)
      */
     private function applySuffixToText($text, $suffix) {
-        if (empty($suffix) || !in_array($suffix, ['a', 'b', 'c', 'ab', 'bc', 'abc'])) {
+        if (empty($suffix) || !preg_match('/^[abc]+$/', $suffix)) {
             return $text;
         }
         
