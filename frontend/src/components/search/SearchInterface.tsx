@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { MagnifyingGlassIcon, BookOpenIcon, ClockIcon, CalendarIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
 import { TranslationSelector } from '../bible/TranslationSelector';
-import { FormatSelector } from './FormatSelector';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorMessage } from '../ui/ErrorMessage';
 import { apiService } from '../../services/api';
@@ -15,7 +14,6 @@ export const SearchInterface: React.FC = () => {
   const location = useLocation();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedTranslation, setSelectedTranslation] = useState('LUT');
-  const [selectedFormat, setSelectedFormat] = useState<'json' | 'text' | 'html' | 'markdown'>('json');
   const [searchResult, setSearchResult] = useState<BibleSearchResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -102,7 +100,7 @@ export const SearchInterface: React.FC = () => {
       const request: BibleSearchRequest = {
         reference: term.trim(),
         translation: selectedTranslation,
-        format: selectedFormat
+        format: 'json'
       };
 
       const response = await apiService.searchBibleText(request);
@@ -197,29 +195,16 @@ export const SearchInterface: React.FC = () => {
               </div>
             </div>
 
-            {/* Translation & Format Selection */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Übersetzung
-                </label>
-                <TranslationSelector
-                  selected={selectedTranslation}
-                  onSelect={setSelectedTranslation}
-                  available={availableTranslations}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Format
-                </label>
-                <FormatSelector
-                  selected={selectedFormat}
-                  onSelect={(format) => setSelectedFormat(format as any)}
-                  disabled={loading}
-                />
-              </div>
+            {/* Translation Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Übersetzung
+              </label>
+              <TranslationSelector
+                selected={selectedTranslation}
+                onSelect={setSelectedTranslation}
+                available={availableTranslations}
+              />
             </div>
 
             {/* Submit Button */}
@@ -543,88 +528,50 @@ export const SearchInterface: React.FC = () => {
                 </motion.div>
               )}
 
-              {/* Format Output - Zeigt je nach ausgewähltem Format */}
+              {/* Copy Buttons */}
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
                 className="card p-6"
               >
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-heading text-lg font-semibold text-gray-900">
-                    Kopiervorlage ({selectedFormat.toUpperCase()})
-                  </h3>
-                  <button
-                    onClick={() => {
-                      // Generiere gefilterten Text basierend auf Toggle-Settings
-                      let filteredText = '';
-                      if (searchResult.verses && searchResult.verses.length > 0) {
-                        const visibleVerses = searchResult.verses.filter(verse => {
-                          if (verse.excluded && !showExcludedVerses) return false;
-                          if (verse.optional && !showOptionalVerses) return false;
-                          return true;
-                        });
-                        filteredText = visibleVerses.map(v => v.text).join(' ');
-                      } else {
-                        filteredText = searchResult.text;
-                      }
-                      
-                      const content = selectedFormat === 'text' ? filteredText :
-                                    selectedFormat === 'markdown' ? `## ${searchResult.reference}\n\n> ${filteredText}\n\n*— ${searchResult.translation?.name}*` :
-                                    selectedFormat === 'html' ? `<div class="bible-verse">\n  <h3>${searchResult.reference}</h3>\n  <blockquote>${filteredText}</blockquote>\n  <footer>${searchResult.translation?.name}</footer>\n</div>` :
-                                    JSON.stringify(searchResult, null, 2);
-                      navigator.clipboard.writeText(content);
-                    }}
-                    className="btn-secondary text-sm"
-                  >
-                    In Zwischenablage kopieren
-                  </button>
-                </div>
-                <div className="bg-gray-50 rounded-lg p-4">
-                  {(() => {
-                    // Generiere gefilterten Text basierend auf Toggle-Settings für Anzeige
-                    let filteredText = '';
-                    if (searchResult.verses && searchResult.verses.length > 0) {
-                      const visibleVerses = searchResult.verses.filter(verse => {
-                        if (verse.excluded && !showExcludedVerses) return false;
-                        if (verse.optional && !showOptionalVerses) return false;
-                        return true;
-                      });
-                      filteredText = visibleVerses.map(v => v.text).join(' ');
-                    } else {
-                      filteredText = searchResult.text;
-                    }
-                    
-                    if (selectedFormat === 'text') {
-                      return <p className="text-gray-700 leading-relaxed">{filteredText}</p>;
-                    } else if (selectedFormat === 'markdown') {
-                      return (
-                        <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
-{`## ${searchResult.reference}
-
-> ${filteredText}
-
-*— ${searchResult.translation?.name}*`}
-                        </pre>
-                      );
-                    } else if (selectedFormat === 'html') {
-                      return (
-                        <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
-{`<div class="bible-verse">
-  <h3>${searchResult.reference}</h3>
-  <blockquote>${filteredText}</blockquote>
-  <footer>${searchResult.translation?.name}</footer>
-</div>`}
-                        </pre>
-                      );
-                    } else {
-                      return (
-                        <pre className="text-sm text-gray-700 whitespace-pre-wrap font-mono">
-                          {JSON.stringify(searchResult, null, 2)}
-                        </pre>
-                      );
-                    }
-                  })()}
+                <h3 className="font-heading text-lg font-semibold text-gray-900 mb-4">
+                  In Zwischenablage kopieren
+                </h3>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                  {[
+                    { format: 'text', label: 'Text' },
+                    { format: 'markdown', label: 'Markdown' },
+                    { format: 'html', label: 'HTML' },
+                    { format: 'json', label: 'JSON' }
+                  ].map(({ format, label }) => (
+                    <button
+                      key={format}
+                      onClick={() => {
+                        // Generiere gefilterten Text basierend auf Toggle-Settings
+                        let filteredText = '';
+                        if (searchResult.verses && searchResult.verses.length > 0) {
+                          const visibleVerses = searchResult.verses.filter(verse => {
+                            if (verse.excluded && !showExcludedVerses) return false;
+                            if (verse.optional && !showOptionalVerses) return false;
+                            return true;
+                          });
+                          filteredText = visibleVerses.map(v => v.text).join(' ');
+                        } else {
+                          filteredText = searchResult.text;
+                        }
+                        
+                        const content = format === 'text' ? filteredText :
+                                      format === 'markdown' ? `## ${searchResult.reference}\n\n> ${filteredText}\n\n*— ${searchResult.translation?.name}*` :
+                                      format === 'html' ? `<div class="bible-verse">\n  <h3>${searchResult.reference}</h3>\n  <blockquote>${filteredText}</blockquote>\n  <footer>${searchResult.translation?.name}</footer>\n</div>` :
+                                      JSON.stringify(searchResult, null, 2);
+                        navigator.clipboard.writeText(content);
+                      }}
+                      className="btn-secondary text-sm py-3 hover:bg-royal-50 hover:text-royal-700 transition-colors"
+                    >
+                      {label}
+                    </button>
+                  ))}
                 </div>
               </motion.div>
             </motion.div>

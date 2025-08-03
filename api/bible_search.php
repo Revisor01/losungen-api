@@ -523,8 +523,8 @@ class BibleSearchAPI {
                 $isExcluded = in_array($verseNum, $excludedVerses);
                 $isNormallyIncluded = in_array($verseNum, $allNeededVerses);
                 
-                // Nehme den Vers wenn er gewünscht ist ODER ausgeschlossen (für vollständige Darstellung)
-                if ($isNormallyIncluded || $isExcluded) {
+                // Nehme ALLE Verse im Bereich für vollständige Darstellung
+                if ($verseNum >= $minVerse && $verseNum <= $maxVerse) {
                     $verse['optional'] = $isOptional;
                     $verse['excluded'] = $isExcluded;
                     
