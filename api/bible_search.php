@@ -627,19 +627,16 @@ class BibleSearchAPI {
             ];
 
             // --- KORRIGIERTE SUFFIX-LOGIK ---
-            // Behandelt Fälle wie 8a(8b...), bei denen ein Vers beide Arten von Suffixen hat.
+            // Suffixe werden NICHT kombiniert - es gibt nur 'a' oder 'b', nie 'ab'
             $finalSuffix = '';
             $suffixes = $parsedRef['suffixes'] ?? [];
             $optionalSuffixes = $parsedRef['optional_suffixes'] ?? [];
             
-            // Hat der Vers einen normalen Suffix?
+            // Bevorzuge normalen Suffix vor optionalem Suffix
             if (isset($suffixes[$verseNum])) {
-                $finalSuffix .= $suffixes[$verseNum];
-            }
-            // Hat der Vers einen optionalen Suffix?
-            // (Ein Vers kann in beiden Kontexten vorkommen, z.B. 8a und (8b))
-            if (isset($optionalSuffixes[$verseNum])) {
-                $finalSuffix .= $optionalSuffixes[$verseNum];
+                $finalSuffix = $suffixes[$verseNum];
+            } elseif (isset($optionalSuffixes[$verseNum])) {
+                $finalSuffix = $optionalSuffixes[$verseNum];
             }
             
             if (!empty($finalSuffix)) {
@@ -684,7 +681,7 @@ class BibleSearchAPI {
      * Schneide Text bei Suffixen am ersten Satzzeichen ab (wie im Python-Scraper)
      */
     private function applySuffixToText($text, $suffix) {
-        if (empty($suffix) || !preg_match('/^[abc]+$/', $suffix)) {
+        if (empty($suffix) || !in_array($suffix, ['a', 'b'])) {
             return $text;
         }
         
