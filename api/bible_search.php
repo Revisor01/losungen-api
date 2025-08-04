@@ -652,19 +652,8 @@ class BibleSearchAPI {
             $isExcluded = in_array($verseNum, $parsedRef['excluded_verses']);
             $isNormal = in_array($verseNum, $parsedRef['all_verses']);
 
-            // Ein Vers muss angefordert sein (normal oder optional), um gescraped zu werden
-            if (!$isNormal && !$isOptional) {
-                // Wenn der Vers ausgeschlossen ist, fügen wir ihn als solchen hinzu, ohne zu scrapen
-                if ($isExcluded) {
-                    $scrapedVerses[] = [
-                        'number' => $verseNum,
-                        'text' => '',
-                        'optional' => false,
-                        'excluded' => true,
-                    ];
-                }
-                continue;
-            }
+            // NEU: Scrape ALLE Verse (normale, optionale UND ausgeschlossene)
+            // Das Frontend braucht auch den Text der ausgeschlossenen Verse
 
             // Scrape den einzelnen Vers
             $simpleRef = "$book $chapter,$verseNum";
@@ -686,8 +675,8 @@ class BibleSearchAPI {
             $verseEntry = [
                 'number' => $verseNum,
                 'text' => $verseText,
-                'optional' => $isOptional, // Korrekte Zuweisung
-                'excluded' => false,       // Per Definition nicht ausgeschlossen, da wir ihn scrapen
+                'optional' => $isOptional,
+                'excluded' => $isExcluded, // Korrekte Zuweisung basierend auf Parser-Daten
             ];
 
             // NEU: Suffix-Logik - erstelle mehrere Einträge für Verse mit Suffixen
@@ -708,7 +697,7 @@ class BibleSearchAPI {
                     'text' => $splitResult['partA'],
                     'suffix' => 'a',
                     'optional' => $isOptional,
-                    'excluded' => ($requestedSuffix !== 'a'), // Wenn 'b' angefordert wurde, ist 'a' ausgeschlossen
+                    'excluded' => $isExcluded || ($requestedSuffix !== 'a'), // Ausgeschlossen wenn Vers ausgeschlossen ODER anderes Suffix angefordert
                 ];
                 
                 // Erstelle Eintrag für Teil B
@@ -717,24 +706,28 @@ class BibleSearchAPI {
                     'text' => $splitResult['partB'],
                     'suffix' => 'b',
                     'optional' => $isOptional,
-                    'excluded' => ($requestedSuffix !== 'b'), // Wenn 'a' angefordert wurde, ist 'b' ausgeschlossen
+                    'excluded' => $isExcluded || ($requestedSuffix !== 'b'), // Ausgeschlossen wenn Vers ausgeschlossen ODER anderes Suffix angefordert
                 ];
                 
                 $scrapedVerses[] = $verseEntryA;
                 $scrapedVerses[] = $verseEntryB;
                 
-                // Füge nur den angeforderten Teil zum kombinierten Text hinzu
-                if ($requestedSuffix === 'a') {
-                    $combinedText .= ($combinedText ? ' ' : '') . $splitResult['partA'];
-                } else {
-                    $combinedText .= ($combinedText ? ' ' : '') . $splitResult['partB'];
+                // Füge nur den angeforderten Teil zum kombinierten Text hinzu (außer bei ausgeschlossenen Versen)
+                if (!$isExcluded) {
+                    if ($requestedSuffix === 'a') {
+                        $combinedText .= ($combinedText ? ' ' : '') . $splitResult['partA'];
+                    } else {
+                        $combinedText .= ($combinedText ? ' ' : '') . $splitResult['partB'];
+                    }
                 }
             } else {
                 // Kein Suffix - normale Behandlung
                 $scrapedVerses[] = $verseEntry;
                 
                 // Füge Text nur hinzu, wenn der Vers nicht ausgeschlossen ist
-                $combinedText .= ($combinedText ? ' ' : '') . $verseEntry['text'];
+                if (!$isExcluded) {
+                    $combinedText .= ($combinedText ? ' ' : '') . $verseEntry['text'];
+                }
             }
         }
         
