@@ -689,6 +689,10 @@ class BibleSearchAPI {
                     ? $parsedRef['suffixes'][$verseNum] 
                     : $parsedRef['optional_suffixes'][$verseNum];
                 
+                // KORREKTUR: Optional-Status basiert darauf, welches Suffix angefordert wurde
+                $suffixIsOptional = isset($parsedRef['optional_suffixes'][$verseNum]);
+                $suffixIsNormal = isset($parsedRef['suffixes'][$verseNum]);
+                
                 // Spalte den Vers-Text auf
                 $splitResult = $this->splitVerseText($verseText);
                 
@@ -697,7 +701,7 @@ class BibleSearchAPI {
                     'number' => $verseNum,
                     'text' => $splitResult['partA'],
                     'suffix' => 'a',
-                    'optional' => $isOptional,
+                    'optional' => $suffixIsOptional && ($requestedSuffix === 'a'), // Nur optional wenn das angeforderte Suffix optional ist
                     'excluded' => $isExcluded || ($requestedSuffix !== 'a'),
                 ];
                 
@@ -706,7 +710,7 @@ class BibleSearchAPI {
                     'number' => $verseNum,
                     'text' => $splitResult['partB'],
                     'suffix' => 'b',
-                    'optional' => $isOptional,
+                    'optional' => $suffixIsOptional && ($requestedSuffix === 'b'), // Nur optional wenn das angeforderte Suffix optional ist
                     'excluded' => $isExcluded || ($requestedSuffix !== 'b'),
                 ];
                 
