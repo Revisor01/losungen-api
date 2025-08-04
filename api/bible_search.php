@@ -617,15 +617,20 @@ class BibleSearchAPI {
         $endVerse = $parsedRef['end_verse'];
         
         // Berechne welche Verse tatsächlich gewünscht sind (normal + optional) und welche ausgeschlossen
-        $normalVerses = [];
+        // KORREKTUR: Verwende die expliziten Listen aus parseReference, nicht den Bereich!
+        $allNormalVerses = [];
+        
+        // Sammle alle normalen Verse aus dem Parsing (nicht aus dem Bereich!)
+        // Diese sind in parseReference korrekt als $allVerses erfasst
         for ($v = $startVerse; $v <= $endVerse; $v++) {
-            if (!in_array($v, $parsedRef['excluded_verses'])) {
-                $normalVerses[] = $v;
+            // Ein Vers ist nur dann normal, wenn er weder ausgeschlossen noch optional ist
+            if (!in_array($v, $parsedRef['excluded_verses']) && !in_array($v, $parsedRef['optional_verses'])) {
+                $allNormalVerses[] = $v;
             }
         }
         
         $optionalVerses = $parsedRef['optional_verses'] ?? [];
-        $allWantedVerses = array_merge($normalVerses, $optionalVerses);
+        $allWantedVerses = array_merge($allNormalVerses, $optionalVerses);
         $allWantedVerses = array_unique($allWantedVerses);
         sort($allWantedVerses);
         
@@ -700,7 +705,7 @@ class BibleSearchAPI {
 
             // Flags aus dem Entry übernehmen oder aus Parsing holen
             $isExcluded = $entry['excluded'] ?? in_array($verseNum, $parsedRef['excluded_verses']);
-            $isOptional = $entry['optional'] ?? (in_array($verseNum, $parsedRef['optional_verses']) && !in_array($verseNum, $normalVerses));
+            $isOptional = $entry['optional'] ?? (in_array($verseNum, $parsedRef['optional_verses']) && !in_array($verseNum, $allNormalVerses));
 
             $verseEntry = [
                 'number' => $verseNum,
