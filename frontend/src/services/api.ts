@@ -238,6 +238,91 @@ class ApiService {
       body: JSON.stringify(event)
     });
   }
+
+  // Gottesdienst-Management API Methoden
+  
+  // Alle Perikopen abrufen
+  async getPerikopes(): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>('/api/services.php?path=perikopes');
+  }
+
+  // Gottesdienste abrufen (mit Filtern)
+  async getServices(filters?: {
+    limit?: number;
+    offset?: number;
+    year?: number;
+    type?: string;
+  }): Promise<ApiResponse<any[]>> {
+    let query = '';
+    if (filters) {
+      const params = new URLSearchParams();
+      if (filters.limit) params.append('limit', filters.limit.toString());
+      if (filters.offset) params.append('offset', filters.offset.toString());
+      if (filters.year) params.append('year', filters.year.toString());
+      if (filters.type) params.append('type', filters.type);
+      query = '&' + params.toString();
+    }
+    return this.request<any[]>(`/api/services.php?path=services${query}`);
+  }
+
+  // Einzelnen Gottesdienst abrufen
+  async getService(serviceId: number): Promise<ApiResponse<any>> {
+    return this.request<any>(`/api/services.php?path=service&id=${serviceId}`);
+  }
+
+  // Gottesdienste nach Perikope abrufen (historische Übersicht)
+  async getServicesByPerikope(perikopeId: number): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>(`/api/services.php?path=services/by-perikope&perikope_id=${perikopeId}`);
+  }
+
+  // Kalender-Ansicht der Gottesdienste
+  async getServicesCalendar(year: number, month?: number): Promise<ApiResponse<any[]>> {
+    let query = `year=${year}`;
+    if (month) query += `&month=${month}`;
+    return this.request<any[]>(`/api/services.php?path=services/calendar&${query}`);
+  }
+
+  // Gottesdienste durchsuchen
+  async searchServices(query: string): Promise<ApiResponse<any[]>> {
+    return this.request<any[]>(`/api/services.php?path=search&q=${encodeURIComponent(query)}`);
+  }
+
+  // Neuen Gottesdienst erstellen
+  async createService(serviceData: {
+    title: string;
+    service_type: string;
+    date: string;
+    time?: string;
+    location?: string;
+    perikope_id?: number;
+    chosen_perikope?: string;
+    congregation_size?: number;
+    notes?: string;
+    tags?: string[];
+  }): Promise<ApiResponse<{ id: number }>> {
+    return this.request<{ id: number }>('/api/services.php?path=service', {
+      method: 'POST',
+      body: JSON.stringify(serviceData)
+    });
+  }
+
+  // Gottesdienst-Komponente erstellen
+  async createServiceComponent(componentData: {
+    service_id: number;
+    component_type: string;
+    title: string;
+    content?: string;
+    bible_reference?: string;
+    hymn_number?: string;
+    order_position?: number;
+    duration_minutes?: number;
+    notes?: string;
+  }): Promise<ApiResponse<{ id: number }>> {
+    return this.request<{ id: number }>('/api/services.php?path=service/component', {
+      method: 'POST',
+      body: JSON.stringify(componentData)
+    });
+  }
 }
 
 export const apiService = new ApiService();

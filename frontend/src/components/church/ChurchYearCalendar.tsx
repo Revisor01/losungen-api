@@ -7,13 +7,15 @@ import {
   ArrowTopRightOnSquareIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  MagnifyingGlassIcon
+  MagnifyingGlassIcon,
+  PlusIcon
 } from '@heroicons/react/24/outline';
 import { ICSParser, ChurchEvent } from '../../utils/icsParser';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { PencilIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { ServiceModal } from '../services/ServiceModal';
 
 export const ChurchYearCalendar: React.FC = () => {
   const navigate = useNavigate();
@@ -27,9 +29,16 @@ export const ChurchYearCalendar: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedEvent, setEditedEvent] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  
+  // Gottesdienst Modal State
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [selectedPerikope, setSelectedPerikope] = useState<any>(null);
+  const [creatingService, setCreatingService] = useState(false);
+  const [perikopes, setPerikopes] = useState<any[]>([]);
 
   useEffect(() => {
     loadChurchYearData();
+    loadPerikopes();
   }, []);
 
   useEffect(() => {
@@ -88,6 +97,17 @@ export const ChurchYearCalendar: React.FC = () => {
       createMockEvents();
     }
     setLoading(false);
+  };
+
+  const loadPerikopes = async () => {
+    try {
+      const response = await apiService.getPerikopes();
+      if (response.success && response.data) {
+        setPerikopes(response.data);
+      }
+    } catch (error) {
+      console.error('Failed to load perikopes:', error);
+    }
   };
 
   const createMockEvents = () => {
@@ -174,6 +194,34 @@ export const ChurchYearCalendar: React.FC = () => {
 
   const updateEditedField = (field: string, value: string) => {
     setEditedEvent({ ...editedEvent, [field]: value });
+  };
+
+  const handleCreateService = (event?: ChurchEvent) => {
+    if (event) {
+      // Finde die entsprechende Perikope basierend auf event.summary
+      const matchingPerikope = perikopes.find(p => p.event_name === event.summary);
+      setSelectedPerikope(matchingPerikope || null);
+    } else {
+      setSelectedPerikope(null);
+    }
+    setShowServiceModal(true);
+  };
+
+  const handleServiceSubmit = async (serviceData: any) => {
+    setCreatingService(true);
+    try {
+      const response = await apiService.createService(serviceData);
+      if (response.success) {
+        setShowServiceModal(false);
+        setSelectedPerikope(null);
+        // Hier könnten wir zu einem Service-Editor weiterleiten oder eine Erfolgsmeldung anzeigen
+        console.log('Gottesdienst erstellt:', response.data);
+      }
+    } catch (error) {
+      console.error('Failed to create service:', error);
+    } finally {
+      setCreatingService(false);
+    }
   };
 
   if (loading) {
@@ -383,13 +431,29 @@ export const ChurchYearCalendar: React.FC = () => {
                         </p>
                       </div>
                       
-                      {selectedEvent.liturgicalColor && (
-                        <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                          ICSParser.getLiturgicalColorClass(selectedEvent.liturgicalColor)
-                        }`} style={{ marginRight: '60px' }}>
-                          {selectedEvent.liturgicalColor}
-                        </span>
-                      )}
+                      <div className="flex items-center space-x-3" style={{ marginRight: '60px' }}>
+                        {/* Gottesdienst anlegen Button */}
+                        {isAuthenticated && (
+                          <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            onClick={() => handleCreateService(selectedEvent)}
+                            className="flex items-center space-x-2 px-4 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-sm font-medium transition-colors"
+                            title="Neuen Gottesdienst für diesen Feiertag anlegen"
+                          >
+                            <PlusIcon className="w-4 h-4" />
+                            <span>Gottesdienst anlegen</span>
+                          </motion.button>
+                        )}
+                        
+                        {selectedEvent.liturgicalColor && (
+                          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+                            ICSParser.getLiturgicalColorClass(selectedEvent.liturgicalColor)
+                          }`}>
+                            {selectedEvent.liturgicalColor}
+                          </span>
+                        )}
+                      </div>
                     </div>
                     
                     {selectedEvent.season && (
@@ -776,6 +840,18 @@ export const ChurchYearCalendar: React.FC = () => {
             </AnimatePresence>
           </div>
         </div>
+
+        {/* Service Modal */}
+        <ServiceModal
+          isOpen={showServiceModal}
+          onClose={() => {
+            setShowServiceModal(false);
+            setSelectedPerikope(null);
+          }}
+          onSubmit={handleServiceSubmit}
+          preselectedPerikope={selectedPerikope}
+          loading={creatingService}
+        />
       </div>
     </div>
   );
