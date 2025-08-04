@@ -40,6 +40,16 @@ export const SearchInterface: React.FC = () => {
     const wordsToHighlight = ['Gott', 'Gottes', 'HERR', 'HERRn', 'HERRN', 'Jesus', 'Christus', 'Geist', 'Heiligen Geist', 'Heiliger Geist', 'Sohn'];
     let formattedText = text;
     
+    // 1. Entferne Zahlen-Referenzen aus Sela: Sela(↑397) -> Sela
+    formattedText = formattedText.replace(/Sela\([^)]*\)/g, 'Sela');
+    
+    // 2. Mache Sela kursiv
+    formattedText = formattedText.replace(/\bSela\b/g, '<em>Sela</em>');
+    
+    // 3. Entferne andere Zahlen-Referenzen: (↑123) 
+    formattedText = formattedText.replace(/\([↑][^)]*\)/g, '');
+    
+    // 4. Bestimmte Worte hervorheben
     wordsToHighlight.forEach(word => {
       const regex = new RegExp(`\\b(${word})\\b`, 'gi'); // 'gi' für case-insensitive
       formattedText = formattedText.replace(regex, '<span class="font-bold text-lg">$1</span>');

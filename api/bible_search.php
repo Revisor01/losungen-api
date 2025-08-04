@@ -634,7 +634,7 @@ class BibleSearchAPI {
                     'language' => 'German'
                 ],
                 'source' => 'Live Scraper (Complex)',
-                'url' => $this->generateBibleserverUrl($parsedRef['original'], $translation),
+                'url' => $this->generateBibleserverUrl($parsedRef['original'], $translation, $parsedRef),
                 'testament' => $parsedRef['testament']
             ];
         }
@@ -748,7 +748,7 @@ class BibleSearchAPI {
                 'language' => 'German'
             ],
             'source' => 'Live Scraper (Complex)',
-            'url' => $this->generateBibleserverUrl($parsedRef['original'], $translation),
+            'url' => $this->generateBibleserverUrl($parsedRef['original'], $translation, $parsedRef),
             'testament' => $parsedRef['testament'],
             'verses' => $scrapedVerses
         ];
@@ -844,10 +844,10 @@ class BibleSearchAPI {
     /**
      * Generiere korrekte Bibleserver-URL (PHP-Port der Python-Funktion)
      */
-    private function generateBibleserverUrl($reference, $translation) {
+    private function generateBibleserverUrl($reference, $translation, $parsedRef = null) {
         // Spezialbehandlung für BIGS
         if ($translation === 'BIGS') {
-            return $this->generateBigsUrl($reference);
+            return $this->generateBigsUrl($reference, $parsedRef);
         }
         
         // Parse Referenz
@@ -954,18 +954,27 @@ class BibleSearchAPI {
     }
     
     /**
-     * Generiere BIGS-URL
+     * Generiere BIGS-URL - NEU: Mit Parse-Daten für komplexe Referenzen
      */
-    private function generateBigsUrl($reference) {
-        // Parse Referenz für BIGS
-        $pattern = '/^(.+?)\s+(\d+),(\d+)(?:-(\d+))?$/';
-        if (!preg_match($pattern, trim($reference), $matches)) {
-            return "https://www.bibel-in-gerechter-sprache.de/";
+    private function generateBigsUrl($reference, $parsedRef = null) {
+        // Verwende Parse-Daten wenn verfügbar (für komplexe Referenzen)
+        if ($parsedRef) {
+            $book = $parsedRef['book'];
+            $chapter = $parsedRef['chapter'];
+            $verse_start = $parsedRef['start_verse'];
+            $verse_end = $parsedRef['end_verse'];
+        } else {
+            // Fallback: Einfache Referenz parsen
+            $pattern = '/^(.+?)\s+(\d+),(\d+)(?:-(\d+))?$/';
+            if (!preg_match($pattern, trim($reference), $matches)) {
+                return "https://www.bibel-in-gerechter-sprache.de/";
+            }
+            
+            $book = trim($matches[1]);
+            $chapter = $matches[2];
+            $verse_start = $matches[3];
+            $verse_end = isset($matches[4]) ? $matches[4] : $verse_start;
         }
-        
-        $book = trim($matches[1]);
-        $chapter = $matches[2];
-        $verse = $matches[3];
         
         // BIGS Buchkürzel
         $book_mappings = [
@@ -992,7 +1001,13 @@ class BibleSearchAPI {
         ];
         
         $book_abbrev = $book_mappings[$book] ?? $book;
-        return "https://www.bibel-in-gerechter-sprache.de/die-bibel/bigs-online/?$book_abbrev/$chapter/$verse/";
+        
+        // NEU: Min-Max Format wie User gewünscht
+        if ($verse_start != $verse_end) {
+            return "https://www.bibel-in-gerechter-sprache.de/die-bibel/bigs-online/?$book_abbrev/$chapter/$verse_start-$verse_end";
+        } else {
+            return "https://www.bibel-in-gerechter-sprache.de/die-bibel/bigs-online/?$book_abbrev/$chapter/$verse_start";
+        }
     }
 
     /**
