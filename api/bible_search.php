@@ -226,6 +226,25 @@ class BibleSearchAPI {
         $bookInput = trim($matches[1]);
         $chapter = (int)$matches[2];
         $verseStr = $matches[3];
+        
+        // Wenn keine Verse angegeben sind, behandle als ganzes Kapitel
+        if (empty(trim($verseStr))) {
+            $resolvedBook = $this->resolveBookAbbreviation($bookInput);
+            return [
+                'book' => $resolvedBook['name'],
+                'testament' => $resolvedBook['testament'],
+                'chapter' => $chapter,
+                'start_verse' => 1,
+                'end_verse' => 999, // Scraper wird das begrenzen
+                'excluded_verses' => [],
+                'optional_verses' => [],
+                'suffixes' => [],
+                'optional_suffixes' => [],
+                'original' => $originalReference,
+                'original_book' => $bookInput,
+                'whole_chapter' => true
+            ];
+        }
 
         // 2. Tokenizer: Zerlege den Vers-String in seine Bestandteile
         // Verbessertes Regex: Unterstützt verschiedene Bindestrich-Arten (-, –, —)
@@ -527,9 +546,10 @@ class BibleSearchAPI {
                 $verseNum = $verse['number'];
                 
                 // Prüfe ob dieser Vers gewünscht ist (normal oder optional)
-                $isOptional = in_array($verseNum, $optionalVerses);
-                $isExcluded = in_array($verseNum, $excludedVerses);
+                // WICHTIG: Normale Verse haben Priorität über optionale
                 $isNormallyIncluded = in_array($verseNum, $allNeededVerses);
+                $isOptional = in_array($verseNum, $optionalVerses) && !$isNormallyIncluded;  // Nur optional wenn nicht normal
+                $isExcluded = in_array($verseNum, $excludedVerses);
                 
                 // Nehme ALLE Verse im Bereich für vollständige Darstellung
                 if ($verseNum >= $minVerse && $verseNum <= $maxVerse) {
@@ -540,10 +560,11 @@ class BibleSearchAPI {
                     $suffixes = $parsedRef['suffixes'] ?? [];
                     $optionalSuffixes = $parsedRef['optional_suffixes'] ?? [];
                     
-                    if ($isOptional && isset($optionalSuffixes[$verseNum])) {
-                        $verse['suffix'] = $optionalSuffixes[$verseNum];
-                    } elseif (!$isOptional && isset($suffixes[$verseNum])) {
+                    // Normale Suffixe haben Priorität über optionale Suffixe
+                    if (isset($suffixes[$verseNum])) {
                         $verse['suffix'] = $suffixes[$verseNum];
+                    } elseif ($isOptional && isset($optionalSuffixes[$verseNum])) {
+                        $verse['suffix'] = $optionalSuffixes[$verseNum];
                     }
                     
                     $filteredVerses[] = $verse;
