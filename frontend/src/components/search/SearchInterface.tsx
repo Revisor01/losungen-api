@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MagnifyingGlassIcon, BookOpenIcon, ClockIcon, CalendarIcon, EyeIcon, EyeSlashIcon } from '@heroicons/react/24/outline';
+import { MagnifyingGlassIcon, BookOpenIcon, ClockIcon, CalendarIcon, EyeIcon, EyeSlashIcon, ArrowTopRightOnSquareIcon } from '@heroicons/react/24/outline';
 import { TranslationSelector } from '../bible/TranslationSelector';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorMessage } from '../ui/ErrorMessage';
@@ -29,6 +29,25 @@ export const SearchInterface: React.FC = () => {
   // Beispiel-Suchen für bessere UX (jetzt aus Parser)
   const exampleSearches = BibleReferenceParser.getExamples();
 
+  // Helper Funktion für Bibelserver URLs
+  const generateBibleserverUrl = (reference: string, translation: string) => {
+    const encodedRef = encodeURIComponent(reference.replace(/\s+/g, '+'));
+    return `https://www.bibleserver.com/${translation}/${encodedRef}`;
+  };
+
+  // Helper Funktion um bestimmte Worte hervorzuheben
+  const formatBibleText = (text: string) => {
+    const wordsToHighlight = ['Gott', 'Gottes', 'HERR', 'HERRn', 'Jesus', 'Christus', 'Geist', 'Heiligen Geist', 'Heiliger Geist', 'Sohn'];
+    let formattedText = text;
+    
+    wordsToHighlight.forEach(word => {
+      const regex = new RegExp(`\\b(${word})\\b`, 'g');
+      formattedText = formattedText.replace(regex, '<span class="font-bold text-lg">$1</span>');
+    });
+    
+    return <span dangerouslySetInnerHTML={{ __html: formattedText }} />;
+  };
+
   // Load URL parameters and next church event
   useEffect(() => {
     const urlParams = new URLSearchParams(location.search);
@@ -43,7 +62,7 @@ export const SearchInterface: React.FC = () => {
 
     // Load next church event
     loadNextChurchEvent();
-  }, [location]);
+  }, [location.search]); // Wichtig: location.search statt location, damit es bei URL-Änderungen reagiert
 
   const loadNextChurchEvent = async () => {
     try {
@@ -500,18 +519,29 @@ export const SearchInterface: React.FC = () => {
                               : ''
                           }`}
                         >
-                          <span 
-                            className={`flex-shrink-0 min-w-[2rem] h-8 px-2 rounded-full flex items-center justify-center text-sm font-semibold ${
-                              verse.excluded 
-                                ? 'bg-orange-100 text-orange-700'
-                                : verse.optional
-                                ? 'bg-blue-100 text-blue-700'
-                                : 'bg-royal-100 text-royal-700'
-                            }`}
-                            title={verse.suffix ? `Vers ${verse.number}${verse.suffix} - nur Teil "${verse.suffix}" des Verses` : undefined}
-                          >
-                            {verse.number}{verse.suffix && <span className="text-xs ml-0.5">{verse.suffix}</span>}
-                          </span>
+                          <div className="flex items-center space-x-2">
+                            <span 
+                              className={`flex-shrink-0 min-w-[2rem] h-8 px-2 rounded-full flex items-center justify-center text-sm font-semibold ${
+                                verse.excluded 
+                                  ? 'bg-orange-100 text-orange-700'
+                                  : verse.optional
+                                  ? 'bg-blue-100 text-blue-700'
+                                  : 'bg-royal-100 text-royal-700'
+                              }`}
+                              title={verse.suffix ? `Vers ${verse.number}${verse.suffix} - nur Teil "${verse.suffix}" des Verses` : undefined}
+                            >
+                              {verse.number}{verse.suffix && <span className="text-xs ml-0.5">{verse.suffix}</span>}
+                            </span>
+                            <a 
+                              href={generateBibleserverUrl(`${searchResult.reference.split(',')[0]} ${searchResult.reference.split(' ')[1].split(',')[0]},${verse.number}${verse.suffix || ''}`, searchResult.translation?.code || 'LUT')}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-gray-400 hover:text-royal-600 transition-colors"
+                              title="Vers in Bibelserver öffnen"
+                            >
+                              <ArrowTopRightOnSquareIcon className="w-4 h-4" />
+                            </a>
+                          </div>
                           <p className={`flex-1 leading-relaxed ${
                             verse.excluded 
                               ? 'text-gray-500 italic'
@@ -519,7 +549,7 @@ export const SearchInterface: React.FC = () => {
                               ? 'text-blue-700 italic'
                               : 'text-gray-700'
                           }`}>
-                            {verse.text || (verse.excluded ? '— Vers konnte nicht geladen werden —' : '')}
+                            {formatBibleText(verse.text || (verse.excluded ? '— Vers konnte nicht geladen werden —' : ''))}
                           </p>
                         </motion.div>
                       );
