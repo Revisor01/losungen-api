@@ -58,7 +58,7 @@ export const TranslationSelector: React.FC<TranslationSelectorProps> = ({
   };
 
   return (
-    <div className={`relative ${className}`} ref={dropdownRef} style={{ isolation: 'isolate' }}>
+    <div className={`relative ${className} z-50`} ref={dropdownRef}>
       {/* Trigger Button */}
       <motion.button
         whileHover={{ scale: 1.02 }}
@@ -91,12 +91,7 @@ export const TranslationSelector: React.FC<TranslationSelectorProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-80 overflow-hidden"
-            style={{ 
-              zIndex: 9999,
-              position: 'absolute',
-              transform: 'translateZ(0)'
-            }}
+            className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-80 overflow-hidden z-[100]"
           >
             {/* Search Input */}
             <div className="p-3 border-b border-gray-100">

@@ -596,6 +596,39 @@ export const SearchInterface: React.FC = () => {
                 <h3 className="font-heading text-lg font-semibold text-gray-900 mb-4">
                   In Zwischenablage kopieren
                 </h3>
+                <div className="text-sm text-gray-600 mb-4">
+                  Text wird entsprechend den Sichtbarkeits-Einstellungen kopiert (ausgeschlossene/optionale Verse werden nur kopiert wenn sie angezeigt werden).
+                </div>
+                
+                {/* Toggles für Zwischenablage */}
+                {(searchResult?.verses?.some(v => v.excluded) || searchResult?.verses?.some(v => v.optional)) && (
+                  <div className="flex flex-wrap gap-2 mb-4 p-3 bg-gray-50 rounded-lg">
+                    <div className="text-sm font-medium text-gray-700">Für Zwischenablage:</div>
+                    {searchResult?.verses?.some(v => v.excluded) && (
+                      <label className="flex items-center space-x-2 text-sm">
+                        <input 
+                          type="checkbox" 
+                          checked={showExcludedVerses} 
+                          onChange={(e) => setShowExcludedVerses(e.target.checked)}
+                          className="rounded border-gray-300"
+                        />
+                        <span>Ausgeschlossene Verse</span>
+                      </label>
+                    )}
+                    {searchResult?.verses?.some(v => v.optional) && (
+                      <label className="flex items-center space-x-2 text-sm">
+                        <input 
+                          type="checkbox" 
+                          checked={showOptionalVerses} 
+                          onChange={(e) => setShowOptionalVerses(e.target.checked)}
+                          className="rounded border-gray-300"
+                        />
+                        <span>Optionale Verse</span>
+                      </label>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
                     { format: 'text', label: 'Text' },
@@ -606,6 +639,15 @@ export const SearchInterface: React.FC = () => {
                     <button
                       key={format}
                       onClick={() => {
+                        // Helper: Text bereinigen (Zahlen-Referenzen entfernen, Formatierung anwenden)
+                        const cleanText = (text: string) => {
+                          let cleaned = text;
+                          // Entferne Zahlen-Referenzen wie in formatBibleText
+                          cleaned = cleaned.replace(/Sela\([^)]*\)/g, 'Sela');
+                          cleaned = cleaned.replace(/\([↑]?\d+\)/g, '');
+                          return cleaned.trim();
+                        };
+
                         // Generiere gefilterten Text basierend auf Toggle-Settings
                         let filteredText = '';
                         if (searchResult.verses && searchResult.verses.length > 0) {
@@ -614,9 +656,9 @@ export const SearchInterface: React.FC = () => {
                             if (verse.optional && !showOptionalVerses) return false;
                             return true;
                           });
-                          filteredText = visibleVerses.map(v => v.text).join(' ');
+                          filteredText = visibleVerses.map(v => cleanText(v.text || '')).join(' ');
                         } else {
-                          filteredText = searchResult.text;
+                          filteredText = cleanText(searchResult.text);
                         }
                         
                         const content = format === 'text' ? filteredText :
