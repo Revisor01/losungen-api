@@ -211,10 +211,12 @@ class BibleSearchAPI {
                     'chapter' => (int)$chapterMatch[2],
                     'start_verse' => 1,
                     'end_verse' => 999, // Scraper wird das begrenzen
+                    'all_verses' => [],
                     'excluded_verses' => [],
                     'optional_verses' => [],
                     'suffixes' => [],
                     'optional_suffixes' => [],
+                    'implicit_excluded_suffixes' => [],
                     'original' => $originalReference,
                     'original_book' => $bookInput,
                     'whole_chapter' => true
@@ -236,10 +238,12 @@ class BibleSearchAPI {
                 'chapter' => $chapter,
                 'start_verse' => 1,
                 'end_verse' => 999, // Scraper wird das begrenzen
+                'all_verses' => [],
                 'excluded_verses' => [],
                 'optional_verses' => [],
                 'suffixes' => [],
                 'optional_suffixes' => [],
+                'implicit_excluded_suffixes' => [],
                 'original' => $originalReference,
                 'original_book' => $bookInput,
                 'whole_chapter' => true
@@ -354,6 +358,7 @@ class BibleSearchAPI {
             'chapter' => $chapter,
             'start_verse' => !empty($allVerseNumbers) ? min($allVerseNumbers) : 0,
             'end_verse' => !empty($allVerseNumbers) ? max($allVerseNumbers) : 0,
+            'all_verses' => array_values($allVerses), // NEU: Explizit normale Verse
             'excluded_verses' => array_values($excludedVerses),
             'optional_verses' => array_values(array_unique($optionalVerses)),
             'suffixes' => $suffixes,
@@ -609,83 +614,60 @@ class BibleSearchAPI {
      * Verarbeite komplexe Referenzen mit ausgeschlossenen und/oder optionalen Versen.
      * Diese Methode ist robuster, da sie die Referenz in kleinere Teile zerlegt und einzeln anfragt.
      */
+    /**
+     * KORRIGIERTE VERSION: Verarbeite komplexe Referenzen mit ausgeschlossenen und/oder optionalen Versen.
+     */
     private function scrapeComplexReference($parsedRef, $translation) {
-        
         $book = $parsedRef['book'];
         $chapter = $parsedRef['chapter'];
-        $startVerse = $parsedRef['start_verse'];
-        $endVerse = $parsedRef['end_verse'];
         
-        // Berechne welche Verse tatsächlich gewünscht sind (normal + optional) und welche ausgeschlossen
-        // KORREKTUR: Verwende die expliziten Listen aus parseReference, nicht den Bereich!
-        $allNormalVerses = [];
-        
-        // Sammle alle normalen Verse aus dem Parsing (nicht aus dem Bereich!)
-        // Diese sind in parseReference korrekt als $allVerses erfasst
-        for ($v = $startVerse; $v <= $endVerse; $v++) {
-            // Ein Vers ist nur dann normal, wenn er weder ausgeschlossen noch optional ist
-            if (!in_array($v, $parsedRef['excluded_verses']) && !in_array($v, $parsedRef['optional_verses'])) {
-                $allNormalVerses[] = $v;
-            }
+        // Bestimme den gesamten Bereich der Verse, die wir betrachten müssen
+        $allMentionedVerses = array_merge($parsedRef['all_verses'], $parsedRef['optional_verses']);
+        if (empty($allMentionedVerses)) {
+            return [
+                'reference' => $parsedRef['original'],
+                'text' => '',
+                'verses' => [],
+                'translation' => [
+                    'code' => $translation,
+                    'name' => $this->getTranslationName($translation),
+                    'language' => 'German'
+                ],
+                'source' => 'Live Scraper (Complex)',
+                'url' => $this->generateBibleserverUrl($parsedRef['original'], $translation),
+                'testament' => $parsedRef['testament']
+            ];
         }
-        
-        $optionalVerses = $parsedRef['optional_verses'] ?? [];
-        $allWantedVerses = array_merge($allNormalVerses, $optionalVerses);
-        $allWantedVerses = array_unique($allWantedVerses);
-        sort($allWantedVerses);
-        
-        // Für vollständige Anzeige: Alle Verse von min bis max (inkl. ausgeschlossene)
-        $minVerse = min($allWantedVerses);
-        $maxVerse = max($allWantedVerses);
-        $allVerseNumbersInScope = range($minVerse, $maxVerse);
-        
+        $minVerse = min($allMentionedVerses);
+        $maxVerse = max($allMentionedVerses);
+
         $scrapedVerses = [];
         $combinedText = '';
 
-        // NEU: Erstelle Liste aller Vers-Suffix-Kombinationen
-        $verseEntries = [];
-        foreach ($allVerseNumbersInScope as $verseNum) {
-            // Sammle alle Suffixe für diesen Vers
-            $verseSuffixes = [];
+        // Iteriere über den gesamten Bereich von min bis max
+        for ($verseNum = $minVerse; $verseNum <= $maxVerse; $verseNum++) {
             
-            // Normale Suffixe
-            if (isset($parsedRef['suffixes'][$verseNum])) {
-                $verseSuffixes[] = ['suffix' => $parsedRef['suffixes'][$verseNum], 'optional' => false];
-            }
-            
-            // Optionale Suffixe
-            if (isset($parsedRef['optional_suffixes'][$verseNum])) {
-                $suffix = $parsedRef['optional_suffixes'][$verseNum];
-                // Prüfe ob dieser Suffix schon als normal existiert
-                $alreadyNormal = isset($parsedRef['suffixes'][$verseNum]) && $parsedRef['suffixes'][$verseNum] === $suffix;
-                if (!$alreadyNormal) {
-                    $verseSuffixes[] = ['suffix' => $suffix, 'optional' => true];
+            // KORREKTUR: Verse-Klassifikation direkt aus den Parser-Daten
+            $isOptional = in_array($verseNum, $parsedRef['optional_verses']);
+            $isExcluded = in_array($verseNum, $parsedRef['excluded_verses']);
+            $isNormal = in_array($verseNum, $parsedRef['all_verses']);
+
+            // Ein Vers muss angefordert sein (normal oder optional), um gescraped zu werden
+            if (!$isNormal && !$isOptional) {
+                // Wenn der Vers ausgeschlossen ist, fügen wir ihn als solchen hinzu, ohne zu scrapen
+                if ($isExcluded) {
+                    $scrapedVerses[] = [
+                        'number' => $verseNum,
+                        'text' => '',
+                        'optional' => false,
+                        'excluded' => true,
+                    ];
                 }
+                continue;
             }
-            
-            // Implizit ausgeschlossene Suffixe
-            if (isset($parsedRef['implicit_excluded_suffixes'][$verseNum])) {
-                $verseSuffixes[] = ['suffix' => $parsedRef['implicit_excluded_suffixes'][$verseNum], 'excluded' => true];
-            }
-            
-            // Wenn keine Suffixe, füge einen Eintrag ohne Suffix hinzu
-            if (empty($verseSuffixes)) {
-                $verseEntries[] = ['number' => $verseNum, 'suffix' => null];
-            } else {
-                // Füge einen Eintrag für jeden Suffix hinzu
-                foreach ($verseSuffixes as $suffixInfo) {
-                    $verseEntries[] = array_merge(['number' => $verseNum], $suffixInfo);
-                }
-            }
-        }
-        
-        // Wir rufen den Scraper für jeden einzelnen Vers im Gesamtbereich auf.
-        // Das ist weniger effizient, aber extrem robust gegen Parsing-Fehler auf der Scraper-Seite.
-        foreach ($verseEntries as $entry) {
-            $verseNum = $entry['number'];
+
+            // Scrape den einzelnen Vers
             $simpleRef = "$book $chapter,$verseNum";
-            
-            // Scrape einzelnen Vers (inkl. Testament)
             $command = "/opt/venv/bin/python3 /var/www/html/bible_scraper.py " .
                       escapeshellarg($simpleRef) . " " .
                       escapeshellarg($translation) . " " .
@@ -695,94 +677,84 @@ class BibleSearchAPI {
             $data = json_decode($output, true);
             
             $verseText = '';
-            // Erfolgreich gescraped?
             if ($data && !isset($data['error']) && isset($data['text'])) {
                 $verseText = $data['text'];
             } else {
-                // Logge einen Fehler, wenn ein Vers nicht gefunden werden konnte
                 error_log("Scraping failed for verse: " . $simpleRef);
             }
-
-            // Flags aus dem Entry übernehmen oder aus Parsing holen
-            $isExcluded = $entry['excluded'] ?? in_array($verseNum, $parsedRef['excluded_verses']);
-            $isOptional = $entry['optional'] ?? (in_array($verseNum, $parsedRef['optional_verses']) && !in_array($verseNum, $allNormalVerses));
 
             $verseEntry = [
                 'number' => $verseNum,
                 'text' => $verseText,
-                'optional' => $isOptional,
-                'excluded' => $isExcluded,
+                'optional' => $isOptional, // Korrekte Zuweisung
+                'excluded' => false,       // Per Definition nicht ausgeschlossen, da wir ihn scrapen
             ];
 
-            // Suffix aus dem Entry übernehmen
-            if (isset($entry['suffix']) && !empty($entry['suffix'])) {
-                $verseEntry['suffix'] = $entry['suffix'];
-                // Bei Suffixen: Text am ersten Satzzeichen abschneiden
-                $verseText = $this->applySuffixToText($verseText, $entry['suffix']);
-                $verseEntry['text'] = $verseText;
+            // Suffix-Logik anwenden
+            $suffix = null;
+            if (isset($parsedRef['suffixes'][$verseNum])) {
+                $suffix = $parsedRef['suffixes'][$verseNum];
+            } elseif ($isOptional && isset($parsedRef['optional_suffixes'][$verseNum])) {
+                $suffix = $parsedRef['optional_suffixes'][$verseNum];
+            }
+            
+            if ($suffix) {
+                $verseEntry['suffix'] = $suffix;
+                // Wende Suffix-Kürzung auf den Text an
+                $verseEntry['text'] = $this->applySuffixToText($verseText, $suffix);
             }
             
             $scrapedVerses[] = $verseEntry;
 
-            // Füge Text nur hinzu, wenn der Vers nicht ausgeschlossen ist
-            if (!$isExcluded && !empty($verseText)) {
-                $combinedText .= ($combinedText ? ' ' : '') . $verseText;
-            }
+            // Füge Text nur hinzu, wenn der Vers nicht ausgeschlossen ist (was hier immer der Fall ist)
+            $combinedText .= ($combinedText ? ' ' : '') . $verseEntry['text'];
         }
         
-        // Sortiere die Verse am Ende nach ihrer Nummer, falls die Verarbeitung durcheinander geraten ist
-        usort($scrapedVerses, function($a, $b) {
-            return $a['number'] <=> $b['number'];
-        });
+        usort($scrapedVerses, fn($a, $b) => $a['number'] <=> $b['number']);
 
-        // Filtere am Ende die wirklich ausgeschlossenen Verse aus der finalen Ausgabe, falls gewünscht.
-        // Aktuell bleiben sie mit 'excluded: true' drin, was für die Anzeige besser ist.
-        
         return [
             'reference' => $parsedRef['original'],
             'text' => trim($combinedText),
             'translation' => [
                 'code' => $translation,
                 'name' => $this->getTranslationName($translation),
-                'language' => 'German' // sollte dynamisch sein, aber für den Moment ok
+                'language' => 'German'
             ],
             'source' => 'Live Scraper (Complex)',
             'url' => $this->generateBibleserverUrl($parsedRef['original'], $translation),
             'testament' => $parsedRef['testament'],
-            'verses' => $scrapedVerses // enthält jetzt alle Verse, korrekt markiert
+            'verses' => $scrapedVerses
         ];
     }
     
     /**
-     * Schneide Text bei Suffixen am ersten Satzzeichen ab (wie im Python-Scraper)
+     * KORRIGIERTE VERSION: Schneide Text bei Suffixen
      */
     private function applySuffixToText($text, $suffix) {
-        if (empty($suffix) || !in_array($suffix, ['a', 'b'])) {
+        // Nur bei Suffix 'a' kürzen
+        if ($suffix !== 'a') {
             return $text;
         }
         
         // Finde das erste Satzende (.!?;)
-        $sentenceEndPattern = '/[.!?;]/';
-        if (preg_match($sentenceEndPattern, $text, $matches, PREG_OFFSET_CAPTURE)) {
-            // Schneide beim ersten Satzende ab (inklusive Satzzeichen)
+        if (preg_match('/[.?!;]/', $text, $matches, PREG_OFFSET_CAPTURE)) {
             $cutPosition = $matches[0][1] + 1;
             $cutText = substr($text, 0, $cutPosition);
             
-            // Stelle sicher, dass der Text nicht zu kurz ist
-            if (strlen(trim($cutText)) > 10) { // Mindestens ein paar Wörter
+            // Stelle sicher, dass der Text nicht zu kurz ist (verhindert Abschneiden bei "Vgl.")
+            if (strlen(trim($cutText)) > 10) { 
                 return trim($cutText);
             }
         }
         
-        // Fallback: Wenn kein Satzende gefunden wird oder Text zu kurz ist
-        // Schneide nach etwa der Hälfte des Textes ab
+        // Fallback: Schneide nach ca. der Hälfte der Wörter
         $words = explode(' ', $text);
         if (count($words) > 4) {
             $halfWords = array_slice($words, 0, intval(count($words) / 2));
             return implode(' ', $halfWords) . '...';
         }
         
-        return $text;
+        return $text; // Wenn alles fehlschlägt, gib Originaltext zurück
     }
     
     /**
