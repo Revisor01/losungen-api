@@ -689,9 +689,9 @@ class BibleSearchAPI {
                     ? $parsedRef['suffixes'][$verseNum] 
                     : $parsedRef['optional_suffixes'][$verseNum];
                 
-                // KORREKTUR: Optional-Status basiert darauf, welches Suffix angefordert wurde
-                $suffixIsOptional = isset($parsedRef['optional_suffixes'][$verseNum]);
-                $suffixIsNormal = isset($parsedRef['suffixes'][$verseNum]);
+                // NEUE LOGIK: Bestimme Status für beide Suffixe separat
+                $normalSuffix = $parsedRef['suffixes'][$verseNum] ?? null;
+                $optionalSuffix = $parsedRef['optional_suffixes'][$verseNum] ?? null;
                 
                 // Spalte den Vers-Text auf
                 $splitResult = $this->splitVerseText($verseText);
@@ -701,8 +701,8 @@ class BibleSearchAPI {
                     'number' => $verseNum,
                     'text' => $splitResult['partA'],
                     'suffix' => 'a',
-                    'optional' => $suffixIsOptional && ($requestedSuffix === 'a'), // Nur optional wenn das angeforderte Suffix optional ist
-                    'excluded' => $isExcluded || ($requestedSuffix !== 'a'),
+                    'optional' => ($optionalSuffix === 'a'), // Optional nur wenn 'a' explizit in optional_suffixes steht
+                    'excluded' => $isExcluded || ($normalSuffix !== 'a' && $optionalSuffix !== 'a'), // Ausgeschlossen wenn weder normal noch optional angefordert
                 ];
                 
                 // Erstelle Eintrag für Teil B  
@@ -710,8 +710,8 @@ class BibleSearchAPI {
                     'number' => $verseNum,
                     'text' => $splitResult['partB'],
                     'suffix' => 'b',
-                    'optional' => $suffixIsOptional && ($requestedSuffix === 'b'), // Nur optional wenn das angeforderte Suffix optional ist
-                    'excluded' => $isExcluded || ($requestedSuffix !== 'b'),
+                    'optional' => ($optionalSuffix === 'b'), // Optional nur wenn 'b' explizit in optional_suffixes steht
+                    'excluded' => $isExcluded || ($normalSuffix !== 'b' && $optionalSuffix !== 'b'), // Ausgeschlossen wenn weder normal noch optional angefordert
                 ];
                 
                 $scrapedVerses[] = $verseEntryA;
@@ -719,9 +719,9 @@ class BibleSearchAPI {
                 
                 // Kombiniere nur angeforderte Teile (außer bei ausgeschlossenen Versen)
                 if (!$isExcluded) {
-                    if ($requestedSuffix === 'a') {
+                    if ($normalSuffix === 'a') {
                         $combinedText .= ($combinedText ? ' ' : '') . $splitResult['partA'];
-                    } else {
+                    } elseif ($normalSuffix === 'b') {
                         $combinedText .= ($combinedText ? ' ' : '') . $splitResult['partB'];
                     }
                 }
@@ -778,7 +778,20 @@ class BibleSearchAPI {
             return ['partA' => $partA, 'partB' => $partB];
         }
 
-        // Wenn kein Trennzeichen gefunden wird, ist alles Teil a
+        // FALLBACK: Wenn kein Trennzeichen gefunden wird, teile bei der Hälfte
+        $textLength = mb_strlen($text);
+        if ($textLength > 20) {
+            $halfPoint = intval($textLength / 2);
+            // Finde das nächste Leerzeichen nach der Hälfte
+            $spacePos = mb_strpos($text, ' ', $halfPoint);
+            if ($spacePos !== false) {
+                $partA = trim(mb_substr($text, 0, $spacePos));
+                $partB = trim(mb_substr($text, $spacePos));
+                return ['partA' => $partA, 'partB' => $partB];
+            }
+        }
+        
+        // Wenn sehr kurz oder kein Leerzeichen, ist alles Teil a
         return ['partA' => $text, 'partB' => ''];
     }
     
