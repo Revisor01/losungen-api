@@ -690,24 +690,52 @@ class BibleSearchAPI {
                 'excluded' => false,       // Per Definition nicht ausgeschlossen, da wir ihn scrapen
             ];
 
-            // Suffix-Logik anwenden
-            $suffix = null;
-            if (isset($parsedRef['suffixes'][$verseNum])) {
-                $suffix = $parsedRef['suffixes'][$verseNum];
-            } elseif ($isOptional && isset($parsedRef['optional_suffixes'][$verseNum])) {
-                $suffix = $parsedRef['optional_suffixes'][$verseNum];
-            }
+            // NEU: Suffix-Logik - erstelle mehrere Einträge für Verse mit Suffixen
+            $hasSuffix = isset($parsedRef['suffixes'][$verseNum]) || (isset($parsedRef['optional_suffixes'][$verseNum]) && $isOptional);
             
-            if ($suffix) {
-                $verseEntry['suffix'] = $suffix;
-                // Wende Suffix-Kürzung auf den Text an
-                $verseEntry['text'] = $this->applySuffixToText($verseText, $suffix);
+            if ($hasSuffix) {
+                // Bestimme das angeforderte Suffix
+                $requestedSuffix = isset($parsedRef['suffixes'][$verseNum]) 
+                    ? $parsedRef['suffixes'][$verseNum] 
+                    : $parsedRef['optional_suffixes'][$verseNum];
+                
+                // Spalte den Vers-Text auf
+                $splitResult = $this->splitVerseText($verseText);
+                
+                // Erstelle Eintrag für Teil A
+                $verseEntryA = [
+                    'number' => $verseNum,
+                    'text' => $splitResult['partA'],
+                    'suffix' => 'a',
+                    'optional' => $isOptional,
+                    'excluded' => ($requestedSuffix !== 'a'), // Wenn 'b' angefordert wurde, ist 'a' ausgeschlossen
+                ];
+                
+                // Erstelle Eintrag für Teil B
+                $verseEntryB = [
+                    'number' => $verseNum,
+                    'text' => $splitResult['partB'],
+                    'suffix' => 'b',
+                    'optional' => $isOptional,
+                    'excluded' => ($requestedSuffix !== 'b'), // Wenn 'a' angefordert wurde, ist 'b' ausgeschlossen
+                ];
+                
+                $scrapedVerses[] = $verseEntryA;
+                $scrapedVerses[] = $verseEntryB;
+                
+                // Füge nur den angeforderten Teil zum kombinierten Text hinzu
+                if ($requestedSuffix === 'a') {
+                    $combinedText .= ($combinedText ? ' ' : '') . $splitResult['partA'];
+                } else {
+                    $combinedText .= ($combinedText ? ' ' : '') . $splitResult['partB'];
+                }
+            } else {
+                // Kein Suffix - normale Behandlung
+                $scrapedVerses[] = $verseEntry;
+                
+                // Füge Text nur hinzu, wenn der Vers nicht ausgeschlossen ist
+                $combinedText .= ($combinedText ? ' ' : '') . $verseEntry['text'];
             }
-            
-            $scrapedVerses[] = $verseEntry;
-
-            // Füge Text nur hinzu, wenn der Vers nicht ausgeschlossen ist (was hier immer der Fall ist)
-            $combinedText .= ($combinedText ? ' ' : '') . $verseEntry['text'];
         }
         
         usort($scrapedVerses, fn($a, $b) => $a['number'] <=> $b['number']);
@@ -728,33 +756,31 @@ class BibleSearchAPI {
     }
     
     /**
-     * KORRIGIERTE VERSION: Schneide Text bei Suffixen
+     * NEU: Spaltet einen Vers-Text in Teil a und Teil b.
+     * @return array ['partA' => string, 'partB' => string]
      */
-    private function applySuffixToText($text, $suffix) {
-        // Nur bei Suffix 'a' kürzen
-        if ($suffix !== 'a') {
-            return $text;
-        }
-        
+    private function splitVerseText($text) {
         // Finde das erste Satzende (.!?;)
         if (preg_match('/[.?!;]/', $text, $matches, PREG_OFFSET_CAPTURE)) {
             $cutPosition = $matches[0][1] + 1;
-            $cutText = substr($text, 0, $cutPosition);
-            
-            // Stelle sicher, dass der Text nicht zu kurz ist (verhindert Abschneiden bei "Vgl.")
-            if (strlen(trim($cutText)) > 10) { 
-                return trim($cutText);
+            $partA = trim(substr($text, 0, $cutPosition));
+            $partB = trim(substr($text, $cutPosition));
+
+            // Verhindere das Aufteilen bei kurzen Abkürzungen wie "Vgl." oder "d.h."
+            if (strlen($partA) < 15 && !empty($partB)) {
+                 // Suche nach dem nächsten Trennzeichen
+                 if (preg_match('/[.?!;]/', $partB, $nextMatches, PREG_OFFSET_CAPTURE)) {
+                     $newCutInB = $nextMatches[0][1] + 1;
+                     $partA .= ' ' . trim(substr($partB, 0, $newCutInB));
+                     $partB = trim(substr($partB, $newCutInB));
+                 }
             }
+
+            return ['partA' => $partA, 'partB' => $partB];
         }
-        
-        // Fallback: Schneide nach ca. der Hälfte der Wörter
-        $words = explode(' ', $text);
-        if (count($words) > 4) {
-            $halfWords = array_slice($words, 0, intval(count($words) / 2));
-            return implode(' ', $halfWords) . '...';
-        }
-        
-        return $text; // Wenn alles fehlschlägt, gib Originaltext zurück
+
+        // Wenn kein Trennzeichen gefunden wird, ist alles Teil a
+        return ['partA' => $text, 'partB' => ''];
     }
     
     /**
