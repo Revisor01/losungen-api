@@ -11,9 +11,7 @@ export const TranslationSelector: React.FC<TranslationSelectorProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
-  const [dropdownPosition, setDropdownPosition] = useState<{top: number, left: number, width: number}>({top: 0, left: 0, width: 0});
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const triggerRef = useRef<HTMLButtonElement>(null);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
   const selectedTranslation = available.find(t => t.code === selected);
@@ -52,23 +50,6 @@ export const TranslationSelector: React.FC<TranslationSelectorProps> = ({
     }
   }, [isOpen]);
 
-  const calculateDropdownPosition = () => {
-    if (triggerRef.current) {
-      const rect = triggerRef.current.getBoundingClientRect();
-      setDropdownPosition({
-        top: rect.bottom + 8,
-        left: rect.left,
-        width: rect.width
-      });
-    }
-  };
-
-  const handleToggle = () => {
-    if (!isOpen) {
-      calculateDropdownPosition();
-    }
-    setIsOpen(!isOpen);
-  };
 
   const handleSelect = (translation: typeof available[0]) => {
     onSelect(translation.code);
@@ -77,13 +58,12 @@ export const TranslationSelector: React.FC<TranslationSelectorProps> = ({
   };
 
   return (
-    <div className={`relative ${className}`} ref={dropdownRef}>
+    <div className={`relative ${className}`} ref={dropdownRef} style={{ isolation: 'isolate' }}>
       {/* Trigger Button */}
       <motion.button
-        ref={triggerRef}
         whileHover={{ scale: 1.02 }}
         whileTap={{ scale: 0.98 }}
-        onClick={handleToggle}
+        onClick={() => setIsOpen(!isOpen)}
         className="w-full flex items-center justify-between bg-white/80 backdrop-blur-sm border border-gray-200 rounded-xl px-4 py-3 text-left shadow-card hover:shadow-card-hover transition-all focus:outline-none focus:ring-2 focus:ring-royal-500/20"
       >
         <div className="flex items-center space-x-3 min-w-0 flex-1">
@@ -111,13 +91,11 @@ export const TranslationSelector: React.FC<TranslationSelectorProps> = ({
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
-            className="fixed bg-white/95 backdrop-blur-lg border border-gray-200 rounded-xl shadow-xl max-h-80 overflow-hidden"
+            className="absolute top-full left-0 right-0 mt-2 bg-white border border-gray-200 rounded-xl shadow-xl max-h-80 overflow-hidden"
             style={{ 
-              zIndex: 99999,
-              top: dropdownPosition.top,
-              left: dropdownPosition.left,
-              width: dropdownPosition.width,
-              maxWidth: '400px'
+              zIndex: 9999,
+              position: 'absolute',
+              transform: 'translateZ(0)'
             }}
           >
             {/* Search Input */}
