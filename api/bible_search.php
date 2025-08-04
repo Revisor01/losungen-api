@@ -637,9 +637,47 @@ class BibleSearchAPI {
         $scrapedVerses = [];
         $combinedText = '';
 
+        // NEU: Erstelle Liste aller Vers-Suffix-Kombinationen
+        $verseEntries = [];
+        foreach ($allVerseNumbersInScope as $verseNum) {
+            // Sammle alle Suffixe für diesen Vers
+            $verseSuffixes = [];
+            
+            // Normale Suffixe
+            if (isset($parsedRef['suffixes'][$verseNum])) {
+                $verseSuffixes[] = ['suffix' => $parsedRef['suffixes'][$verseNum], 'optional' => false];
+            }
+            
+            // Optionale Suffixe
+            if (isset($parsedRef['optional_suffixes'][$verseNum])) {
+                $suffix = $parsedRef['optional_suffixes'][$verseNum];
+                // Prüfe ob dieser Suffix schon als normal existiert
+                $alreadyNormal = isset($parsedRef['suffixes'][$verseNum]) && $parsedRef['suffixes'][$verseNum] === $suffix;
+                if (!$alreadyNormal) {
+                    $verseSuffixes[] = ['suffix' => $suffix, 'optional' => true];
+                }
+            }
+            
+            // Implizit ausgeschlossene Suffixe
+            if (isset($parsedRef['implicit_excluded_suffixes'][$verseNum])) {
+                $verseSuffixes[] = ['suffix' => $parsedRef['implicit_excluded_suffixes'][$verseNum], 'excluded' => true];
+            }
+            
+            // Wenn keine Suffixe, füge einen Eintrag ohne Suffix hinzu
+            if (empty($verseSuffixes)) {
+                $verseEntries[] = ['number' => $verseNum, 'suffix' => null];
+            } else {
+                // Füge einen Eintrag für jeden Suffix hinzu
+                foreach ($verseSuffixes as $suffixInfo) {
+                    $verseEntries[] = array_merge(['number' => $verseNum], $suffixInfo);
+                }
+            }
+        }
+        
         // Wir rufen den Scraper für jeden einzelnen Vers im Gesamtbereich auf.
         // Das ist weniger effizient, aber extrem robust gegen Parsing-Fehler auf der Scraper-Seite.
-        foreach ($allVerseNumbersInScope as $verseNum) {
+        foreach ($verseEntries as $entry) {
+            $verseNum = $entry['number'];
             $simpleRef = "$book $chapter,$verseNum";
             
             // Scrape einzelnen Vers (inkl. Testament)
@@ -660,9 +698,9 @@ class BibleSearchAPI {
                 error_log("Scraping failed for verse: " . $simpleRef);
             }
 
-            // Flags aus dem Parsing holen
-            $isExcluded = in_array($verseNum, $parsedRef['excluded_verses']);
-            $isOptional = in_array($verseNum, $parsedRef['optional_verses']);
+            // Flags aus dem Entry übernehmen oder aus Parsing holen
+            $isExcluded = $entry['excluded'] ?? in_array($verseNum, $parsedRef['excluded_verses']);
+            $isOptional = $entry['optional'] ?? (in_array($verseNum, $parsedRef['optional_verses']) && !in_array($verseNum, $normalVerses));
 
             $verseEntry = [
                 'number' => $verseNum,
@@ -671,23 +709,11 @@ class BibleSearchAPI {
                 'excluded' => $isExcluded,
             ];
 
-            // --- KORRIGIERTE SUFFIX-LOGIK ---
-            // Suffixe werden NICHT kombiniert - es gibt nur 'a' oder 'b', nie 'ab'
-            $finalSuffix = '';
-            $suffixes = $parsedRef['suffixes'] ?? [];
-            $optionalSuffixes = $parsedRef['optional_suffixes'] ?? [];
-            
-            // Bevorzuge normalen Suffix vor optionalem Suffix
-            if (isset($suffixes[$verseNum])) {
-                $finalSuffix = $suffixes[$verseNum];
-            } elseif (isset($optionalSuffixes[$verseNum])) {
-                $finalSuffix = $optionalSuffixes[$verseNum];
-            }
-            
-            if (!empty($finalSuffix)) {
-                $verseEntry['suffix'] = $finalSuffix;
+            // Suffix aus dem Entry übernehmen
+            if (isset($entry['suffix']) && !empty($entry['suffix'])) {
+                $verseEntry['suffix'] = $entry['suffix'];
                 // Bei Suffixen: Text am ersten Satzzeichen abschneiden
-                $verseText = $this->applySuffixToText($verseText, $finalSuffix);
+                $verseText = $this->applySuffixToText($verseText, $entry['suffix']);
                 $verseEntry['text'] = $verseText;
             }
             
