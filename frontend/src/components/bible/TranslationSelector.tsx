@@ -91,6 +91,7 @@ export const TranslationSelector: React.FC<TranslationSelectorProps> = ({
             exit={{ opacity: 0, y: -10, scale: 0.95 }}
             transition={{ duration: 0.2 }}
             className="absolute z-[9999] w-full mt-2 bg-white/95 backdrop-blur-lg border border-gray-200 rounded-xl shadow-xl max-h-80 overflow-hidden"
+            style={{ zIndex: 99999 }}
           >
             {/* Search Input */}
             <div className="p-3 border-b border-gray-100">

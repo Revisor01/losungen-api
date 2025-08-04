@@ -37,11 +37,11 @@ export const SearchInterface: React.FC = () => {
 
   // Helper Funktion um bestimmte Worte hervorzuheben
   const formatBibleText = (text: string) => {
-    const wordsToHighlight = ['Gott', 'Gottes', 'HERR', 'HERRn', 'Jesus', 'Christus', 'Geist', 'Heiligen Geist', 'Heiliger Geist', 'Sohn'];
+    const wordsToHighlight = ['Gott', 'Gottes', 'HERR', 'HERRn', 'HERRN', 'Jesus', 'Christus', 'Geist', 'Heiligen Geist', 'Heiliger Geist', 'Sohn'];
     let formattedText = text;
     
     wordsToHighlight.forEach(word => {
-      const regex = new RegExp(`\\b(${word})\\b`, 'g');
+      const regex = new RegExp(`\\b(${word})\\b`, 'gi'); // 'gi' für case-insensitive
       formattedText = formattedText.replace(regex, '<span class="font-bold text-lg">$1</span>');
     });
     
@@ -282,7 +282,10 @@ export const SearchInterface: React.FC = () => {
                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mt-4">
                   {nextEvent.psalm && (
                     <button
-                      onClick={() => handleSearchDirect(nextEvent.psalm!)}
+                      onClick={() => {
+                        setSearchTerm(nextEvent.psalm!);
+                        handleSearchDirect(nextEvent.psalm!);
+                      }}
                       className="bg-white/60 hover:bg-white/80 rounded-lg p-3 text-left transition-colors group"
                     >
                       <div className="text-xs text-gray-600 mb-1">Psalm</div>
@@ -294,7 +297,10 @@ export const SearchInterface: React.FC = () => {
                   
                   {nextEvent.oldTestamentReading && (
                     <button
-                      onClick={() => handleSearchDirect(nextEvent.oldTestamentReading!)}
+                      onClick={() => {
+                        setSearchTerm(nextEvent.oldTestamentReading!);
+                        handleSearchDirect(nextEvent.oldTestamentReading!);
+                      }}
                       className="bg-white/60 hover:bg-white/80 rounded-lg p-3 text-left transition-colors group"
                     >
                       <div className="text-xs text-gray-600 mb-1">AT-Lesung</div>
@@ -306,7 +312,10 @@ export const SearchInterface: React.FC = () => {
                   
                   {nextEvent.epistle && (
                     <button
-                      onClick={() => handleSearchDirect(nextEvent.epistle!)}
+                      onClick={() => {
+                        setSearchTerm(nextEvent.epistle!);
+                        handleSearchDirect(nextEvent.epistle!);
+                      }}
                       className="bg-white/60 hover:bg-white/80 rounded-lg p-3 text-left transition-colors group"
                     >
                       <div className="text-xs text-gray-600 mb-1">Epistel</div>
@@ -318,7 +327,10 @@ export const SearchInterface: React.FC = () => {
                   
                   {nextEvent.gospel && (
                     <button
-                      onClick={() => handleSearchDirect(nextEvent.gospel!)}
+                      onClick={() => {
+                        setSearchTerm(nextEvent.gospel!);
+                        handleSearchDirect(nextEvent.gospel!);
+                      }}
                       className="bg-white/60 hover:bg-white/80 rounded-lg p-3 text-left transition-colors group"
                     >
                       <div className="text-xs text-gray-600 mb-1">Evangelium</div>
@@ -330,7 +342,10 @@ export const SearchInterface: React.FC = () => {
                   
                   {nextEvent.sermonText && (
                     <button
-                      onClick={() => handleSearchDirect(nextEvent.sermonText!)}
+                      onClick={() => {
+                        setSearchTerm(nextEvent.sermonText!);
+                        handleSearchDirect(nextEvent.sermonText!);
+                      }}
                       className="bg-white/60 hover:bg-white/80 rounded-lg p-3 text-left transition-colors group"
                     >
                       <div className="text-xs text-gray-600 mb-1">Predigttext</div>
@@ -438,8 +453,20 @@ export const SearchInterface: React.FC = () => {
                 <h2 className="font-heading text-2xl font-semibold text-gray-900">
                   Suchergebnis
                 </h2>
-                <div className="text-sm text-gray-500">
-                  {searchResult.translation?.name} ({searchResult.translation?.code})
+                <div className="flex items-center space-x-4">
+                  <div className="text-sm text-gray-500">
+                    {searchResult.translation?.name} ({searchResult.translation?.code})
+                  </div>
+                  <a 
+                    href={searchResult.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center space-x-2 px-3 py-2 bg-royal-100 hover:bg-royal-200 rounded-lg text-royal-700 transition-colors"
+                    title="Vollständige Bibelstelle öffnen"
+                  >
+                    <ArrowTopRightOnSquareIcon className="w-4 h-4" />
+                    <span className="text-sm font-medium">Bibelserver</span>
+                  </a>
                 </div>
               </div>
 
@@ -519,29 +546,18 @@ export const SearchInterface: React.FC = () => {
                               : ''
                           }`}
                         >
-                          <div className="flex items-center space-x-2">
-                            <span 
-                              className={`flex-shrink-0 min-w-[2rem] h-8 px-2 rounded-full flex items-center justify-center text-sm font-semibold ${
-                                verse.excluded 
-                                  ? 'bg-orange-100 text-orange-700'
-                                  : verse.optional
-                                  ? 'bg-blue-100 text-blue-700'
-                                  : 'bg-royal-100 text-royal-700'
-                              }`}
-                              title={verse.suffix ? `Vers ${verse.number}${verse.suffix} - nur Teil "${verse.suffix}" des Verses` : undefined}
-                            >
-                              {verse.number}{verse.suffix && <span className="text-xs ml-0.5">{verse.suffix}</span>}
-                            </span>
-                            <a 
-                              href={generateBibleserverUrl(`${searchResult.reference.split(',')[0]} ${searchResult.reference.split(' ')[1].split(',')[0]},${verse.number}${verse.suffix || ''}`, searchResult.translation?.code || 'LUT')}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-gray-400 hover:text-royal-600 transition-colors"
-                              title="Vers in Bibelserver öffnen"
-                            >
-                              <ArrowTopRightOnSquareIcon className="w-4 h-4" />
-                            </a>
-                          </div>
+                          <span 
+                            className={`flex-shrink-0 min-w-[2rem] h-8 px-2 rounded-full flex items-center justify-center text-sm font-semibold ${
+                              verse.excluded 
+                                ? 'bg-orange-100 text-orange-700'
+                                : verse.optional
+                                ? 'bg-blue-100 text-blue-700'
+                                : 'bg-royal-100 text-royal-700'
+                            }`}
+                            title={verse.suffix ? `Vers ${verse.number}${verse.suffix} - nur Teil "${verse.suffix}" des Verses` : undefined}
+                          >
+                            {verse.number}{verse.suffix && <span className="text-xs ml-0.5">{verse.suffix}</span>}
+                          </span>
                           <p className={`flex-1 leading-relaxed ${
                             verse.excluded 
                               ? 'text-gray-500 italic'
