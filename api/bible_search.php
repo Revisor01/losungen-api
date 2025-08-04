@@ -651,9 +651,12 @@ class BibleSearchAPI {
             $isOptional = in_array($verseNum, $parsedRef['optional_verses']);
             $isExcluded = in_array($verseNum, $parsedRef['excluded_verses']);
             $isNormal = in_array($verseNum, $parsedRef['all_verses']);
-
-            // NEU: Scrape ALLE Verse (normale, optionale UND ausgeschlossene)
-            // Das Frontend braucht auch den Text der ausgeschlossenen Verse
+            
+            // NEU: Prüfe ob dieser Vers Suffixe hat
+            $hasSuffix = isset($parsedRef['suffixes'][$verseNum]) || (isset($parsedRef['optional_suffixes'][$verseNum]) && $isOptional);
+            
+            // WICHTIG: Wenn ein Vers Suffixe hat, wird er NUR über die Suffix-Logik behandelt
+            // Das verhindert doppelte Einträge bei z.B. "Mk 1,8b-10"
 
             // Scrape den einzelnen Vers
             $simpleRef = "$book $chapter,$verseNum";
@@ -672,18 +675,16 @@ class BibleSearchAPI {
                 error_log("Scraping failed for verse: " . $simpleRef);
             }
 
+            // Erstelle Basis-Eintrag (wird nur verwendet wenn kein Suffix vorhanden)
             $verseEntry = [
                 'number' => $verseNum,
                 'text' => $verseText,
                 'optional' => $isOptional,
-                'excluded' => $isExcluded, // Korrekte Zuweisung basierend auf Parser-Daten
+                'excluded' => $isExcluded,
             ];
-
-            // NEU: Suffix-Logik - erstelle mehrere Einträge für Verse mit Suffixen
-            $hasSuffix = isset($parsedRef['suffixes'][$verseNum]) || (isset($parsedRef['optional_suffixes'][$verseNum]) && $isOptional);
             
             if ($hasSuffix) {
-                // Bestimme das angeforderte Suffix
+                // SUFFIX-BEHANDLUNG: Dieser Vers hat Suffixe
                 $requestedSuffix = isset($parsedRef['suffixes'][$verseNum]) 
                     ? $parsedRef['suffixes'][$verseNum] 
                     : $parsedRef['optional_suffixes'][$verseNum];
@@ -697,22 +698,22 @@ class BibleSearchAPI {
                     'text' => $splitResult['partA'],
                     'suffix' => 'a',
                     'optional' => $isOptional,
-                    'excluded' => $isExcluded || ($requestedSuffix !== 'a'), // Ausgeschlossen wenn Vers ausgeschlossen ODER anderes Suffix angefordert
+                    'excluded' => $isExcluded || ($requestedSuffix !== 'a'),
                 ];
                 
-                // Erstelle Eintrag für Teil B
+                // Erstelle Eintrag für Teil B  
                 $verseEntryB = [
                     'number' => $verseNum,
                     'text' => $splitResult['partB'],
                     'suffix' => 'b',
                     'optional' => $isOptional,
-                    'excluded' => $isExcluded || ($requestedSuffix !== 'b'), // Ausgeschlossen wenn Vers ausgeschlossen ODER anderes Suffix angefordert
+                    'excluded' => $isExcluded || ($requestedSuffix !== 'b'),
                 ];
                 
                 $scrapedVerses[] = $verseEntryA;
                 $scrapedVerses[] = $verseEntryB;
                 
-                // Füge nur den angeforderten Teil zum kombinierten Text hinzu (außer bei ausgeschlossenen Versen)
+                // Kombiniere nur angeforderte Teile (außer bei ausgeschlossenen Versen)
                 if (!$isExcluded) {
                     if ($requestedSuffix === 'a') {
                         $combinedText .= ($combinedText ? ' ' : '') . $splitResult['partA'];
@@ -720,8 +721,9 @@ class BibleSearchAPI {
                         $combinedText .= ($combinedText ? ' ' : '') . $splitResult['partB'];
                     }
                 }
+                
             } else {
-                // Kein Suffix - normale Behandlung
+                // NORMALE BEHANDLUNG: Kein Suffix
                 $scrapedVerses[] = $verseEntry;
                 
                 // Füge Text nur hinzu, wenn der Vers nicht ausgeschlossen ist
