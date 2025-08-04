@@ -315,6 +315,27 @@ class BibleSearchAPI {
         sort($allVerseNumbers);
         $allVerseNumbers = array_unique($allVerseNumbers);
         
+        // NEU: Bei Suffix 'a' automatisch 'b' als ausgeschlossen hinzufügen (Problem 3)
+        $implicitExcludedSuffixes = [];
+        $allSuffixes = array_merge($suffixes, $optionalSuffixes);
+        foreach ($allSuffixes as $verseNum => $suffix) {
+            if ($suffix === 'a') {
+                // Prüfe ob 'b' für diesen Vers existiert
+                $hasBSuffix = false;
+                if (isset($suffixes[$verseNum]) && $suffixes[$verseNum] === 'b') {
+                    $hasBSuffix = true;
+                }
+                if (isset($optionalSuffixes[$verseNum]) && $optionalSuffixes[$verseNum] === 'b') {
+                    $hasBSuffix = true;
+                }
+                
+                if (!$hasBSuffix) {
+                    // 'a' existiert aber 'b' nicht -> füge 'b' als implizit ausgeschlossen hinzu
+                    $implicitExcludedSuffixes[$verseNum] = 'b';
+                }
+            }
+        }
+        
         // Ausgeschlossene Verse berechnen
         $excludedVerses = [];
         if (!empty($allVerseNumbers)) {
@@ -337,6 +358,7 @@ class BibleSearchAPI {
             'optional_verses' => array_values(array_unique($optionalVerses)),
             'suffixes' => $suffixes,
             'optional_suffixes' => $optionalSuffixes,
+            'implicit_excluded_suffixes' => $implicitExcludedSuffixes,
             'original' => $originalReference,
             'original_book' => $bookInput
         ];
