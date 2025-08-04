@@ -37,7 +37,7 @@ export const SearchInterface: React.FC = () => {
 
   // Helper Funktion um bestimmte Worte hervorzuheben
   const formatBibleText = (text: string) => {
-    const wordsToHighlight = ['Gott', 'Gottes', 'HERR', 'HERRn', 'HERRN', 'Jesus', 'Christus', 'Geist', 'Heiligen Geist', 'Heiliger Geist', 'Sohn'];
+    const wordsToHighlight = ['Gott', 'Gottes', 'HERR', 'HERRn', 'HERRN', 'Jesus', 'Christus', 'Geist', 'Heiligen Geist', 'Heiliger Geist', 'Sohn', 'Adonaj'];
     let formattedText = text;
     
     // 1. Entferne Zahlen-Referenzen aus Sela: Sela(↑397) -> Sela
@@ -46,8 +46,8 @@ export const SearchInterface: React.FC = () => {
     // 2. Mache Sela kursiv
     formattedText = formattedText.replace(/\bSela\b/g, '<em>Sela</em>');
     
-    // 3. Entferne andere Zahlen-Referenzen: (↑123) 
-    formattedText = formattedText.replace(/\([↑][^)]*\)/g, '');
+    // 3. Entferne ALLE Zahlen-Referenzen: (409), (↑123), etc.
+    formattedText = formattedText.replace(/\([↑]?\d+\)/g, '');
     
     // 4. Bestimmte Worte hervorheben
     wordsToHighlight.forEach(word => {
@@ -475,7 +475,9 @@ export const SearchInterface: React.FC = () => {
                     title="Vollständige Bibelstelle öffnen"
                   >
                     <ArrowTopRightOnSquareIcon className="w-4 h-4" />
-                    <span className="text-sm font-medium">Bibelserver</span>
+                    <span className="text-sm font-medium">
+                      {searchResult.translation?.code === 'BIGS' ? 'BiGS' : 'Bibelserver'}
+                    </span>
                   </a>
                 </div>
               </div>
