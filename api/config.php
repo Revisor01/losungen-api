@@ -11,7 +11,7 @@ $username = $_ENV['DB_USER'] ?? 'losungen_user';
 $password = $_ENV['DB_PASSWORD'] ?? '';
 
 // PDO DSN
-$dsn = "pgsql:host=$host;dbname=$dbname;charset=utf8";
+$dsn = "pgsql:host=$host;dbname=$dbname";
 
 // PDO Options
 $options = [
