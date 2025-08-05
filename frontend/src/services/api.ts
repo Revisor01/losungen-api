@@ -184,7 +184,7 @@ class ApiService {
   // Kirchenjahr API Methoden
   async getChurchEvents(action: 'today' | 'next' | 'upcoming' | 'date' | 'range' = 'upcoming', params?: any): Promise<ApiResponse<any[]>> {
     try {
-      let url = `/api/church_events.php?action=${action}`;
+      let url = `/church_events.php?action=${action}`;
       
       if (params) {
         if (params.date) url += `&date=${params.date}`;
@@ -237,7 +237,7 @@ class ApiService {
   }
 
   async updateChurchEvent(event: any): Promise<ApiResponse<any>> {
-    return this.request<any>('/api/church_events_update.php', {
+    return this.request<any>('/church_events_update.php', {
       method: 'POST',
       body: JSON.stringify(event)
     });
@@ -247,7 +247,7 @@ class ApiService {
   
   // Alle Perikopen abrufen
   async getPerikopes(): Promise<ApiResponse<any[]>> {
-    return this.request<any[]>('/api/services.php?path=perikopes');
+    return this.request<any[]>('/services.php?path=perikopes');
   }
 
   // Gottesdienste abrufen (mit Filtern)
@@ -266,29 +266,29 @@ class ApiService {
       if (filters.type) params.append('type', filters.type);
       query = '&' + params.toString();
     }
-    return this.request<any[]>(`/api/services.php?path=services${query}`);
+    return this.request<any[]>(`/services.php?path=services${query}`);
   }
 
   // Einzelnen Gottesdienst abrufen
   async getService(serviceId: number): Promise<ApiResponse<any>> {
-    return this.request<any>(`/api/services.php?path=service&id=${serviceId}`);
+    return this.request<any>(`/services.php?path=service&id=${serviceId}`);
   }
 
   // Gottesdienste nach Perikope abrufen (historische Übersicht)
   async getServicesByPerikope(perikopeId: number): Promise<ApiResponse<any[]>> {
-    return this.request<any[]>(`/api/services.php?path=services/by-perikope&perikope_id=${perikopeId}`);
+    return this.request<any[]>(`/services.php?path=services/by-perikope&perikope_id=${perikopeId}`);
   }
 
   // Kalender-Ansicht der Gottesdienste
   async getServicesCalendar(year: number, month?: number): Promise<ApiResponse<any[]>> {
     let query = `year=${year}`;
     if (month) query += `&month=${month}`;
-    return this.request<any[]>(`/api/services.php?path=services/calendar&${query}`);
+    return this.request<any[]>(`/services.php?path=services/calendar&${query}`);
   }
 
   // Gottesdienste durchsuchen
   async searchServices(query: string): Promise<ApiResponse<any[]>> {
-    return this.request<any[]>(`/api/services.php?path=search&q=${encodeURIComponent(query)}`);
+    return this.request<any[]>(`/services.php?path=search&q=${encodeURIComponent(query)}`);
   }
 
   // Neuen Gottesdienst erstellen
@@ -304,7 +304,7 @@ class ApiService {
     notes?: string;
     tags?: string[];
   }): Promise<ApiResponse<{ id: number }>> {
-    return this.request<{ id: number }>('/api/services.php?path=service', {
+    return this.request<{ id: number }>('/services.php?path=service', {
       method: 'POST',
       body: JSON.stringify(serviceData)
     });
@@ -322,7 +322,7 @@ class ApiService {
     duration_minutes?: number;
     notes?: string;
   }): Promise<ApiResponse<{ id: number }>> {
-    return this.request<{ id: number }>('/api/services.php?path=service/component', {
+    return this.request<{ id: number }>('/services.php?path=service/component', {
       method: 'POST',
       body: JSON.stringify(componentData)
     });

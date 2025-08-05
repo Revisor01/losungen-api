@@ -11,7 +11,8 @@
       "Bash(python3:*)",
       "Bash(php:*)",
       "Bash(rm:*)",
-      "Bash(cp:*)"
+      "Bash(cp:*)",
+      "Bash(curl:*)"
     ],
     "deny": []
   }
