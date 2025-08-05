@@ -35,6 +35,7 @@ interface ServiceModalProps {
   onClose: () => void;
   onSubmit: (serviceData: any) => Promise<void>;
   preselectedPerikope?: Perikope;
+  preselectedDate?: Date;
   loading?: boolean;
   onServiceCreated?: (serviceId: number) => void;
 }
@@ -44,14 +45,15 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
   onClose,
   onSubmit,
   preselectedPerikope,
+  preselectedDate,
   loading = false,
   onServiceCreated
 }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
-    title: preselectedPerikope ? `${preselectedPerikope.event_name} ${new Date().getFullYear()}` : '',
+    title: preselectedPerikope ? `${preselectedPerikope.event_name} ${(preselectedDate || new Date()).getFullYear()}` : '',
     service_type: 'regular',
-    date: new Date().toISOString().split('T')[0], // Heute als Default
+    date: (preselectedDate || new Date()).toISOString().split('T')[0],
     time: '10:00',
     location: 'Hauptkirche',
     perikope_id: preselectedPerikope?.id || null,

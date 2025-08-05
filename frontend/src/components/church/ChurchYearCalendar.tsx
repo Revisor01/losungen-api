@@ -201,6 +201,7 @@ export const ChurchYearCalendar: React.FC = () => {
       // Finde die entsprechende Perikope basierend auf event.summary
       const matchingPerikope = perikopes.find(p => p.event_name === event.summary);
       setSelectedPerikope(matchingPerikope || null);
+      setSelectedDate(event.date); // Datum vom Event übernehmen
     } else {
       setSelectedPerikope(null);
     }
@@ -850,6 +851,7 @@ export const ChurchYearCalendar: React.FC = () => {
           }}
           onSubmit={handleServiceSubmit}
           preselectedPerikope={selectedPerikope}
+          preselectedDate={selectedDate}
           loading={creatingService}
         />
       </div>
