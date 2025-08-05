@@ -11,6 +11,7 @@ import {
   PlusIcon
 } from '@heroicons/react/24/outline';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
+import { useNavigate } from 'react-router-dom';
 
 interface Perikope {
   id: number;
@@ -35,6 +36,7 @@ interface ServiceModalProps {
   onSubmit: (serviceData: any) => Promise<void>;
   preselectedPerikope?: Perikope;
   loading?: boolean;
+  onServiceCreated?: (serviceId: number) => void;
 }
 
 export const ServiceModal: React.FC<ServiceModalProps> = ({
@@ -42,8 +44,10 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
   onClose,
   onSubmit,
   preselectedPerikope,
-  loading = false
+  loading = false,
+  onServiceCreated
 }) => {
+  const navigate = useNavigate();
   const [formData, setFormData] = useState({
     title: preselectedPerikope ? `${preselectedPerikope.event_name} ${new Date().getFullYear()}` : '',
     service_type: 'regular',

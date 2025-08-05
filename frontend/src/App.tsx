@@ -10,6 +10,8 @@ import { ProfileSettings } from './components/profile/ProfileSettings';
 import { AdminPanel } from './components/admin/AdminPanel';
 import { FavoritesList } from './components/favorites/FavoritesList';
 import { ChurchYearCalendar } from './components/church/ChurchYearCalendar';
+import { ServiceEditor } from './components/services/ServiceEditor';
+import { ServicesOverview } from './components/services/ServicesOverview';
 import './styles/globals.css';
 
 function AppContent() {
@@ -55,6 +57,8 @@ function AppContent() {
             <Route path="/admin" element={<AdminPanel />} />
             <Route path="/favorites" element={<FavoritesList />} />
             <Route path="/kirchenjahr" element={<ChurchYearCalendar />} />
+            <Route path="/services" element={<ServicesOverview />} />
+            <Route path="/service/:serviceId" element={<ServiceEditor />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

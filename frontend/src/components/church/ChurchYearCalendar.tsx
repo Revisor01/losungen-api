@@ -211,11 +211,11 @@ export const ChurchYearCalendar: React.FC = () => {
     setCreatingService(true);
     try {
       const response = await apiService.createService(serviceData);
-      if (response.success) {
+      if (response.success && response.data) {
         setShowServiceModal(false);
         setSelectedPerikope(null);
-        // Hier könnten wir zu einem Service-Editor weiterleiten oder eine Erfolgsmeldung anzeigen
-        console.log('Gottesdienst erstellt:', response.data);
+        // Navigate to the service editor
+        navigate(`/service/${response.data.id}`);
       }
     } catch (error) {
       console.error('Failed to create service:', error);
