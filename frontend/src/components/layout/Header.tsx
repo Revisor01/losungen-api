@@ -41,8 +41,9 @@ export const Header: React.FC<HeaderProps> = ({
 
           {/* Desktop Navigation */}
           <nav className="hidden md:flex items-center space-x-8">
-            <NavLink href="/" active={location.pathname === '/'}>Dashboard</NavLink>
-            <NavLink href="/search" active={location.pathname === '/search'}>Suche</NavLink>
+            <NavLink href="/" active={location.pathname === '/'}>Tageslosung</NavLink>
+            <NavLink href="/search" active={location.pathname === '/search'}>Bibelsuche</NavLink>
+            <NavLink href="/services" active={location.pathname === '/services' || location.pathname.startsWith('/service')}>Gottesdienste</NavLink>
             <NavLink href="/kirchenjahr" active={location.pathname === '/kirchenjahr'}>Kirchenjahr</NavLink>
             <NavLink href="/favorites" active={location.pathname === '/favorites'}>Favoriten</NavLink>
             <NavLink href="/profile" active={location.pathname === '/profile'}>Profil</NavLink>
@@ -114,8 +115,9 @@ export const Header: React.FC<HeaderProps> = ({
             className="md:hidden bg-white/95 backdrop-blur-lg border-b border-royal-100"
           >
             <nav className="px-4 py-4 space-y-3">
-              <MobileNavLink href="/" active={location.pathname === '/'}>Dashboard</MobileNavLink>
-              <MobileNavLink href="/search" active={location.pathname === '/search'}>Suche</MobileNavLink>
+              <MobileNavLink href="/" active={location.pathname === '/'}>Tageslosung</MobileNavLink>
+              <MobileNavLink href="/search" active={location.pathname === '/search'}>Bibelsuche</MobileNavLink>
+              <MobileNavLink href="/services" active={location.pathname === '/services' || location.pathname.startsWith('/service')}>Gottesdienste</MobileNavLink>
               <MobileNavLink href="/kirchenjahr" active={location.pathname === '/kirchenjahr'}>Kirchenjahr</MobileNavLink>
               <MobileNavLink href="/favorites" active={location.pathname === '/favorites'}>Favoriten</MobileNavLink>
               <MobileNavLink href="/profile" active={location.pathname === '/profile'}>Profil</MobileNavLink>
