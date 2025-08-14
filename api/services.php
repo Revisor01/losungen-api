@@ -401,4 +401,54 @@ function createServiceComponent($pdo, $input) {
         'timestamp' => date('c')
     ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
 }
+
+/**
+ * Handle DELETE requests
+ */
+function handleDelete($pdo, $path) {
+    if ($path === 'service' && isset($_GET['id'])) {
+        $serviceId = (int)$_GET['id'];
+        
+        // Start transaction
+        $pdo->beginTransaction();
+        
+        try {
+            // Delete service components first (foreign key constraint)
+            $stmt = $pdo->prepare("DELETE FROM service_components WHERE service_id = ?");
+            $stmt->execute([$serviceId]);
+            
+            // Delete service tags
+            $stmt = $pdo->prepare("DELETE FROM service_tags WHERE service_id = ?");
+            $stmt->execute([$serviceId]);
+            
+            // Delete the service itself
+            $stmt = $pdo->prepare("DELETE FROM services WHERE id = ?");
+            $stmt->execute([$serviceId]);
+            
+            if ($stmt->rowCount() === 0) {
+                $pdo->rollBack();
+                http_response_code(404);
+                echo json_encode([
+                    'success' => false,
+                    'error' => 'Service not found',
+                    'timestamp' => date('c')
+                ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+                return;
+            }
+            
+            $pdo->commit();
+            
+            echo json_encode([
+                'success' => true,
+                'message' => 'Service deleted successfully',
+                'timestamp' => date('c')
+            ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            throw $e;
+        }
+    } else {
+        throw new Exception('Invalid DELETE request');
+    }
+}
 ?>
