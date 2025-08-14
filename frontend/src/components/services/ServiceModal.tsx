@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   XMarkIcon, 
@@ -67,6 +67,16 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
 
   const [newTag, setNewTag] = useState('');
   const [showTagInput, setShowTagInput] = useState(false);
+
+  // Update form data when preselected props change
+  useEffect(() => {
+    setFormData(prev => ({
+      ...prev,
+      title: preselectedPerikope ? `${preselectedPerikope.event_name} ${(preselectedDate || new Date()).getFullYear()}` : prev.title,
+      date: (preselectedDate || new Date()).toISOString().split('T')[0],
+      perikope_id: preselectedPerikope?.id || prev.perikope_id,
+    }));
+  }, [preselectedPerikope, preselectedDate]);
 
   const serviceTypes = [
     { value: 'regular', label: 'Regulärer Gottesdienst' },

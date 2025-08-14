@@ -405,15 +405,18 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                         {(component.component_type === 'lied' || config?.hasNumber) && (
                           <div className="mt-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              {config?.placeholder?.includes('EG') ? 'Lied-Nummer' : 'Referenz'}
+                              Lied (Nummer und Titel)
                             </label>
-                            <input
-                              type="text"
+                            <textarea
                               value={component.hymn_number || ''}
                               onChange={(e) => updateComponent(index, { hymn_number: e.target.value })}
-                              placeholder={config?.placeholder || 'z.B. EG 123'}
-                              className="input-field text-sm"
+                              placeholder="z.B. EG 324, 1-3: Ich singe dir mit Herz und Mund"
+                              className="input-field text-sm resize-none min-h-[80px]"
+                              rows={3}
                             />
+                            <p className="text-xs text-gray-500 mt-1">
+                              Format: Gesangbuch Nummer, Strophen: Titel
+                            </p>
                           </div>
                         )}
 
@@ -439,16 +442,50 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
 
                         {(config?.hasText) && (
                           <div className="mt-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Inhalt/Notizen
-                            </label>
+                            <div className="flex items-center justify-between mb-1">
+                              <label className="block text-sm font-medium text-gray-700">
+                                Inhalt/Notizen
+                              </label>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const textarea = document.getElementById(`content-${index}`) as HTMLTextAreaElement;
+                                  if (textarea) {
+                                    const isExpanded = textarea.rows > 3;
+                                    textarea.rows = isExpanded ? 3 : Math.max(8, (component.content || '').split('\n').length + 2);
+                                  }
+                                }}
+                                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
+                              >
+                                {component.component_type === 'predigt' ? 'Erweitern' : 'Ein/Ausklappen'}
+                              </button>
+                            </div>
                             <textarea
+                              id={`content-${index}`}
                               value={component.content || ''}
                               onChange={(e) => updateComponent(index, { content: e.target.value })}
                               placeholder={config?.placeholder || 'Stichpunkte oder Text...'}
-                              className="input-field text-sm resize-none"
-                              rows={3}
+                              className={`input-field text-sm resize-y ${component.component_type === 'predigt' ? 'font-serif' : 'font-mono'}`}
+                              rows={component.component_type === 'predigt' ? 12 : 3}
+                              style={{ minHeight: component.component_type === 'predigt' ? '300px' : '80px' }}
                             />
+                            {component.component_type === 'predigt' && (
+                              <div className="mt-2 flex space-x-2 text-xs">
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const textarea = document.getElementById(`content-${index}`) as HTMLTextAreaElement;
+                                    textarea.style.fontFamily = textarea.style.fontFamily === 'serif' ? 'monospace' : 'serif';
+                                  }}
+                                  className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
+                                >
+                                  Schriftart wechseln
+                                </button>
+                                <span className="text-gray-500">
+                                  {(component.content || '').length} Zeichen, ~{Math.ceil((component.content || '').length / 100)} Min
+                                </span>
+                              </div>
+                            )}
                           </div>
                         )}
 
