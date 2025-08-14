@@ -38,6 +38,7 @@ interface ServiceModalProps {
   preselectedDate?: Date;
   loading?: boolean;
   onServiceCreated?: (serviceId: number) => void;
+  existingServices?: any[];
 }
 
 export const ServiceModal: React.FC<ServiceModalProps> = ({
@@ -47,7 +48,8 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
   preselectedPerikope,
   preselectedDate,
   loading = false,
-  onServiceCreated
+  onServiceCreated,
+  existingServices = []
 }) => {
   const navigate = useNavigate();
   const [formData, setFormData] = useState({
@@ -97,12 +99,12 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
     
     // Reset form nach erfolgreichem Submit
     setFormData({
-      title: '',
+      title: preselectedPerikope ? `${preselectedPerikope.event_name} ${(preselectedDate || new Date()).getFullYear()}` : '',
       service_type: 'regular',
-      date: new Date().toISOString().split('T')[0],
+      date: (preselectedDate || new Date()).toISOString().split('T')[0],
       time: '10:00',
       location: 'Hauptkirche',
-      perikope_id: null,
+      perikope_id: preselectedPerikope?.id || null,
       chosen_perikope: 'III',
       congregation_size: '',
       notes: '',
@@ -176,6 +178,37 @@ export const ServiceModal: React.FC<ServiceModalProps> = ({
                 <XMarkIcon className="w-5 h-5" />
               </button>
             </div>
+
+            {/* Existing Services */}
+            {existingServices.length > 0 && (
+              <div className="px-6 pb-4">
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <h4 className="font-medium text-blue-900 mb-3 flex items-center">
+                    <CalendarIcon className="w-5 h-5 mr-2" />
+                    Bestehende Gottesdienste zu diesem Feiertag:
+                  </h4>
+                  <div className="space-y-2">
+                    {existingServices.map((service, index) => (
+                      <div key={service.id || index} className="flex items-center justify-between bg-white p-3 rounded border">
+                        <div>
+                          <span className="font-medium">{service.title}</span>
+                          <div className="text-sm text-gray-600">
+                            {new Date(service.date).toLocaleDateString('de-DE')} um {service.time || '10:00'} Uhr
+                          </div>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/service/${service.id}`)}
+                          className="text-blue-600 hover:text-blue-800 text-sm font-medium px-3 py-1 rounded border border-blue-200 hover:bg-blue-50"
+                        >
+                          Bearbeiten
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Form */}
             <form onSubmit={handleSubmit} className="p-6 space-y-6">

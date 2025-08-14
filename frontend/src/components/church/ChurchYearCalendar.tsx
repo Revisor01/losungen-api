@@ -35,6 +35,7 @@ export const ChurchYearCalendar: React.FC = () => {
   const [selectedPerikope, setSelectedPerikope] = useState<any>(null);
   const [creatingService, setCreatingService] = useState(false);
   const [perikopes, setPerikopes] = useState<any[]>([]);
+  const [existingServices, setExistingServices] = useState<any[]>([]);
 
   useEffect(() => {
     loadChurchYearData();
@@ -196,14 +197,34 @@ export const ChurchYearCalendar: React.FC = () => {
     setEditedEvent({ ...editedEvent, [field]: value });
   };
 
-  const handleCreateService = (event?: ChurchEvent) => {
+  const loadExistingServices = async (eventName: string, eventDate: Date) => {
+    try {
+      const response = await apiService.getServices();
+      if (response.success && response.data) {
+        // Filter services by event name and date
+        const dateStr = eventDate.toISOString().split('T')[0];
+        const matchingServices = response.data.filter((service: any) => 
+          service.title.includes(eventName) || service.date === dateStr
+        );
+        setExistingServices(matchingServices);
+      }
+    } catch (error) {
+      console.error('Fehler beim Laden bestehender Gottesdienste:', error);
+      setExistingServices([]);
+    }
+  };
+
+  const handleCreateService = async (event?: ChurchEvent) => {
     if (event) {
       // Finde die entsprechende Perikope basierend auf event.summary
       const matchingPerikope = perikopes.find(p => p.event_name === event.summary);
       setSelectedPerikope(matchingPerikope || null);
       setSelectedDate(event.date); // Datum vom Event übernehmen
+      // Load existing services for this event
+      await loadExistingServices(event.summary, event.date);
     } else {
       setSelectedPerikope(null);
+      setExistingServices([]);
     }
     setShowServiceModal(true);
   };
@@ -848,10 +869,12 @@ export const ChurchYearCalendar: React.FC = () => {
           onClose={() => {
             setShowServiceModal(false);
             setSelectedPerikope(null);
+            setExistingServices([]);
           }}
           onSubmit={handleServiceSubmit}
           preselectedPerikope={selectedPerikope}
           preselectedDate={selectedDate}
+          existingServices={existingServices}
           loading={creatingService}
         />
       </div>
