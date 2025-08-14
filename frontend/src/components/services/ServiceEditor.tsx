@@ -553,6 +553,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                     <option value="EU">Einheitsübersetzung</option>
                                     <option value="NGÜ">Neue Genfer</option>
                                     <option value="GNB">Gute Nachricht</option>
+                                    <option value="BIGS">Bibel in gerechter Sprache</option>
                                     <option value="NIV">New International</option>
                                   </select>
                                 </div>
@@ -586,11 +587,18 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                         });
                                         
                                         if (response.success && response.data?.text) {
-                                          // Text in das content-Feld laden
-                                          updateComponentWithAutoDuration(index, { 
-                                            content: response.data.text,
-                                            bible_text: response.data.text
-                                          });
+                                          // Für Psalm: Text ins content-Feld laden
+                                          // Für AT/Epistel/Evangelium/Predigttext: nur bible_text speichern für Anzeige
+                                          if (component.component_type === 'psalm') {
+                                            updateComponentWithAutoDuration(index, { 
+                                              content: response.data.text,
+                                              bible_text: response.data.text
+                                            });
+                                          } else {
+                                            updateComponent(index, { 
+                                              bible_text: response.data.text
+                                            });
+                                          }
                                         } else {
                                           alert('Bibeltext konnte nicht gefunden werden. Bitte Referenz überprüfen.');
                                         }
@@ -614,6 +622,27 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                     )}
                                   </button>
                                 </div>
+                                
+                                {/* Bibeltext-Anzeige für AT/Epistel/Evangelium/Predigttext */}
+                                {component.bible_text && component.component_type !== 'psalm' && (
+                                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                    <div className="flex items-center justify-between mb-2">
+                                      <h4 className="text-sm font-medium text-blue-900">
+                                        {component.bible_reference} ({component.bible_translation || 'LUT'})
+                                      </h4>
+                                      <button
+                                        type="button"
+                                        onClick={() => updateComponent(index, { bible_text: undefined })}
+                                        className="text-blue-600 hover:text-blue-800 text-xs"
+                                      >
+                                        ✕ Schließen
+                                      </button>
+                                    </div>
+                                    <div className="text-sm text-blue-800 whitespace-pre-wrap font-serif leading-relaxed max-h-64 overflow-y-auto">
+                                      {component.bible_text}
+                                    </div>
+                                  </div>
+                                )}
                               </div>
                             )}
 
