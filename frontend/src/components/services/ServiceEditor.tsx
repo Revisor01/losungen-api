@@ -21,6 +21,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { apiService } from '../../services/api';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorMessage } from '../ui/ErrorMessage';
+import { COMPONENT_CONFIGS, getComponentsByCategory, ComponentType } from '../../types/serviceComponents';
 
 interface ServiceComponent {
   id?: number;
@@ -53,19 +54,7 @@ interface Service {
   season?: string;
 }
 
-const COMPONENT_TYPES = [
-  { value: 'opening', label: 'Eingangswort', icon: BookOpenIcon, color: 'blue' },
-  { value: 'opening_prayer', label: 'Eingangsgebet', icon: BookOpenIcon, color: 'blue' },
-  { value: 'hymn', label: 'Lied', icon: MusicalNoteIcon, color: 'purple' },
-  { value: 'reading', label: 'Schriftlesung', icon: BookOpenIcon, color: 'green' },
-  { value: 'sermon', label: 'Predigt', icon: DocumentTextIcon, color: 'orange' },
-  { value: 'creed', label: 'Glaubensbekenntnis', icon: BookOpenIcon, color: 'indigo' },
-  { value: 'intercession', label: 'Fürbitten', icon: UsersIcon, color: 'pink' },
-  { value: 'communion', label: 'Abendmahl', icon: BookOpenIcon, color: 'red' },
-  { value: 'offering', label: 'Kollekte', icon: UsersIcon, color: 'yellow' },
-  { value: 'blessing', label: 'Segen', icon: BookOpenIcon, color: 'green' },
-  { value: 'announcements', label: 'Abkündigungen', icon: DocumentTextIcon, color: 'gray' }
-];
+// Use the new component system from serviceComponents.ts
 
 export const ServiceEditor: React.FC = () => {
   const navigate = useNavigate();
@@ -118,13 +107,13 @@ export const ServiceEditor: React.FC = () => {
     }
   };
 
-  const addComponent = (type: string) => {
-    const typeInfo = COMPONENT_TYPES.find(t => t.value === type);
+  const addComponent = (type: ComponentType) => {
+    const config = COMPONENT_CONFIGS[type];
     const newComponent: ServiceComponent = {
       component_type: type,
-      title: typeInfo?.label || type,
+      title: config.label,
       order_position: components.length,
-      duration_minutes: type === 'sermon' ? 20 : 5
+      duration_minutes: config.defaultDuration || 5
     };
     setComponents([...components, newComponent]);
   };
@@ -390,9 +379,8 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
 
           <AnimatePresence>
             {components.map((component, index) => {
-              const typeInfo = COMPONENT_TYPES.find(t => t.value === component.component_type);
-              const Icon = typeInfo?.icon || DocumentTextIcon;
-              const color = typeInfo?.color || 'gray';
+              const config = COMPONENT_CONFIGS[component.component_type as ComponentType];
+              const color = config?.color || 'gray';
 
               return (
                 <motion.div
@@ -400,36 +388,40 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
-                  className={`mb-4 p-4 border rounded-lg bg-${color}-50 border-${color}-200`}
+                  className={config ? `mb-4 p-4 border rounded-lg ${config.bgColor} ${config.borderColor}` : 'mb-4 p-4 border rounded-lg bg-gray-50 border-gray-200'}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start space-x-3 flex-1">
-                      <Icon className={`w-5 h-5 text-${color}-600 mt-1`} />
+                      <span className="text-xl mt-1">{config?.icon || '📄'}</span>
                       <div className="flex-1">
                         <input
                           type="text"
                           value={component.title}
                           onChange={(e) => updateComponent(index, { title: e.target.value })}
-                          className={`font-medium text-${color}-900 bg-transparent border-b border-${color}-300 focus:outline-none focus:border-${color}-500 mb-2`}
+                          className={config ? `font-medium ${config.textColor} bg-transparent border-b ${config.borderColor} focus:outline-none focus:border-${config.color}-500 mb-2` : 'font-medium text-gray-900 bg-transparent border-b border-gray-300 focus:outline-none focus:border-gray-500 mb-2'}
                         />
 
                         {/* Type-specific fields */}
-                        {component.component_type === 'hymn' && (
+                        {(component.component_type === 'lied' || config?.hasNumber) && (
                           <div className="mt-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
-                              EG-Nummer
+                              {config?.placeholder?.includes('EG') ? 'Lied-Nummer' : 'Referenz'}
                             </label>
                             <input
                               type="text"
                               value={component.hymn_number || ''}
                               onChange={(e) => updateComponent(index, { hymn_number: e.target.value })}
-                              placeholder="z.B. EG 322"
+                              placeholder={config?.placeholder || 'z.B. EG 123'}
                               className="input-field text-sm"
                             />
                           </div>
                         )}
 
-                        {component.component_type === 'reading' && (
+                        {(component.component_type === 'predigttext' || 
+                          component.component_type === 'altes_testament' || 
+                          component.component_type === 'epistel' || 
+                          component.component_type === 'evangelium' ||
+                          component.component_type === 'predigt') && (
                           <div className="mt-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Bibelstelle
@@ -444,7 +436,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                           </div>
                         )}
 
-                        {['sermon', 'intercession', 'opening_prayer'].includes(component.component_type) && (
+                        {(config?.hasText) && (
                           <div className="mt-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">
                               Inhalt/Notizen
@@ -452,7 +444,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                             <textarea
                               value={component.content || ''}
                               onChange={(e) => updateComponent(index, { content: e.target.value })}
-                              placeholder="Stichpunkte oder Text..."
+                              placeholder={config?.placeholder || 'Stichpunkte oder Text...'}
                               className="input-field text-sm resize-none"
                               rows={3}
                             />
@@ -508,23 +500,37 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
           {/* Add Component Buttons */}
           <div className="mt-6">
             <h3 className="text-sm font-medium text-gray-700 mb-3">Komponente hinzufügen:</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-              {COMPONENT_TYPES.map(type => {
-                const Icon = type.icon;
-                return (
-                  <motion.button
-                    key={type.value}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    onClick={() => addComponent(type.value)}
-                    className={`flex items-center justify-center space-x-2 p-3 bg-${type.color}-100 hover:bg-${type.color}-200 text-${type.color}-700 rounded-lg transition-colors`}
-                  >
-                    <Icon className="w-4 h-4" />
-                    <span className="text-sm">{type.label}</span>
-                  </motion.button>
-                );
-              })}
-            </div>
+            {(() => {
+              const categories = getComponentsByCategory();
+              return Object.entries(categories).map(([categoryName, configs]) => (
+                <div key={categoryName} className="mb-4">
+                  <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+                    {categoryName === 'sprechakte' && 'Sprechakte'}
+                    {categoryName === 'gebete' && 'Gebete & Segen'}
+                    {categoryName === 'lieder' && 'Lieder'}
+                    {categoryName === 'liturgien' && 'Liturgien'}
+                    {categoryName === 'bibellesungen' && 'Bibellesungen'}
+                    {categoryName === 'predigt' && 'Predigt'}
+                    {categoryName === 'sakramente' && 'Sakramente'}
+                    {categoryName === 'kasualien' && 'Kasualien'}
+                  </h4>
+                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                    {configs.map(config => (
+                      <motion.button
+                        key={config.type}
+                        whileHover={{ scale: 1.05 }}
+                        whileTap={{ scale: 0.95 }}
+                        onClick={() => addComponent(config.type)}
+                        className={`flex items-center justify-center space-x-2 p-3 ${config.bgColor} hover:bg-${config.color}-200 ${config.textColor} rounded-lg transition-colors`}
+                      >
+                        <span className="text-lg">{config.icon}</span>
+                        <span className="text-sm">{config.label}</span>
+                      </motion.button>
+                    ))}
+                  </div>
+                </div>
+              ));
+            })()}
           </div>
 
           {/* Save Button */}
