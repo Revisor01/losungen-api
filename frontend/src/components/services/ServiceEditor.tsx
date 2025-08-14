@@ -69,12 +69,46 @@ export const ServiceEditor: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [expandedComponents, setExpandedComponents] = useState<Set<number>>(new Set());
   const [componentStyles, setComponentStyles] = useState<{ [key: number]: { bold: boolean; italic: boolean } }>({});
+  const [wordsPerMinute, setWordsPerMinute] = useState<number>(() => {
+    // Lade Sprechgeschwindigkeit aus localStorage oder nutze Default
+    const saved = localStorage.getItem('wordsPerMinute');
+    return saved ? parseInt(saved) : 110;
+  });
 
   useEffect(() => {
     if (serviceId) {
       loadService();
     }
   }, [serviceId]);
+
+  // Speichere Sprechgeschwindigkeit in localStorage
+  useEffect(() => {
+    localStorage.setItem('wordsPerMinute', wordsPerMinute.toString());
+  }, [wordsPerMinute]);
+
+  // Automatische Zeitberechnung für Text-Komponenten
+  const calculateTextDuration = (text: string): number => {
+    if (!text || text.trim().length === 0) return 0;
+    const wordCount = text.trim().split(/\s+/).length;
+    return Math.ceil(wordCount / wordsPerMinute);
+  };
+
+  // Aktualisiere Dauer automatisch wenn sich Text ändert
+  const updateComponentWithAutoDuration = (index: number, updates: Partial<ServiceComponent>) => {
+    const component = components[index];
+    const config = COMPONENT_CONFIGS[component.component_type as ComponentType];
+    
+    // Automatische Dauer-Berechnung für Text-Komponenten
+    if (updates.content !== undefined && config?.hasText) {
+      const calculatedDuration = calculateTextDuration(updates.content);
+      // Setze berechnete Dauer nur wenn keine manuelle Dauer gesetzt ist
+      if (!component.duration_minutes || component.duration_minutes === calculateTextDuration(component.content || '')) {
+        updates.duration_minutes = calculatedDuration;
+      }
+    }
+    
+    updateComponent(index, updates);
+  };
 
   const loadService = async () => {
     try {
@@ -386,7 +420,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
           </div>
 
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4 mt-6">
+          <div className="grid grid-cols-4 gap-4 mt-6">
             <div className="bg-gray-50 rounded-lg p-3 text-center">
               <div className="text-2xl font-bold text-gray-900">{components.length}</div>
               <div className="text-sm text-gray-600">Komponenten</div>
@@ -397,9 +431,23 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
             </div>
             <div className="bg-gray-50 rounded-lg p-3 text-center">
               <div className="text-2xl font-bold text-gray-900">
-                {components.filter(c => c.component_type === 'hymn').length}
+                {components.filter(c => c.component_type === 'lied').length}
               </div>
               <div className="text-sm text-gray-600">Lieder</div>
+            </div>
+            <div className="bg-blue-50 rounded-lg p-3">
+              <div className="text-center">
+                <label className="block text-xs text-gray-600 mb-1">Sprechtempo</label>
+                <input
+                  type="number"
+                  value={wordsPerMinute}
+                  onChange={(e) => setWordsPerMinute(parseInt(e.target.value) || 110)}
+                  className="w-16 text-center text-sm font-bold bg-transparent border-b border-blue-300 focus:outline-none focus:border-blue-500"
+                  min="80"
+                  max="200"
+                />
+                <div className="text-xs text-gray-500 mt-1">Wörter/Min</div>
+              </div>
             </div>
           </div>
         </motion.div>
@@ -524,7 +572,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                 <textarea
                                   id={`content-${index}`}
                                   value={component.content || ''}
-                                  onChange={(e) => updateComponent(index, { content: e.target.value })}
+                                  onChange={(e) => updateComponentWithAutoDuration(index, { content: e.target.value })}
                                   placeholder={config?.placeholder || 'Stichpunkte oder Text...'}
                                   className={`input-field text-sm resize-y font-sans ${
                                     componentStyles[index]?.bold ? 'font-bold' : 'font-normal'
@@ -537,11 +585,14 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                     fontFamily: 'system-ui, -apple-system, sans-serif'
                                   }}
                                 />
-                                {component.component_type === 'predigt' && (
-                                  <div className="mt-2 text-xs text-gray-500">
-                                    {(component.content || '').length} Zeichen, ~{Math.ceil((component.content || '').length / 100)} Min
-                                  </div>
-                                )}
+                                <div className="mt-2 flex justify-between text-xs text-gray-500">
+                                  <span>
+                                    {(component.content || '').length} Zeichen, {(component.content || '').trim().split(/\s+/).filter(w => w.length > 0).length} Wörter
+                                  </span>
+                                  <span className="font-medium text-blue-600">
+                                    ⏱️ ~{calculateTextDuration(component.content || '')} Min (bei {wordsPerMinute} Wörtern/Min)
+                                  </span>
+                                </div>
                               </div>
                             )}
                           </div>
