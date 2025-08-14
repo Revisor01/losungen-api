@@ -421,6 +421,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                           component.component_type === 'altes_testament' || 
                           component.component_type === 'epistel' || 
                           component.component_type === 'evangelium' ||
+                          component.component_type === 'psalm' ||
                           component.component_type === 'predigt') && (
                           <div className="mt-2">
                             <label className="block text-sm font-medium text-gray-700 mb-1">

@@ -26,6 +26,7 @@ export type ComponentType =
   | 'epistel'
   | 'predigttext'
   | 'evangelium'
+  | 'psalm'
   
   // Predigt (indigo/dunkelblau)
   | 'predigt'
@@ -300,6 +301,21 @@ export const COMPONENT_CONFIGS: Record<ComponentType, ComponentConfig> = {
     icon: '✝️',
     category: 'bibellesungen',
     defaultDuration: 3
+  },
+  
+  psalm: {
+    type: 'psalm',
+    label: 'Psalm',
+    color: 'amber',
+    bgColor: 'bg-amber-50',
+    borderColor: 'border-amber-200',
+    textColor: 'text-amber-900',
+    hasText: true,
+    hasNumber: true,
+    placeholder: 'Psalm 23',
+    icon: '🎵',
+    category: 'bibellesungen',
+    defaultDuration: 4
   },
 
   // Predigt (indigo)
