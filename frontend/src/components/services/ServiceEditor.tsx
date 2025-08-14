@@ -506,6 +506,21 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                 min="0"
                               />
                               <span className="text-sm text-gray-600">Min.</span>
+                              {/* Zeitberechnung für Bible-Komponenten anzeigen */}
+                              {component.bible_text && component.component_type !== 'psalm' && (() => {
+                                try {
+                                  const bibleData = JSON.parse(component.bible_text);
+                                  const plainText = bibleData.text || (bibleData.verses?.map((v: any) => v.text).join(' ') || '');
+                                  const textDuration = calculateTextDurationFormatted(plainText);
+                                  return (
+                                    <span className="text-xs text-blue-600 ml-2" title="Berechnete Zeit für Bibeltext">
+                                      ({textDuration})
+                                    </span>
+                                  );
+                                } catch (error) {
+                                  return null;
+                                }
+                              })()}
                             </div>
                           </div>
                         </div>
@@ -583,20 +598,21 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                         const response = await apiService.searchBibleText({
                                           reference: reference,
                                           translation: translation,
-                                          format: 'text'
+                                          format: 'json'
                                         });
                                         
-                                        if (response.success && response.data?.text) {
+                                        if (response.success && response.data) {
                                           // Für Psalm: Text ins content-Feld laden
-                                          // Für AT/Epistel/Evangelium/Predigttext: nur bible_text speichern für Anzeige
+                                          // Für AT/Epistel/Evangelium/Predigttext: vollständige Daten speichern
                                           if (component.component_type === 'psalm') {
+                                            const plainText = response.data.text || (response.data.verses?.map(v => v.text).join(' ') || '');
                                             updateComponentWithAutoDuration(index, { 
-                                              content: response.data.text,
-                                              bible_text: response.data.text
+                                              content: plainText,
+                                              bible_text: JSON.stringify(response.data)
                                             });
                                           } else {
                                             updateComponent(index, { 
-                                              bible_text: response.data.text
+                                              bible_text: JSON.stringify(response.data)
                                             });
                                           }
                                         } else {
@@ -624,25 +640,74 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                 </div>
                                 
                                 {/* Bibeltext-Anzeige für AT/Epistel/Evangelium/Predigttext */}
-                                {component.bible_text && component.component_type !== 'psalm' && (
-                                  <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded-lg">
-                                    <div className="flex items-center justify-between mb-2">
-                                      <h4 className="text-sm font-medium text-blue-900">
-                                        {component.bible_reference} ({component.bible_translation || 'LUT'})
-                                      </h4>
-                                      <button
-                                        type="button"
-                                        onClick={() => updateComponent(index, { bible_text: undefined })}
-                                        className="text-blue-600 hover:text-blue-800 text-xs"
-                                      >
-                                        ✕ Schließen
-                                      </button>
-                                    </div>
-                                    <div className="text-sm text-blue-800 whitespace-pre-wrap font-serif leading-relaxed max-h-64 overflow-y-auto">
-                                      {component.bible_text}
-                                    </div>
-                                  </div>
-                                )}
+                                {component.bible_text && component.component_type !== 'psalm' && (() => {
+                                  try {
+                                    const bibleData = JSON.parse(component.bible_text);
+                                    const plainText = bibleData.text || (bibleData.verses?.map((v: any) => v.text).join(' ') || '');
+                                    const textDuration = calculateTextDurationFormatted(plainText);
+                                    
+                                    return (
+                                      <div className="mt-3 p-4 border border-gray-200 rounded-lg bg-white">
+                                        <div className="flex items-center justify-between mb-3">
+                                          <h4 className="text-sm font-medium text-gray-900">
+                                            {component.bible_reference} ({component.bible_translation || 'LUT'})
+                                          </h4>
+                                          <div className="flex items-center space-x-3">
+                                            <span className="text-xs text-gray-500">⏱️ ~{textDuration} Min</span>
+                                            <button
+                                              type="button"
+                                              onClick={() => updateComponent(index, { bible_text: undefined })}
+                                              className="text-gray-400 hover:text-gray-600 text-xs"
+                                            >
+                                              ✕
+                                            </button>
+                                          </div>
+                                        </div>
+                                        
+                                        {/* Verse mit Nummern wie in SearchInterface */}
+                                        {bibleData.verses && bibleData.verses.length > 0 ? (
+                                          <div className="space-y-3 max-h-64 overflow-y-auto">
+                                            {bibleData.verses.map((verse: any, verseIndex: number) => (
+                                              <div key={verse.number || verseIndex} className="flex space-x-3 py-2 border-b border-gray-100 last:border-b-0">
+                                                <span className="flex-shrink-0 min-w-[1.5rem] h-6 px-2 rounded-full flex items-center justify-center text-xs font-semibold bg-gray-100 text-gray-700">
+                                                  {verse.number}{verse.suffix && <span className="text-xs ml-0.5">{verse.suffix}</span>}
+                                                </span>
+                                                <p className="flex-1 leading-relaxed text-gray-700 text-sm">
+                                                  {verse.text}
+                                                </p>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        ) : (
+                                          <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">
+                                            {plainText}
+                                          </div>
+                                        )}
+                                      </div>
+                                    );
+                                  } catch (error) {
+                                    // Fallback für alten text-format
+                                    return (
+                                      <div className="mt-3 p-4 border border-gray-200 rounded-lg bg-white">
+                                        <div className="flex items-center justify-between mb-2">
+                                          <h4 className="text-sm font-medium text-gray-900">
+                                            {component.bible_reference} ({component.bible_translation || 'LUT'})
+                                          </h4>
+                                          <button
+                                            type="button"
+                                            onClick={() => updateComponent(index, { bible_text: undefined })}
+                                            className="text-gray-400 hover:text-gray-600 text-xs"
+                                          >
+                                            ✕
+                                          </button>
+                                        </div>
+                                        <div className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed max-h-64 overflow-y-auto">
+                                          {component.bible_text}
+                                        </div>
+                                      </div>
+                                    );
+                                  }
+                                })()}
                               </div>
                             )}
 

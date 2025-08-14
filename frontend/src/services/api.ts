@@ -324,6 +324,8 @@ class ApiService {
     title: string;
     content?: string;
     bible_reference?: string;
+    bible_translation?: string;
+    bible_text?: string;
     hymn_number?: string;
     order_position?: number;
     duration_minutes?: number;
