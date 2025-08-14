@@ -67,6 +67,8 @@ export const ServiceEditor: React.FC = () => {
   const [showShareMenu, setShowShareMenu] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [expandedComponents, setExpandedComponents] = useState<Set<number>>(new Set());
+  const [componentStyles, setComponentStyles] = useState<{ [key: number]: { bold: boolean; italic: boolean } }>({});
 
   useEffect(() => {
     if (serviceId) {
@@ -128,6 +130,27 @@ export const ServiceEditor: React.FC = () => {
     setComponents(components.filter((_, i) => i !== index));
     // Update order positions
     setComponents(prev => prev.map((comp, i) => ({ ...comp, order_position: i })));
+  };
+
+  const toggleComponentExpansion = (index: number) => {
+    const newExpanded = new Set(expandedComponents);
+    if (newExpanded.has(index)) {
+      newExpanded.delete(index);
+    } else {
+      newExpanded.add(index);
+    }
+    setExpandedComponents(newExpanded);
+  };
+
+  const toggleComponentStyle = (index: number, style: 'bold' | 'italic') => {
+    const currentStyles = componentStyles[index] || { bold: false, italic: false };
+    setComponentStyles({
+      ...componentStyles,
+      [index]: {
+        ...currentStyles,
+        [style]: !currentStyles[style]
+      }
+    });
   };
 
   const moveComponent = (index: number, direction: 'up' | 'down') => {
@@ -394,115 +417,139 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                     <div className="flex items-start space-x-3 flex-1">
                       <span className="text-xl mt-1">{config?.icon || '📄'}</span>
                       <div className="flex-1">
-                        <input
-                          type="text"
-                          value={component.title}
-                          onChange={(e) => updateComponent(index, { title: e.target.value })}
-                          className={config ? `font-medium ${config.textColor} bg-transparent border-b ${config.borderColor} focus:outline-none focus:border-${config.color}-500 mb-2` : 'font-medium text-gray-900 bg-transparent border-b border-gray-300 focus:outline-none focus:border-gray-500 mb-2'}
-                        />
-
-                        {/* Type-specific fields */}
-                        {(component.component_type === 'lied' || config?.hasNumber) && (
-                          <div className="mt-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Lied (Nummer und Titel)
-                            </label>
-                            <textarea
-                              value={component.hymn_number || ''}
-                              onChange={(e) => updateComponent(index, { hymn_number: e.target.value })}
-                              placeholder="z.B. EG 324, 1-3: Ich singe dir mit Herz und Mund"
-                              className="input-field text-sm resize-none min-h-[80px]"
-                              rows={3}
-                            />
-                            <p className="text-xs text-gray-500 mt-1">
-                              Format: Gesangbuch Nummer, Strophen: Titel
-                            </p>
-                          </div>
-                        )}
-
-                        {(component.component_type === 'predigttext' || 
-                          component.component_type === 'altes_testament' || 
-                          component.component_type === 'epistel' || 
-                          component.component_type === 'evangelium' ||
-                          component.component_type === 'psalm' ||
-                          component.component_type === 'predigt') && (
-                          <div className="mt-2">
-                            <label className="block text-sm font-medium text-gray-700 mb-1">
-                              Bibelstelle
-                            </label>
+                        <div className="flex items-center justify-between mb-3">
+                          <h3 className="text-lg font-semibold text-gray-900">
                             <input
                               type="text"
-                              value={component.bible_reference || ''}
-                              onChange={(e) => updateComponent(index, { bible_reference: e.target.value })}
-                              placeholder="z.B. Johannes 3,16"
-                              className="input-field text-sm"
+                              value={component.title}
+                              onChange={(e) => updateComponent(index, { title: e.target.value })}
+                              className={config ? `font-heading text-lg font-semibold ${config.textColor} bg-transparent border-b ${config.borderColor} focus:outline-none focus:border-${config.color}-500 w-full` : 'font-heading text-lg font-semibold text-gray-900 bg-transparent border-b border-gray-300 focus:outline-none focus:border-gray-500 w-full'}
                             />
-                          </div>
-                        )}
-
-                        {(config?.hasText) && (
-                          <div className="mt-2">
-                            <div className="flex items-center justify-between mb-1">
-                              <label className="block text-sm font-medium text-gray-700">
-                                Inhalt/Notizen
-                              </label>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  const textarea = document.getElementById(`content-${index}`) as HTMLTextAreaElement;
-                                  if (textarea) {
-                                    const isExpanded = textarea.rows > 3;
-                                    textarea.rows = isExpanded ? 3 : Math.max(8, (component.content || '').split('\n').length + 2);
-                                  }
-                                }}
-                                className="text-xs text-blue-600 hover:text-blue-800 font-medium"
-                              >
-                                {component.component_type === 'predigt' ? 'Erweitern' : 'Ein/Ausklappen'}
-                              </button>
+                          </h3>
+                          <div className="flex items-center space-x-2">
+                            <div className="flex items-center space-x-2">
+                              <ClockIcon className="w-4 h-4 text-gray-400" />
+                              <input
+                                type="number"
+                                value={component.duration_minutes || 0}
+                                onChange={(e) => updateComponent(index, { duration_minutes: parseInt(e.target.value) || 0 })}
+                                className="w-16 text-sm border-gray-300 rounded"
+                                min="0"
+                              />
+                              <span className="text-sm text-gray-600">Min.</span>
                             </div>
-                            <textarea
-                              id={`content-${index}`}
-                              value={component.content || ''}
-                              onChange={(e) => updateComponent(index, { content: e.target.value })}
-                              placeholder={config?.placeholder || 'Stichpunkte oder Text...'}
-                              className={`input-field text-sm resize-y ${component.component_type === 'predigt' ? 'font-serif' : 'font-mono'}`}
-                              rows={component.component_type === 'predigt' ? 12 : 3}
-                              style={{ minHeight: component.component_type === 'predigt' ? '300px' : '80px' }}
-                            />
-                            {component.component_type === 'predigt' && (
-                              <div className="mt-2 flex space-x-2 text-xs">
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const textarea = document.getElementById(`content-${index}`) as HTMLTextAreaElement;
-                                    textarea.style.fontFamily = textarea.style.fontFamily === 'serif' ? 'monospace' : 'serif';
+                            <button
+                              type="button"
+                              onClick={() => toggleComponentExpansion(index)}
+                              className="p-1 hover:bg-gray-200 rounded text-gray-600"
+                            >
+                              {expandedComponents.has(index) ? (
+                                <ChevronUpIcon className="w-4 h-4" />
+                              ) : (
+                                <ChevronDownIcon className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Type-specific fields - nur wenn expanded */}
+                        {expandedComponents.has(index) && (
+                          <div className="space-y-4">
+                            {(component.component_type === 'lied' || config?.hasNumber) && (
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Lied (Nummer und Titel)
+                                </label>
+                                <textarea
+                                  value={component.hymn_number || ''}
+                                  onChange={(e) => updateComponent(index, { hymn_number: e.target.value })}
+                                  placeholder="z.B. EG 324, 1-3: Ich singe dir mit Herz und Mund"
+                                  className="input-field text-sm resize-none min-h-[100px] font-sans"
+                                  rows={4}
+                                />
+                                <p className="text-xs text-gray-500 mt-1">
+                                  Format: Gesangbuch Nummer, Strophen: Titel
+                                </p>
+                              </div>
+                            )}
+
+                            {(component.component_type === 'predigttext' || 
+                              component.component_type === 'altes_testament' || 
+                              component.component_type === 'epistel' || 
+                              component.component_type === 'evangelium' ||
+                              component.component_type === 'psalm' ||
+                              component.component_type === 'predigt') && (
+                              <div>
+                                <label className="block text-sm font-medium text-gray-700 mb-1">
+                                  Bibelstelle
+                                </label>
+                                <input
+                                  type="text"
+                                  value={component.bible_reference || ''}
+                                  onChange={(e) => updateComponent(index, { bible_reference: e.target.value })}
+                                  placeholder="z.B. Johannes 3,16"
+                                  className="input-field text-sm font-sans"
+                                />
+                              </div>
+                            )}
+
+                            {(config?.hasText) && (
+                              <div>
+                                <div className="flex items-center justify-between mb-2">
+                                  <label className="block text-sm font-medium text-gray-700">
+                                    Inhalt/Notizen
+                                  </label>
+                                  <div className="flex items-center space-x-2">
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleComponentStyle(index, 'bold')}
+                                      className={`px-2 py-1 text-xs rounded border ${
+                                        componentStyles[index]?.bold 
+                                          ? 'bg-gray-800 text-white border-gray-800' 
+                                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                      }`}
+                                    >
+                                      <strong>B</strong>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleComponentStyle(index, 'italic')}
+                                      className={`px-2 py-1 text-xs rounded border ${
+                                        componentStyles[index]?.italic 
+                                          ? 'bg-gray-800 text-white border-gray-800' 
+                                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
+                                      }`}
+                                    >
+                                      <em>I</em>
+                                    </button>
+                                  </div>
+                                </div>
+                                <textarea
+                                  id={`content-${index}`}
+                                  value={component.content || ''}
+                                  onChange={(e) => updateComponent(index, { content: e.target.value })}
+                                  placeholder={config?.placeholder || 'Stichpunkte oder Text...'}
+                                  className={`input-field text-sm resize-y font-sans ${
+                                    componentStyles[index]?.bold ? 'font-bold' : 'font-normal'
+                                  } ${
+                                    componentStyles[index]?.italic ? 'italic' : 'not-italic'
+                                  }`}
+                                  rows={component.component_type === 'predigt' ? 15 : 8}
+                                  style={{ 
+                                    minHeight: component.component_type === 'predigt' ? '400px' : '200px',
+                                    fontFamily: 'system-ui, -apple-system, sans-serif'
                                   }}
-                                  className="px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded text-gray-700"
-                                >
-                                  Schriftart wechseln
-                                </button>
-                                <span className="text-gray-500">
-                                  {(component.content || '').length} Zeichen, ~{Math.ceil((component.content || '').length / 100)} Min
-                                </span>
+                                />
+                                {component.component_type === 'predigt' && (
+                                  <div className="mt-2 text-xs text-gray-500">
+                                    {(component.content || '').length} Zeichen, ~{Math.ceil((component.content || '').length / 100)} Min
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
                         )}
 
-                        {/* Duration */}
-                        <div className="mt-2 flex items-center space-x-4">
-                          <div className="flex items-center space-x-2">
-                            <ClockIcon className="w-4 h-4 text-gray-400" />
-                            <input
-                              type="number"
-                              value={component.duration_minutes || 0}
-                              onChange={(e) => updateComponent(index, { duration_minutes: parseInt(e.target.value) || 0 })}
-                              className="w-16 text-sm border-gray-300 rounded"
-                              min="0"
-                            />
-                            <span className="text-sm text-gray-600">Min.</span>
-                          </div>
-                        </div>
                       </div>
                     </div>
 
