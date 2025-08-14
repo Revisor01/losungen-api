@@ -71,6 +71,7 @@ export const ServiceEditor: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [expandedComponents, setExpandedComponents] = useState<Set<number>>(new Set());
   const [componentStyles, setComponentStyles] = useState<{ [key: number]: { bold: boolean; italic: boolean } }>({});
+  const [loadingBible, setLoadingBible] = useState<{ [key: number]: boolean }>({});
   const [wordsPerMinute, setWordsPerMinute] = useState<number>(() => {
     // Lade Sprechgeschwindigkeit aus localStorage oder nutze Default
     const saved = localStorage.getItem('wordsPerMinute');
@@ -88,11 +89,21 @@ export const ServiceEditor: React.FC = () => {
     localStorage.setItem('wordsPerMinute', wordsPerMinute.toString());
   }, [wordsPerMinute]);
 
-  // Automatische Zeitberechnung für Text-Komponenten
-  const calculateTextDuration = (text: string): number => {
+  // Automatische Zeitberechnung für Text-Komponenten in Minuten (für duration_minutes)
+  const calculateTextDurationMinutes = (text: string): number => {
     if (!text || text.trim().length === 0) return 0;
     const wordCount = text.trim().split(/\s+/).filter(w => w.length > 0).length;
-    return Math.round(wordCount / wordsPerMinute);
+    return Math.ceil(wordCount / wordsPerMinute);
+  };
+
+  // Präzise Zeitberechnung für Anzeige in Minuten:Sekunden
+  const calculateTextDurationFormatted = (text: string): string => {
+    if (!text || text.trim().length === 0) return '0:00';
+    const wordCount = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+    const totalSeconds = Math.round((wordCount / wordsPerMinute) * 60);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
   // Aktualisiere Dauer automatisch wenn sich Text ändert
@@ -102,9 +113,9 @@ export const ServiceEditor: React.FC = () => {
     
     // Automatische Dauer-Berechnung für Text-Komponenten
     if (updates.content !== undefined && config?.hasText) {
-      const calculatedDuration = calculateTextDuration(updates.content);
+      const calculatedDuration = calculateTextDurationMinutes(updates.content);
       // Setze berechnete Dauer nur wenn keine manuelle Dauer gesetzt ist
-      if (!component.duration_minutes || component.duration_minutes === calculateTextDuration(component.content || '')) {
+      if (!component.duration_minutes || component.duration_minutes === calculateTextDurationMinutes(component.content || '')) {
         updates.duration_minutes = calculatedDuration;
       }
     }
@@ -555,13 +566,52 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                   />
                                   <button
                                     type="button"
-                                    onClick={() => {
-                                      // TODO: Bibel-API aufrufen und Text laden
-                                      alert('Bibel-Integration kommt gleich!');
+                                    onClick={async () => {
+                                      const reference = component.bible_reference?.trim();
+                                      const translation = component.bible_translation || 'LUT';
+                                      
+                                      if (!reference) {
+                                        alert('Bitte erst eine Bibelstelle eingeben (z.B. Johannes 3,16)');
+                                        return;
+                                      }
+                                      
+                                      // Loading state für diesen Button setzen
+                                      setLoadingBible(prev => ({ ...prev, [index]: true }));
+                                      
+                                      try {
+                                        const response = await apiService.searchBibleText({
+                                          reference: reference,
+                                          translation: translation,
+                                          format: 'text'
+                                        });
+                                        
+                                        if (response.success && response.data?.text) {
+                                          // Text in das content-Feld laden
+                                          updateComponentWithAutoDuration(index, { 
+                                            content: response.data.text,
+                                            bible_text: response.data.text
+                                          });
+                                        } else {
+                                          alert('Bibeltext konnte nicht gefunden werden. Bitte Referenz überprüfen.');
+                                        }
+                                      } catch (error) {
+                                        console.error('Bible search error:', error);
+                                        alert('Fehler beim Laden der Bibelstelle: ' + (error instanceof Error ? error.message : 'Unbekannter Fehler'));
+                                      } finally {
+                                        setLoadingBible(prev => ({ ...prev, [index]: false }));
+                                      }
                                     }}
-                                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded font-medium"
+                                    disabled={loadingBible[index]}
+                                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded font-medium disabled:opacity-50 disabled:cursor-not-allowed flex items-center"
                                   >
-                                    Suche
+                                    {loadingBible[index] ? (
+                                      <>
+                                        <div className="animate-spin h-3 w-3 border border-white border-t-transparent rounded-full mr-1"></div>
+                                        Laden...
+                                      </>
+                                    ) : (
+                                      'Suche'
+                                    )}
                                   </button>
                                 </div>
                               </div>
@@ -656,7 +706,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                     {(component.content || '').length} Zeichen, {(component.content || '').trim().split(/\s+/).filter(w => w.length > 0).length} Wörter
                                   </span>
                                   <span className="font-medium text-blue-600">
-                                    ⏱️ ~{calculateTextDuration(component.content || '')} Min (bei {wordsPerMinute} Wörtern/Min)
+                                    ⏱️ ~{calculateTextDurationFormatted(component.content || '')} Min (bei {wordsPerMinute} Wörtern/Min)
                                   </span>
                                 </div>
                                 {component.content && component.content.length > 50 && (
