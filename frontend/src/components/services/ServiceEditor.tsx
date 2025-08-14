@@ -506,20 +506,35 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                 min="0"
                               />
                               <span className="text-sm text-gray-600">Min.</span>
-                              {/* Zeitberechnung für Bible-Komponenten anzeigen */}
-                              {component.bible_text && component.component_type !== 'psalm' && (() => {
-                                try {
-                                  const bibleData = JSON.parse(component.bible_text);
-                                  const plainText = bibleData.text || (bibleData.verses?.map((v: any) => v.text).join(' ') || '');
-                                  const textDuration = calculateTextDurationFormatted(plainText);
-                                  return (
-                                    <span className="text-xs text-blue-600 ml-2" title="Berechnete Zeit für Bibeltext">
-                                      ({textDuration})
-                                    </span>
-                                  );
-                                } catch (error) {
-                                  return null;
+                              {/* Zeitberechnung für alle Text-Komponenten anzeigen */}
+                              {(() => {
+                                // Für Bibel-Komponenten (außer Psalm)
+                                if (component.bible_text && component.component_type !== 'psalm') {
+                                  try {
+                                    const bibleData = JSON.parse(component.bible_text);
+                                    const plainText = bibleData.text || (bibleData.verses?.map((v: any) => v.text).join(' ') || '');
+                                    const textDuration = calculateTextDurationFormatted(plainText);
+                                    return (
+                                      <span className="text-xs text-blue-600 ml-2" title="Berechnete Zeit für Bibeltext">
+                                        ({textDuration})
+                                      </span>
+                                    );
+                                  } catch (error) {
+                                    // Fallback zu content
+                                  }
                                 }
+                                // Für alle anderen Text-Komponenten
+                                if (component.content && config?.hasText) {
+                                  const textDuration = calculateTextDurationFormatted(component.content);
+                                  if (textDuration !== '0:00') {
+                                    return (
+                                      <span className="text-xs text-gray-500 ml-2" title="Berechnete Sprechdauer">
+                                        ({textDuration})
+                                      </span>
+                                    );
+                                  }
+                                }
+                                return null;
                               })()}
                             </div>
                           </div>
@@ -778,7 +793,19 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                   contentEditable
                                   suppressContentEditableWarning
                                   onInput={(e) => {
-                                    const text = e.currentTarget.textContent || '';
+                                    // innerHTML behält Formatierung bei, aber wir müssen <br> zu \n konvertieren
+                                    const html = e.currentTarget.innerHTML;
+                                    const text = html
+                                      .replace(/<br\s*\/?>/gi, '\n')
+                                      .replace(/<\/div><div>/gi, '\n')
+                                      .replace(/<div>/gi, '\n')
+                                      .replace(/<\/div>/gi, '')
+                                      .replace(/<[^>]*>/g, '') // Entferne andere HTML tags
+                                      .replace(/&nbsp;/g, ' ')
+                                      .replace(/&lt;/g, '<')
+                                      .replace(/&gt;/g, '>')
+                                      .replace(/&amp;/g, '&')
+                                      .replace(/^\n/, ''); // Entferne führende Zeilenumbrüche
                                     updateComponentWithAutoDuration(index, { content: text });
                                   }}
                                   onPaste={(e) => {
@@ -786,7 +813,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                     const text = e.clipboardData.getData('text/plain');
                                     document.execCommand('insertText', false, text);
                                   }}
-                                  className="input-field text-sm font-sans border border-gray-300 rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                  className="input-field text-sm font-sans border border-gray-300 rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent whitespace-pre-wrap"
                                   style={{ 
                                     minHeight: component.component_type === 'predigt' ? '400px' : '200px',
                                     fontFamily: 'system-ui, -apple-system, sans-serif'
