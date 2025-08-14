@@ -286,6 +286,34 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
     return components.reduce((total, comp) => total + (comp.duration_minutes || 0), 0);
   };
 
+  // Berechne kalkulierte Gesamtzeit basierend auf Text-Inhalten
+  const calculateTotalCalculatedDuration = () => {
+    let totalSeconds = 0;
+    
+    components.forEach(component => {
+      // Für Bibel-Komponenten (außer Psalm)
+      if (component.bible_text && component.component_type !== 'psalm') {
+        try {
+          const bibleData = JSON.parse(component.bible_text);
+          const plainText = bibleData.text || (bibleData.verses?.map((v: any) => v.text).join(' ') || '');
+          const wordCount = plainText.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
+          totalSeconds += Math.round((wordCount / wordsPerMinute) * 60);
+        } catch (error) {
+          // Fallback zu content
+        }
+      }
+      // Für alle anderen Text-Komponenten
+      if (component.content) {
+        const wordCount = component.content.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
+        totalSeconds += Math.round((wordCount / wordsPerMinute) * 60);
+      }
+    });
+    
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-subtle flex items-center justify-center">
@@ -441,6 +469,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
             <div className="bg-gray-50 rounded-lg p-3 text-center">
               <div className="text-2xl font-bold text-gray-900">{calculateTotalDuration()}</div>
               <div className="text-sm text-gray-600">Minuten gesamt</div>
+              <div className="text-sm font-semibold text-green-600 mt-1">≈{calculateTotalCalculatedDuration()}</div>
             </div>
             <div className="bg-gray-50 rounded-lg p-3 text-center">
               <div className="text-2xl font-bold text-gray-900">
@@ -498,15 +527,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                           <div className="flex items-center space-x-3">
                             <div className="flex items-center space-x-2">
                               <ClockIcon className="w-4 h-4 text-gray-400" />
-                              <input
-                                type="number"
-                                value={component.duration_minutes || 0}
-                                onChange={(e) => updateComponent(index, { duration_minutes: parseInt(e.target.value) || 0 })}
-                                className="w-16 text-sm border-gray-300 rounded"
-                                min="0"
-                              />
-                              <span className="text-sm text-gray-600">Min.</span>
-                              {/* Zeitberechnung für alle Text-Komponenten anzeigen */}
+                              {/* Kalkulierte Zeit VOR manueller Zeit */}
                               {(() => {
                                 // Für Bibel-Komponenten (außer Psalm)
                                 if (component.bible_text && component.component_type !== 'psalm') {
@@ -515,8 +536,8 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                     const plainText = bibleData.text || (bibleData.verses?.map((v: any) => v.text).join(' ') || '');
                                     const textDuration = calculateTextDurationFormatted(plainText);
                                     return (
-                                      <span className="text-xs text-blue-600 ml-2" title="Berechnete Zeit für Bibeltext">
-                                        ({textDuration})
+                                      <span className="text-sm font-semibold text-blue-600 mr-2" title="Berechnete Zeit für Bibeltext">
+                                        {textDuration}
                                       </span>
                                     );
                                   } catch (error) {
@@ -528,14 +549,22 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                   const textDuration = calculateTextDurationFormatted(component.content);
                                   if (textDuration !== '0:00') {
                                     return (
-                                      <span className="text-xs text-gray-500 ml-2" title="Berechnete Sprechdauer">
-                                        ({textDuration})
+                                      <span className="text-sm font-semibold text-green-600 mr-2" title="Berechnete Sprechdauer">
+                                        {textDuration}
                                       </span>
                                     );
                                   }
                                 }
                                 return null;
                               })()}
+                              <input
+                                type="number"
+                                value={component.duration_minutes || 0}
+                                onChange={(e) => updateComponent(index, { duration_minutes: parseInt(e.target.value) || 0 })}
+                                className="w-16 text-sm border-gray-300 rounded"
+                                min="0"
+                              />
+                              <span className="text-sm text-gray-600">Min.</span>
                             </div>
                           </div>
                         </div>
@@ -788,38 +817,24 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                     </button>
                                   </div>
                                 </div>
-                                <div
+                                <textarea
                                   id={`editor-${index}`}
-                                  contentEditable
-                                  suppressContentEditableWarning
-                                  onInput={(e) => {
-                                    // innerHTML behält Formatierung bei, aber wir müssen <br> zu \n konvertieren
-                                    const html = e.currentTarget.innerHTML;
-                                    const text = html
-                                      .replace(/<br\s*\/?>/gi, '\n')
-                                      .replace(/<\/div><div>/gi, '\n')
-                                      .replace(/<div>/gi, '\n')
-                                      .replace(/<\/div>/gi, '')
-                                      .replace(/<[^>]*>/g, '') // Entferne andere HTML tags
-                                      .replace(/&nbsp;/g, ' ')
-                                      .replace(/&lt;/g, '<')
-                                      .replace(/&gt;/g, '>')
-                                      .replace(/&amp;/g, '&')
-                                      .replace(/^\n/, ''); // Entferne führende Zeilenumbrüche
-                                    updateComponentWithAutoDuration(index, { content: text });
+                                  value={component.content || ''}
+                                  onChange={(e) => {
+                                    updateComponentWithAutoDuration(index, { content: e.target.value });
                                   }}
-                                  onPaste={(e) => {
-                                    e.preventDefault();
-                                    const text = e.clipboardData.getData('text/plain');
-                                    document.execCommand('insertText', false, text);
-                                  }}
-                                  className="input-field text-sm font-sans border border-gray-300 rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent whitespace-pre-wrap"
+                                  className="input-field text-sm font-sans border border-gray-300 rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
                                   style={{ 
                                     minHeight: component.component_type === 'predigt' ? '400px' : '200px',
+                                    height: 'auto',
                                     fontFamily: 'system-ui, -apple-system, sans-serif'
                                   }}
-                                  dangerouslySetInnerHTML={{
-                                    __html: component.content?.replace(/\n/g, '<br>') || ''
+                                  rows={component.component_type === 'predigt' ? 20 : 8}
+                                  onInput={(e) => {
+                                    // Auto-resize basierend auf Inhalt
+                                    const target = e.target as HTMLTextAreaElement;
+                                    target.style.height = 'auto';
+                                    target.style.height = `${Math.max(target.scrollHeight, component.component_type === 'predigt' ? 400 : 200)}px`;
                                   }}
                                 />
                                 <div className="mt-2 flex justify-between text-xs text-gray-500">
