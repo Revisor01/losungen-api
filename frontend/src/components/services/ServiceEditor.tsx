@@ -29,6 +29,8 @@ interface ServiceComponent {
   title: string;
   content?: string;
   bible_reference?: string;
+  bible_translation?: string;
+  bible_text?: string;
   hymn_number?: string;
   order_position: number;
   duration_minutes?: number;
@@ -500,7 +502,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                         {/* Type-specific fields - nur wenn expanded */}
                         {expandedComponents.has(index) && (
                           <div className="space-y-4">
-                            {(component.component_type === 'lied' || config?.hasNumber) && (
+                            {component.component_type === 'lied' && (
                               <div>
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                   Lied (Nummer und Titel)
@@ -525,16 +527,43 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                               component.component_type === 'psalm' ||
                               component.component_type === 'predigt') && (
                               <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  Bibelstelle
-                                </label>
-                                <input
-                                  type="text"
-                                  value={component.bible_reference || ''}
-                                  onChange={(e) => updateComponent(index, { bible_reference: e.target.value })}
-                                  placeholder="z.B. Johannes 3,16"
-                                  className="input-field text-sm font-sans"
-                                />
+                                <div className="flex items-center justify-between mb-1">
+                                  <label className="block text-sm font-medium text-gray-700">
+                                    Bibelstelle
+                                  </label>
+                                  <select
+                                    className="text-xs border border-gray-300 rounded px-2 py-1"
+                                    value={component.bible_translation || 'LUT'}
+                                    onChange={(e) => updateComponent(index, { bible_translation: e.target.value })}
+                                  >
+                                    <option value="LUT">Luther 2017</option>
+                                    <option value="HFA">Hoffnung für Alle</option>
+                                    <option value="ELB">Elberfelder</option>
+                                    <option value="EU">Einheitsübersetzung</option>
+                                    <option value="NGÜ">Neue Genfer</option>
+                                    <option value="GNB">Gute Nachricht</option>
+                                    <option value="NIV">New International</option>
+                                  </select>
+                                </div>
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    value={component.bible_reference || ''}
+                                    onChange={(e) => updateComponent(index, { bible_reference: e.target.value })}
+                                    placeholder="z.B. Johannes 3,16"
+                                    className="input-field text-sm font-sans flex-1"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      // TODO: Bibel-API aufrufen und Text laden
+                                      alert('Bibel-Integration kommt gleich!');
+                                    }}
+                                    className="px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm rounded font-medium"
+                                  >
+                                    Suche
+                                  </button>
+                                </div>
                               </div>
                             )}
 
@@ -544,45 +573,82 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                   <label className="block text-sm font-medium text-gray-700">
                                     Inhalt/Notizen
                                   </label>
-                                  <div className="flex items-center space-x-2">
+                                  <div className="flex items-center space-x-1">
                                     <button
                                       type="button"
-                                      onClick={() => toggleComponentStyle(index, 'bold')}
-                                      className={`px-2 py-1 text-xs rounded border ${
-                                        componentStyles[index]?.bold 
-                                          ? 'bg-gray-800 text-white border-gray-800' 
-                                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                      }`}
+                                      onClick={() => {
+                                        const editor = document.getElementById(`editor-${index}`);
+                                        if (editor) {
+                                          document.execCommand('bold', false);
+                                          editor.focus();
+                                        }
+                                      }}
+                                      className="px-2 py-1 text-xs rounded border bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                                     >
                                       <strong>B</strong>
                                     </button>
                                     <button
                                       type="button"
-                                      onClick={() => toggleComponentStyle(index, 'italic')}
-                                      className={`px-2 py-1 text-xs rounded border ${
-                                        componentStyles[index]?.italic 
-                                          ? 'bg-gray-800 text-white border-gray-800' 
-                                          : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50'
-                                      }`}
+                                      onClick={() => {
+                                        const editor = document.getElementById(`editor-${index}`);
+                                        if (editor) {
+                                          document.execCommand('italic', false);
+                                          editor.focus();
+                                        }
+                                      }}
+                                      className="px-2 py-1 text-xs rounded border bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
                                     >
                                       <em>I</em>
                                     </button>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const editor = document.getElementById(`editor-${index}`);
+                                        if (editor) {
+                                          document.execCommand('underline', false);
+                                          editor.focus();
+                                        }
+                                      }}
+                                      className="px-2 py-1 text-xs rounded border bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                                    >
+                                      <u>U</u>
+                                    </button>
+                                    <div className="border-l border-gray-200 h-4 mx-1"></div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        const editor = document.getElementById(`editor-${index}`);
+                                        if (editor) {
+                                          document.execCommand('removeFormat', false);
+                                          editor.focus();
+                                        }
+                                      }}
+                                      className="px-2 py-1 text-xs rounded border bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                                    >
+                                      Clear
+                                    </button>
                                   </div>
                                 </div>
-                                <textarea
-                                  id={`content-${index}`}
-                                  value={component.content || ''}
-                                  onChange={(e) => updateComponentWithAutoDuration(index, { content: e.target.value })}
-                                  placeholder={config?.placeholder || 'Stichpunkte oder Text...'}
-                                  className={`input-field text-sm resize-y font-sans ${
-                                    componentStyles[index]?.bold ? 'font-bold' : 'font-normal'
-                                  } ${
-                                    componentStyles[index]?.italic ? 'italic' : 'not-italic'
-                                  }`}
-                                  rows={component.component_type === 'predigt' ? 15 : 8}
+                                <div
+                                  id={`editor-${index}`}
+                                  contentEditable
+                                  suppressContentEditableWarning
+                                  onInput={(e) => {
+                                    const text = e.currentTarget.textContent || '';
+                                    updateComponentWithAutoDuration(index, { content: text });
+                                  }}
+                                  onPaste={(e) => {
+                                    e.preventDefault();
+                                    const text = e.clipboardData.getData('text/plain');
+                                    document.execCommand('insertText', false, text);
+                                  }}
+                                  className="input-field text-sm font-sans border border-gray-300 rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                                   style={{ 
                                     minHeight: component.component_type === 'predigt' ? '400px' : '200px',
                                     fontFamily: 'system-ui, -apple-system, sans-serif'
+                                  }}
+                                  dangerouslySetInnerHTML={{
+                                    __html: component.content?.replace(/\n/g, '<br>') || ''
                                   }}
                                 />
                                 <div className="mt-2 flex justify-between text-xs text-gray-500">
@@ -593,6 +659,11 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                     ⏱️ ~{calculateTextDuration(component.content || '')} Min (bei {wordsPerMinute} Wörtern/Min)
                                   </span>
                                 </div>
+                                {component.content && component.content.length > 50 && (
+                                  <div className="text-xs text-gray-400 mt-1">
+                                    💡 Markieren Sie Text und nutzen Sie die Buttons für Formatierung
+                                  </div>
+                                )}
                               </div>
                             )}
                           </div>
