@@ -120,7 +120,11 @@ export const ServiceEditor: React.FC = () => {
     const newComponents = [...components, newComponent];
     setComponents(newComponents);
     // Neue Komponente automatisch ausklappen
-    setExpandedComponents(prev => new Set([...prev, newComponents.length - 1]));
+    setExpandedComponents(prev => {
+      const newSet = new Set(prev);
+      newSet.add(newComponents.length - 1);
+      return newSet;
+    });
   };
 
   const updateComponent = (index: number, updates: Partial<ServiceComponent>) => {
