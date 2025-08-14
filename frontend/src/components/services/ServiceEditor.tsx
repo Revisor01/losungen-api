@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { DragDropContext, Droppable, Draggable } from '@hello-pangea/dnd';
 import { 
   PlusIcon,
   TrashIcon,
@@ -205,6 +206,31 @@ export const ServiceEditor: React.FC = () => {
         [style]: !currentStyles[style]
       }
     });
+  };
+
+  const onDragEnd = (result: any) => {
+    if (!result.destination) {
+      return;
+    }
+
+    const sourceIndex = result.source.index;
+    const destinationIndex = result.destination.index;
+
+    if (sourceIndex === destinationIndex) {
+      return;
+    }
+
+    const newComponents = Array.from(components);
+    const [reorderedItem] = newComponents.splice(sourceIndex, 1);
+    newComponents.splice(destinationIndex, 0, reorderedItem);
+
+    // Update order positions
+    const updatedComponents = newComponents.map((comp, index) => ({
+      ...comp,
+      order_position: index
+    }));
+
+    setComponents(updatedComponents);
   };
 
   const moveComponent = (index: number, direction: 'up' | 'down') => {
@@ -500,23 +526,45 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
             Gottesdienst-Ablauf
           </h2>
 
-          <AnimatePresence>
-            {components.map((component, index) => {
-              const config = COMPONENT_CONFIGS[component.component_type as ComponentType];
-              const color = config?.color || 'gray';
+          <DragDropContext onDragEnd={onDragEnd}>
+            <Droppable droppableId="components">
+              {(provided) => (
+                <div {...provided.droppableProps} ref={provided.innerRef}>
+                  <AnimatePresence>
+                    {components.map((component, index) => {
+                      const config = COMPONENT_CONFIGS[component.component_type as ComponentType];
+                      const color = config?.color || 'gray';
 
-              return (
-                <motion.div
-                  key={index}
-                  initial={{ opacity: 0, x: -20 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 20 }}
-                  className={`mb-4 p-4 bg-white border-l-4 border-r border-t border-b rounded-lg shadow-sm ${config ? config.borderColor : 'border-gray-200'}`}
-                >
-                  <div className="flex items-start justify-between">
-                    <div className="flex items-start space-x-3 flex-1">
-                      <span className="text-xl mt-1">{config?.icon || '📄'}</span>
-                      <div className="flex-1">
+                      return (
+                        <Draggable 
+                          key={component.id?.toString() || `temp-${index}`} 
+                          draggableId={component.id?.toString() || `temp-${index}`} 
+                          index={index}
+                        >
+                          {(provided, snapshot) => (
+                            <motion.div
+                              ref={provided.innerRef}
+                              {...provided.draggableProps}
+                              key={index}
+                              initial={{ opacity: 0, x: -20 }}
+                              animate={{ opacity: 1, x: 0 }}
+                              exit={{ opacity: 0, x: 20 }}
+                              className={`mb-4 p-4 bg-white border-l-4 border-r border-t border-b rounded-lg shadow-sm ${config ? config.borderColor : 'border-gray-200'} ${
+                                snapshot.isDragging ? 'shadow-lg transform rotate-2' : ''
+                              }`}
+                            >
+                              <div className="flex items-start justify-between">
+                                <div className="flex items-start space-x-3 flex-1">
+                                  {/* Drag Handle */}
+                                  <div 
+                                    {...provided.dragHandleProps}
+                                    className="cursor-move p-1 text-gray-400 hover:text-gray-600 transition-colors mt-1"
+                                    title="Komponente verschieben"
+                                  >
+                                    ⋮⋮
+                                  </div>
+                                  <span className="text-xl mt-1">{config?.icon || '📄'}</span>
+                                  <div className="flex-1">
                         <div className="flex items-center justify-between mb-3">
                           <input
                             type="text"
@@ -900,10 +948,17 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                       </button>
                     </div>
                   </div>
-                </motion.div>
-              );
-            })}
-          </AnimatePresence>
+                            </motion.div>
+                          )}
+                        </Draggable>
+                      );
+                    })}
+                  </AnimatePresence>
+                  {provided.placeholder}
+                </div>
+              )}
+            </Droppable>
+          </DragDropContext>
 
           {/* Add Component Buttons */}
           <div className="mt-6">
