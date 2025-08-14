@@ -372,10 +372,10 @@ function createServiceComponent($pdo, $input) {
     $stmt = $pdo->prepare("
         INSERT INTO service_components (
             service_id, component_type, title, content, bible_reference,
-            hymn_number, order_position, duration_minutes, notes
+            bible_translation, bible_text, hymn_number, order_position, duration_minutes, notes
         ) VALUES (
             :service_id, :component_type, :title, :content, :bible_reference,
-            :hymn_number, :order_position, :duration_minutes, :notes
+            :bible_translation, :bible_text, :hymn_number, :order_position, :duration_minutes, :notes
         ) RETURNING id
     ");
     
@@ -385,6 +385,8 @@ function createServiceComponent($pdo, $input) {
         'title' => $input['title'],
         'content' => $input['content'] ?? null,
         'bible_reference' => $input['bible_reference'] ?? null,
+        'bible_translation' => $input['bible_translation'] ?? null,
+        'bible_text' => $input['bible_text'] ?? null,
         'hymn_number' => $input['hymn_number'] ?? null,
         'order_position' => $input['order_position'] ?? 0,
         'duration_minutes' => $input['duration_minutes'] ?? null,
