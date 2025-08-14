@@ -908,44 +908,55 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                       </div>
                     </div>
 
-                    {/* Actions */}
-                    <div className="flex items-center space-x-1 ml-4">
-                      <button
-                        type="button"
-                        onClick={() => toggleComponentExpansion(index)}
-                        className="p-2 hover:bg-gray-100 rounded text-gray-600" 
-                        title={expandedComponents.has(index) ? "Einklappen" : "Ausklappen"}
-                      >
-                        {expandedComponents.has(index) ? (
-                          <ChevronUpIcon className="w-4 h-4" />
-                        ) : (
-                          <ChevronDownIcon className="w-4 h-4" />
-                        )}
-                      </button>
-                      <div className="border-l border-gray-200 h-6 mx-1"></div>
-                      <button
-                        onClick={() => moveComponent(index, 'up')}
-                        disabled={index === 0}
-                        className="p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Nach oben"
-                      >
-                        <ChevronUpIcon className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => moveComponent(index, 'down')}
-                        disabled={index === components.length - 1}
-                        className="p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
-                        title="Nach unten"
-                      >
-                        <ChevronDownIcon className="w-4 h-4" />
-                      </button>
-                      <button
-                        onClick={() => removeComponent(index)}
-                        className="p-1 hover:bg-red-100 text-red-600 rounded"
-                        title="Löschen"
-                      >
-                        <TrashIcon className="w-4 h-4" />
-                      </button>
+                    {/* Improved Actions Bar */}
+                    <div className="flex items-center ml-4">
+                      {/* Primary Actions - Always Visible */}
+                      <div className="flex items-center space-x-1">
+                        <button
+                          type="button"
+                          onClick={() => toggleComponentExpansion(index)}
+                          className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-all duration-200 hover:scale-105" 
+                          title={expandedComponents.has(index) ? "Einklappen" : "Ausklappen"}
+                        >
+                          {expandedComponents.has(index) ? (
+                            <ChevronUpIcon className="w-5 h-5" />
+                          ) : (
+                            <ChevronDownIcon className="w-5 h-5" />
+                          )}
+                        </button>
+                        
+                        {/* Quick Delete - Always visible for efficiency */}
+                        <button
+                          onClick={() => removeComponent(index)}
+                          className="p-2 hover:bg-red-100 text-red-500 hover:text-red-700 rounded-lg transition-all duration-200 hover:scale-105"
+                          title="Komponente löschen"
+                        >
+                          <TrashIcon className="w-5 h-5" />
+                        </button>
+                      </div>
+
+                      {/* Divider */}
+                      <div className="border-l border-gray-200 h-8 mx-3"></div>
+                      
+                      {/* Secondary Actions - Compact Group */}
+                      <div className="flex items-center bg-gray-50 rounded-lg p-1 space-x-1">
+                        <button
+                          onClick={() => moveComponent(index, 'up')}
+                          disabled={index === 0}
+                          className="p-1.5 hover:bg-white hover:shadow-sm rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                          title="Nach oben verschieben"
+                        >
+                          <ChevronUpIcon className="w-4 h-4 text-gray-600" />
+                        </button>
+                        <button
+                          onClick={() => moveComponent(index, 'down')}
+                          disabled={index === components.length - 1}
+                          className="p-1.5 hover:bg-white hover:shadow-sm rounded-md disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                          title="Nach unten verschieben"
+                        >
+                          <ChevronDownIcon className="w-4 h-4 text-gray-600" />
+                        </button>
+                      </div>
                     </div>
                   </div>
                             </motion.div>
@@ -997,7 +1008,33 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
             })()}
           </div>
 
-          {/* Save Button */}
+          {/* Floating Quick Actions Panel - Sticky for better UX */}
+          {components.length > 3 && (
+            <div className="sticky bottom-4 left-0 right-0 z-10 mt-4">
+              <div className="flex justify-center">
+                <div className="flex items-center space-x-3 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-full px-4 py-2 shadow-lg">
+                  <span className="text-sm font-medium text-gray-600">
+                    {components.length} Komponenten
+                  </span>
+                  <div className="border-l border-gray-200 h-6"></div>
+                  <button
+                    onClick={saveComponents}
+                    disabled={saving}
+                    className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-full transition-colors disabled:opacity-50"
+                  >
+                    {saving ? (
+                      <LoadingSpinner size="sm" className="text-white" />
+                    ) : (
+                      <CheckIcon className="w-4 h-4" />
+                    )}
+                    <span>Speichern</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Save Button - Regular positioned for shorter lists */}
           <div className="mt-6 flex justify-end">
             <motion.button
               whileHover={{ scale: 1.05 }}
