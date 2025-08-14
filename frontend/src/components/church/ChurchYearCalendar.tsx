@@ -216,10 +216,51 @@ export const ChurchYearCalendar: React.FC = () => {
 
   const handleCreateService = async (event?: ChurchEvent) => {
     if (event) {
-      // Finde die entsprechende Perikope basierend auf event.summary
-      const matchingPerikope = perikopes.find(p => p.event_name === event.summary);
+      // Improved perikope matching - try exact match first, then fuzzy matching
+      let matchingPerikope = perikopes.find(p => p.event_name === event.summary);
+      
+      if (!matchingPerikope) {
+        // Try fuzzy matching for common differences
+        const eventSummary = event.summary.toLowerCase().trim();
+        matchingPerikope = perikopes.find(p => {
+          const eventName = p.event_name.toLowerCase().trim();
+          
+          // Direct partial matches
+          if (eventName.includes(eventSummary) || eventSummary.includes(eventName)) {
+            return true;
+          }
+          
+          // Handle Advent variations (1. Advent vs 4. Advent etc.)
+          if (eventSummary.includes('advent') && eventName.includes('advent')) {
+            return true;
+          }
+          
+          // Handle Sunday variations (So. n. = Sonntag nach)
+          if (eventSummary.includes('sonntag') && eventName.includes('so.')) {
+            return true;
+          }
+          
+          // Handle special cases
+          if (eventSummary.includes('weihnacht') && eventName.includes('christfest')) {
+            return true;
+          }
+          
+          if (eventSummary.includes('ostern') && eventName.includes('ostern')) {
+            return true;
+          }
+          
+          return false;
+        });
+      }
+      
+      // Debugging: log the matching attempt
+      console.log('Event summary:', event.summary);
+      console.log('Available perikopes:', perikopes.map(p => p.event_name));
+      console.log('Found matching perikope:', matchingPerikope?.event_name || 'None');
+      
       setSelectedPerikope(matchingPerikope || null);
-      setSelectedDate(event.date); // Datum vom Event übernehmen
+      setSelectedDate(event.date);
+      
       // Load existing services for this event
       await loadExistingServices(event.summary, event.date);
     } else {
