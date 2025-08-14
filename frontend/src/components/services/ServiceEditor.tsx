@@ -652,10 +652,12 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                             const plainText = response.data.text || (response.data.verses?.map(v => v.text).join(' ') || '');
                                             updateComponentWithAutoDuration(index, { 
                                               content: plainText,
+                                              bible_translation: translation,
                                               bible_text: JSON.stringify(response.data)
                                             });
                                           } else {
                                             updateComponent(index, { 
+                                              bible_translation: translation,
                                               bible_text: JSON.stringify(response.data)
                                             });
                                           }
