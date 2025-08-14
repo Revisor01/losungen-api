@@ -10,6 +10,7 @@ import {
   ClockIcon
 } from '@heroicons/react/24/outline';
 import { useNavigate } from 'react-router-dom';
+import { ServiceModal } from './ServiceModal';
 import { apiService } from '../../services/api';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorMessage } from '../ui/ErrorMessage';
@@ -47,6 +48,8 @@ export const ServicesOverview: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterType, setFilterType] = useState<string>('all');
   const [filterYear, setFilterYear] = useState<number>(new Date().getFullYear());
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [creatingService, setCreatingService] = useState(false);
 
   useEffect(() => {
     loadServices();
@@ -55,6 +58,23 @@ export const ServicesOverview: React.FC = () => {
   useEffect(() => {
     filterServices();
   }, [services, searchTerm, filterType]);
+
+  const handleServiceSubmit = async (serviceData: any) => {
+    setCreatingService(true);
+    try {
+      const response = await apiService.createService(serviceData);
+      
+      if (response.success && response.data?.id) {
+        setShowServiceModal(false);
+        // Navigate to the service editor
+        navigate(`/service/${response.data.id}`);
+      }
+    } catch (error) {
+      console.error('Fehler beim Erstellen des Gottesdienstes:', error);
+    } finally {
+      setCreatingService(false);
+    }
+  };
 
   const loadServices = async () => {
     try {
@@ -146,7 +166,7 @@ export const ServicesOverview: React.FC = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/kirchenjahr')}
+              onClick={() => setShowServiceModal(true)}
               className="flex items-center space-x-2 px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg transition-colors"
             >
               <PlusIcon className="w-5 h-5" />
@@ -300,6 +320,14 @@ export const ServicesOverview: React.FC = () => {
           </div>
         )}
       </div>
+
+      {/* Service Modal */}
+      <ServiceModal
+        isOpen={showServiceModal}
+        onClose={() => setShowServiceModal(false)}
+        onSubmit={handleServiceSubmit}
+        loading={creatingService}
+      />
     </div>
   );
 };

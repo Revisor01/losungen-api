@@ -32,7 +32,15 @@ export type ComponentType =
   
   // Sakramente (rot)
   | 'abendmahl'
-  | 'taufe';
+  | 'taufe'
+  
+  // Kasualien-spezifisch (teal/türkis)
+  | 'trauversprechen'
+  | 'taufformel'
+  | 'trauerrede'
+  | 'konfirmationssegen'
+  | 'trauung_ringtausch'
+  | 'bestattung_erdwurf';
 
 export interface ComponentConfig {
   type: ComponentType;
@@ -45,7 +53,7 @@ export interface ComponentConfig {
   hasNumber: boolean; // für EG-Nummern etc.
   placeholder?: string;
   icon: string;
-  category: 'sprechakte' | 'gebete' | 'lieder' | 'liturgien' | 'bibellesungen' | 'predigt' | 'sakramente';
+  category: 'sprechakte' | 'gebete' | 'lieder' | 'liturgien' | 'bibellesungen' | 'predigt' | 'sakramente' | 'kasualien';
   defaultDuration?: number; // in Minuten
 }
 
@@ -339,6 +347,97 @@ export const COMPONENT_CONFIGS: Record<ComponentType, ComponentConfig> = {
     icon: '💧',
     category: 'sakramente',
     defaultDuration: 8
+  },
+
+  // Kasualien-spezifisch (teal/türkis)
+  trauversprechen: {
+    type: 'trauversprechen',
+    label: 'Trauversprechen',
+    color: 'teal',
+    bgColor: 'bg-teal-50',
+    borderColor: 'border-teal-200',
+    textColor: 'text-teal-900',
+    hasText: true,
+    hasNumber: false,
+    placeholder: 'Ich nehme dich an als meine Frau/meinen Mann...',
+    icon: '💍',
+    category: 'kasualien',
+    defaultDuration: 3
+  },
+
+  taufformel: {
+    type: 'taufformel',
+    label: 'Taufformel',
+    color: 'teal',
+    bgColor: 'bg-teal-50',
+    borderColor: 'border-teal-200',
+    textColor: 'text-teal-900',
+    hasText: true,
+    hasNumber: false,
+    placeholder: 'Ich taufe dich im Namen des Vaters...',
+    icon: '💦',
+    category: 'kasualien',
+    defaultDuration: 2
+  },
+
+  trauerrede: {
+    type: 'trauerrede',
+    label: 'Trauerrede',
+    color: 'teal',
+    bgColor: 'bg-teal-50',
+    borderColor: 'border-teal-200',
+    textColor: 'text-teal-900',
+    hasText: true,
+    hasNumber: false,
+    placeholder: 'Wir nehmen Abschied von...',
+    icon: '🕊️',
+    category: 'kasualien',
+    defaultDuration: 10
+  },
+
+  konfirmationssegen: {
+    type: 'konfirmationssegen',
+    label: 'Konfirmationssegen',
+    color: 'teal',
+    bgColor: 'bg-teal-50',
+    borderColor: 'border-teal-200',
+    textColor: 'text-teal-900',
+    hasText: true,
+    hasNumber: false,
+    placeholder: 'Der Herr segne dich und behüte dich...',
+    icon: '✝️',
+    category: 'kasualien',
+    defaultDuration: 5
+  },
+
+  trauung_ringtausch: {
+    type: 'trauung_ringtausch',
+    label: 'Ringtausch',
+    color: 'teal',
+    bgColor: 'bg-teal-50',
+    borderColor: 'border-teal-200',
+    textColor: 'text-teal-900',
+    hasText: true,
+    hasNumber: false,
+    placeholder: 'Trage diesen Ring als Zeichen...',
+    icon: '💐',
+    category: 'kasualien',
+    defaultDuration: 2
+  },
+
+  bestattung_erdwurf: {
+    type: 'bestattung_erdwurf',
+    label: 'Erdwurf',
+    color: 'teal',
+    bgColor: 'bg-teal-50',
+    borderColor: 'border-teal-200',
+    textColor: 'text-teal-900',
+    hasText: true,
+    hasNumber: false,
+    placeholder: 'Erde zu Erde, Asche zu Asche...',
+    icon: '⚱️',
+    category: 'kasualien',
+    defaultDuration: 2
   }
 };
 

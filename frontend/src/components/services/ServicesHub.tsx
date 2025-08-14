@@ -12,6 +12,7 @@ import {
   ArrowRightIcon
 } from '@heroicons/react/24/outline';
 import { useNavigate } from 'react-router-dom';
+import { ServiceModal } from './ServiceModal';
 import { apiService } from '../../services/api';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 
@@ -33,6 +34,8 @@ export const ServicesHub: React.FC = () => {
   const [recentServices, setRecentServices] = useState<Service[]>([]);
   const [upcomingServices, setUpcomingServices] = useState<Service[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showServiceModal, setShowServiceModal] = useState(false);
+  const [creatingService, setCreatingService] = useState(false);
   const [stats, setStats] = useState({
     totalServices: 0,
     thisMonth: 0,
@@ -42,6 +45,23 @@ export const ServicesHub: React.FC = () => {
   useEffect(() => {
     loadServicesData();
   }, []);
+
+  const handleServiceSubmit = async (serviceData: any) => {
+    setCreatingService(true);
+    try {
+      const response = await apiService.createService(serviceData);
+      
+      if (response.success && response.data?.id) {
+        setShowServiceModal(false);
+        // Navigate to the service editor
+        navigate(`/service/${response.data.id}`);
+      }
+    } catch (error) {
+      console.error('Fehler beim Erstellen des Gottesdienstes:', error);
+    } finally {
+      setCreatingService(false);
+    }
+  };
 
   const loadServicesData = async () => {
     try {
@@ -143,7 +163,7 @@ export const ServicesHub: React.FC = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/kirchenjahr')}
+              onClick={() => setShowServiceModal(true)}
               className="flex items-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors shadow-lg"
             >
               <PlusIcon className="w-5 h-5" />
@@ -383,6 +403,14 @@ export const ServicesHub: React.FC = () => {
           </motion.div>
         )}
       </div>
+
+      {/* Service Modal */}
+      <ServiceModal
+        isOpen={showServiceModal}
+        onClose={() => setShowServiceModal(false)}
+        onSubmit={handleServiceSubmit}
+        loading={creatingService}
+      />
     </div>
   );
 };

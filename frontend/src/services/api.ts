@@ -291,6 +291,13 @@ class ApiService {
     return this.request<any[]>(`/services.php?path=search&q=${encodeURIComponent(query)}`);
   }
 
+  // Gottesdienst löschen
+  async deleteService(serviceId: number): Promise<ApiResponse<{ success: boolean }>> {
+    return this.request<{ success: boolean }>(`/services.php?path=service&id=${serviceId}`, {
+      method: 'DELETE'
+    });
+  }
+
   // Neuen Gottesdienst erstellen
   async createService(serviceData: {
     title: string;

@@ -76,6 +76,8 @@ export const ServiceEditor: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showShareMenu, setShowShareMenu] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     if (serviceId) {
@@ -94,6 +96,25 @@ export const ServiceEditor: React.FC = () => {
       setError('Fehler beim Laden des Gottesdienstes');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!serviceId) return;
+    
+    setDeleting(true);
+    try {
+      const response = await apiService.deleteService(parseInt(serviceId));
+      if (response.success) {
+        navigate('/services');
+      } else {
+        setError('Fehler beim Löschen des Gottesdienstes');
+      }
+    } catch (err) {
+      setError('Fehler beim Löschen des Gottesdienstes');
+    } finally {
+      setDeleting(false);
+      setShowDeleteConfirm(false);
     }
   };
 
@@ -244,19 +265,32 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
               </div>
             </div>
 
-            {/* Share Menu */}
-            <div className="relative">
+            {/* Actions */}
+            <div className="flex items-center space-x-3">
+              {/* Delete Button */}
               <motion.button
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setShowShareMenu(!showShareMenu)}
-                className="flex items-center space-x-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors"
+                onClick={() => setShowDeleteConfirm(true)}
+                className="flex items-center space-x-2 px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition-colors"
               >
-                <ShareIcon className="w-5 h-5" />
-                <span>Teilen</span>
+                <TrashIcon className="w-5 h-5" />
+                <span>Löschen</span>
               </motion.button>
 
-              <AnimatePresence>
+              {/* Share Menu */}
+              <div className="relative">
+                <motion.button
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => setShowShareMenu(!showShareMenu)}
+                  className="flex items-center space-x-2 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition-colors"
+                >
+                  <ShareIcon className="w-5 h-5" />
+                  <span>Teilen</span>
+                </motion.button>
+
+                <AnimatePresence>
                 {showShareMenu && (
                   <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -325,6 +359,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                   </motion.div>
                 )}
               </AnimatePresence>
+              </div>
             </div>
           </div>
 
@@ -511,6 +546,61 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
           </div>
         </div>
       </div>
+
+      {/* Delete Confirmation Modal */}
+      <AnimatePresence>
+        {showDeleteConfirm && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => setShowDeleteConfirm(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white rounded-lg p-6 max-w-md w-full shadow-xl"
+            >
+              <h3 className="text-lg font-semibold text-gray-900 mb-3">
+                Gottesdienst löschen?
+              </h3>
+              <p className="text-gray-600 mb-6">
+                Möchten Sie den Gottesdienst "{service.title}" wirklich löschen? 
+                Diese Aktion kann nicht rückgängig gemacht werden.
+              </p>
+              <div className="flex justify-end space-x-3">
+                <button
+                  onClick={() => setShowDeleteConfirm(false)}
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-lg transition-colors"
+                  disabled={deleting}
+                >
+                  Abbrechen
+                </button>
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting}
+                  className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-2"
+                >
+                  {deleting ? (
+                    <>
+                      <LoadingSpinner size="sm" />
+                      <span>Löschen...</span>
+                    </>
+                  ) : (
+                    <>
+                      <TrashIcon className="w-4 h-4" />
+                      <span>Löschen</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 };
