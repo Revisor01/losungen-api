@@ -89,8 +89,8 @@ export const ServiceEditor: React.FC = () => {
   // Automatische Zeitberechnung für Text-Komponenten
   const calculateTextDuration = (text: string): number => {
     if (!text || text.trim().length === 0) return 0;
-    const wordCount = text.trim().split(/\s+/).length;
-    return Math.ceil(wordCount / wordsPerMinute);
+    const wordCount = text.trim().split(/\s+/).filter(w => w.length > 0).length;
+    return Math.round(wordCount / wordsPerMinute);
   };
 
   // Aktualisiere Dauer automatisch wenn sich Text ändert
@@ -662,6 +662,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                     {categoryName === 'predigt' && 'Predigt'}
                     {categoryName === 'sakramente' && 'Sakramente'}
                     {categoryName === 'kasualien' && 'Kasualien'}
+                    {categoryName === 'frei' && 'Freie Komponenten'}
                   </h4>
                   <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                     {configs.map(config => (

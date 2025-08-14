@@ -20,6 +20,7 @@ export type ComponentType =
   | 'gloria'
   | 'glaubensbekenntnis'
   | 'vater_unser'
+  | 'ehr_sei_dem_vater'
   
   // Bibellesungen (gelb/amber)
   | 'altes_testament'
@@ -41,7 +42,10 @@ export type ComponentType =
   | 'trauerrede'
   | 'konfirmationssegen'
   | 'trauung_ringtausch'
-  | 'bestattung_erdwurf';
+  | 'bestattung_erdwurf'
+  
+  // Freie Komponenten (grau)
+  | 'freie_komponente';
 
 export interface ComponentConfig {
   type: ComponentType;
@@ -54,7 +58,7 @@ export interface ComponentConfig {
   hasNumber: boolean; // für EG-Nummern etc.
   placeholder?: string;
   icon: string;
-  category: 'sprechakte' | 'gebete' | 'lieder' | 'liturgien' | 'bibellesungen' | 'predigt' | 'sakramente' | 'kasualien';
+  category: 'sprechakte' | 'gebete' | 'lieder' | 'liturgien' | 'bibellesungen' | 'predigt' | 'sakramente' | 'kasualien' | 'frei';
   defaultDuration?: number; // in Minuten
 }
 
@@ -238,6 +242,20 @@ export const COMPONENT_CONFIGS: Record<ComponentType, ComponentConfig> = {
     hasText: false,
     hasNumber: false,
     icon: '👨‍👧‍👦',
+    category: 'liturgien',
+    defaultDuration: 1
+  },
+
+  ehr_sei_dem_vater: {
+    type: 'ehr_sei_dem_vater',
+    label: 'Ehr sei dem Vater',
+    color: 'orange',
+    bgColor: 'bg-orange-50',
+    borderColor: 'border-orange-200',
+    textColor: 'text-orange-900',
+    hasText: false,
+    hasNumber: false,
+    icon: '✨',
     category: 'liturgien',
     defaultDuration: 1
   },
@@ -454,6 +472,22 @@ export const COMPONENT_CONFIGS: Record<ComponentType, ComponentConfig> = {
     icon: '⚱️',
     category: 'kasualien',
     defaultDuration: 2
+  },
+
+  // Freie Komponenten (grau)
+  freie_komponente: {
+    type: 'freie_komponente',
+    label: 'Freie Komponente',
+    color: 'gray',
+    bgColor: 'bg-gray-50',
+    borderColor: 'border-gray-200',
+    textColor: 'text-gray-900',
+    hasText: true,
+    hasNumber: false,
+    placeholder: 'Benutzerdefinierte Inhalte...',
+    icon: '📝',
+    category: 'frei',
+    defaultDuration: 3
   }
 };
 
