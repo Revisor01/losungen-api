@@ -117,7 +117,10 @@ export const ServiceEditor: React.FC = () => {
       order_position: components.length,
       duration_minutes: config.defaultDuration || 5
     };
-    setComponents([...components, newComponent]);
+    const newComponents = [...components, newComponent];
+    setComponents(newComponents);
+    // Neue Komponente automatisch ausklappen
+    setExpandedComponents(prev => new Set([...prev, newComponents.length - 1]));
   };
 
   const updateComponent = (index: number, updates: Partial<ServiceComponent>) => {
@@ -178,7 +181,10 @@ export const ServiceEditor: React.FC = () => {
     
     setSaving(true);
     try {
-      // Save each component
+      // Erst alle bestehenden Komponenten löschen
+      await apiService.deleteServiceComponents(service.id);
+      
+      // Dann alle Komponenten neu erstellen
       for (const component of components) {
         await apiService.createServiceComponent({
           service_id: service.id,
@@ -411,22 +417,20 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                   initial={{ opacity: 0, x: -20 }}
                   animate={{ opacity: 1, x: 0 }}
                   exit={{ opacity: 0, x: 20 }}
-                  className={config ? `mb-4 p-4 border rounded-lg ${config.bgColor} ${config.borderColor}` : 'mb-4 p-4 border rounded-lg bg-gray-50 border-gray-200'}
+                  className={`mb-4 p-4 bg-white border-l-4 border-r border-t border-b rounded-lg shadow-sm ${config ? config.borderColor : 'border-gray-200'}`}
                 >
                   <div className="flex items-start justify-between">
                     <div className="flex items-start space-x-3 flex-1">
                       <span className="text-xl mt-1">{config?.icon || '📄'}</span>
                       <div className="flex-1">
                         <div className="flex items-center justify-between mb-3">
-                          <h3 className="text-lg font-semibold text-gray-900">
-                            <input
-                              type="text"
-                              value={component.title}
-                              onChange={(e) => updateComponent(index, { title: e.target.value })}
-                              className={config ? `font-heading text-lg font-semibold ${config.textColor} bg-transparent border-b ${config.borderColor} focus:outline-none focus:border-${config.color}-500 w-full` : 'font-heading text-lg font-semibold text-gray-900 bg-transparent border-b border-gray-300 focus:outline-none focus:border-gray-500 w-full'}
-                            />
-                          </h3>
-                          <div className="flex items-center space-x-2">
+                          <input
+                            type="text"
+                            value={component.title}
+                            onChange={(e) => updateComponent(index, { title: e.target.value })}
+                            className="font-heading text-lg font-semibold text-gray-900 bg-transparent focus:outline-none focus:bg-gray-50 px-2 py-1 rounded w-full border-0"
+                          />
+                          <div className="flex items-center space-x-3">
                             <div className="flex items-center space-x-2">
                               <ClockIcon className="w-4 h-4 text-gray-400" />
                               <input
@@ -438,17 +442,6 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                               />
                               <span className="text-sm text-gray-600">Min.</span>
                             </div>
-                            <button
-                              type="button"
-                              onClick={() => toggleComponentExpansion(index)}
-                              className="p-1 hover:bg-gray-200 rounded text-gray-600"
-                            >
-                              {expandedComponents.has(index) ? (
-                                <ChevronUpIcon className="w-4 h-4" />
-                              ) : (
-                                <ChevronDownIcon className="w-4 h-4" />
-                              )}
-                            </button>
                           </div>
                         </div>
 
@@ -554,24 +547,40 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                     </div>
 
                     {/* Actions */}
-                    <div className="flex items-center space-x-2 ml-4">
+                    <div className="flex items-center space-x-1 ml-4">
+                      <button
+                        type="button"
+                        onClick={() => toggleComponentExpansion(index)}
+                        className="p-2 hover:bg-gray-100 rounded text-gray-600" 
+                        title={expandedComponents.has(index) ? "Einklappen" : "Ausklappen"}
+                      >
+                        {expandedComponents.has(index) ? (
+                          <ChevronUpIcon className="w-4 h-4" />
+                        ) : (
+                          <ChevronDownIcon className="w-4 h-4" />
+                        )}
+                      </button>
+                      <div className="border-l border-gray-200 h-6 mx-1"></div>
                       <button
                         onClick={() => moveComponent(index, 'up')}
                         disabled={index === 0}
-                        className="p-1 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Nach oben"
                       >
                         <ChevronUpIcon className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => moveComponent(index, 'down')}
                         disabled={index === components.length - 1}
-                        className="p-1 hover:bg-gray-200 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="p-1 hover:bg-gray-100 rounded disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Nach unten"
                       >
                         <ChevronDownIcon className="w-4 h-4" />
                       </button>
                       <button
                         onClick={() => removeComponent(index)}
                         className="p-1 hover:bg-red-100 text-red-600 rounded"
+                        title="Löschen"
                       >
                         <TrashIcon className="w-4 h-4" />
                       </button>

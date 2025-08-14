@@ -334,6 +334,13 @@ class ApiService {
       body: JSON.stringify(componentData)
     });
   }
+
+  // Alle Komponenten eines Gottesdienstes löschen
+  async deleteServiceComponents(serviceId: number): Promise<ApiResponse<{ success: boolean }>> {
+    return this.request<{ success: boolean }>(`/services.php?path=service/components&service_id=${serviceId}`, {
+      method: 'DELETE'
+    });
+  }
 }
 
 export const apiService = new ApiService();
