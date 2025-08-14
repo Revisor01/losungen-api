@@ -447,6 +447,19 @@ function handleDelete($pdo, $path) {
             $pdo->rollBack();
             throw $e;
         }
+    } elseif ($path === 'service/components' && isset($_GET['service_id'])) {
+        // Delete all components for a service
+        $serviceId = (int)$_GET['service_id'];
+        
+        $stmt = $pdo->prepare("DELETE FROM service_components WHERE service_id = ?");
+        $stmt->execute([$serviceId]);
+        
+        echo json_encode([
+            'success' => true,
+            'message' => 'Service components deleted successfully',
+            'deleted_count' => $stmt->rowCount(),
+            'timestamp' => date('c')
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
     } else {
         throw new Exception('Invalid DELETE request');
     }
