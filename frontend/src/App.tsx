@@ -11,6 +11,7 @@ import { AdminPanel } from './components/admin/AdminPanel';
 import { FavoritesList } from './components/favorites/FavoritesList';
 import { ChurchYearCalendar } from './components/church/ChurchYearCalendar';
 import { ServiceEditor } from './components/services/ServiceEditor';
+import { ServiceCelebration } from './components/services/ServiceCelebration';
 import { ServicesOverview } from './components/services/ServicesOverview';
 import { ServicesHub } from './components/services/ServicesHub';
 import './styles/globals.css';
@@ -61,6 +62,7 @@ function AppContent() {
             <Route path="/services" element={<ServicesHub />} />
             <Route path="/services/overview" element={<ServicesOverview />} />
             <Route path="/service/:serviceId" element={<ServiceEditor />} />
+            <Route path="/service/:serviceId/celebrate" element={<ServiceCelebration />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
         </main>

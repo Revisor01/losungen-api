@@ -16,7 +16,8 @@ import {
   ArrowLeftIcon,
   EnvelopeIcon,
   DevicePhoneMobileIcon,
-  DocumentArrowDownIcon
+  DocumentArrowDownIcon,
+  PlayIcon
 } from '@heroicons/react/24/outline';
 import { useNavigate, useParams } from 'react-router-dom';
 import { apiService } from '../../services/api';
@@ -317,8 +318,27 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
     let totalSeconds = 0;
     
     components.forEach(component => {
-      // Für Bibel-Komponenten (außer Psalm)
-      if (component.bible_text && component.component_type !== 'psalm') {
+      // Für Predigt-Komponenten: Content + Bibeltext addieren (ohne Doppelzählung)
+      if (component.component_type === 'predigt') {
+        // Content-Zeit
+        if (component.content) {
+          const wordCount = component.content.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
+          totalSeconds += Math.round((wordCount / wordsPerMinute) * 60);
+        }
+        // Bibeltext-Zeit
+        if (component.bible_text) {
+          try {
+            const bibleData = JSON.parse(component.bible_text);
+            const plainText = bibleData.text || (bibleData.verses?.map((v: any) => v.text).join(' ') || '');
+            const wordCount = plainText.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
+            totalSeconds += Math.round((wordCount / wordsPerMinute) * 60);
+          } catch (error) {
+            // Ignore parsing errors
+          }
+        }
+      }
+      // Für Bibel-Komponenten (außer Psalm und Predigt)
+      else if (component.bible_text && component.component_type !== 'psalm') {
         try {
           const bibleData = JSON.parse(component.bible_text);
           const plainText = bibleData.text || (bibleData.verses?.map((v: any) => v.text).join(' ') || '');
@@ -328,8 +348,8 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
           // Fallback zu content
         }
       }
-      // Für alle anderen Text-Komponenten
-      if (component.content) {
+      // Für alle anderen Text-Komponenten (außer Predigt - schon behandelt)
+      else if (component.content && component.component_type !== 'predigt') {
         const wordCount = component.content.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
         totalSeconds += Math.round((wordCount / wordsPerMinute) * 60);
       }
@@ -518,6 +538,19 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
               </div>
             </div>
           </div>
+          
+          {/* Celebrate Button */}
+          {components.length > 0 && (
+            <div className="mt-4 flex justify-center">
+              <button
+                onClick={() => navigate(`/service/${service.id}/celebrate`)}
+                className="flex items-center space-x-2 px-6 py-3 bg-purple-600 hover:bg-purple-700 text-white font-medium rounded-lg transition-colors shadow-lg hover:shadow-xl transform hover:scale-105"
+              >
+                <PlayIcon className="w-5 h-5" />
+                <span>Gottesdienst feiern</span>
+              </button>
+            </div>
+          )}
         </motion.div>
 
         {/* Component List */}
@@ -537,20 +570,19 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
 
                       return (
                         <Draggable 
-                          key={component.id?.toString() || `temp-${index}`} 
-                          draggableId={component.id?.toString() || `temp-${index}`} 
+                          key={`component-${index}-${component.component_type}-${component.title}`} 
+                          draggableId={`component-${index}-${component.component_type}`} 
                           index={index}
                         >
                           {(provided, snapshot) => (
-                            <motion.div
+                            <div
                               ref={provided.innerRef}
                               {...provided.draggableProps}
-                              key={index}
-                              initial={{ opacity: 0, x: -20 }}
-                              animate={{ opacity: 1, x: 0 }}
-                              exit={{ opacity: 0, x: 20 }}
-                              className={`mb-4 p-4 bg-white border-l-4 border-r border-t border-b rounded-lg shadow-sm ${config ? config.borderColor : 'border-gray-200'} ${
-                                snapshot.isDragging ? 'shadow-lg transform rotate-2' : ''
+                              style={{
+                                ...provided.draggableProps.style,
+                              }}
+                              className={`mb-4 p-4 bg-white border-l-4 border-r border-t border-b rounded-lg shadow-sm transition-all duration-200 ${config ? config.borderColor : 'border-gray-200'} ${
+                                snapshot.isDragging ? 'shadow-xl transform scale-105 z-50' : ''
                               }`}
                             >
                               <div className="flex items-start justify-between">
@@ -577,8 +609,41 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                               <ClockIcon className="w-4 h-4 text-gray-400" />
                               {/* Kalkulierte Zeit VOR manueller Zeit */}
                               {(() => {
-                                // Für Bibel-Komponenten (außer Psalm)
-                                if (component.bible_text && component.component_type !== 'psalm') {
+                                // Für Predigt-Komponenten: Content + Bibeltext addieren
+                                if (component.component_type === 'predigt' && (component.content || component.bible_text)) {
+                                  let totalSeconds = 0;
+                                  
+                                  // Zeit für Content berechnen
+                                  if (component.content) {
+                                    const wordCount = component.content.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
+                                    totalSeconds += Math.round((wordCount / wordsPerMinute) * 60);
+                                  }
+                                  
+                                  // Zeit für Bibeltext berechnen
+                                  if (component.bible_text) {
+                                    try {
+                                      const bibleData = JSON.parse(component.bible_text);
+                                      const plainText = bibleData.text || (bibleData.verses?.map((v: any) => v.text).join(' ') || '');
+                                      const wordCount = plainText.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
+                                      totalSeconds += Math.round((wordCount / wordsPerMinute) * 60);
+                                    } catch (error) {
+                                      // Ignore parsing errors
+                                    }
+                                  }
+                                  
+                                  if (totalSeconds > 0) {
+                                    const minutes = Math.floor(totalSeconds / 60);
+                                    const seconds = totalSeconds % 60;
+                                    const formatted = seconds > 0 ? `${minutes}:${seconds.toString().padStart(2, '0')}` : `${minutes}:00`;
+                                    return (
+                                      <span className="text-sm font-semibold text-purple-600 mr-2" title="Berechnete Zeit für Predigt + Predigttext">
+                                        {formatted}
+                                      </span>
+                                    );
+                                  }
+                                }
+                                // Für Bibel-Komponenten (außer Psalm und Predigt)
+                                else if (component.bible_text && component.component_type !== 'psalm' && component.component_type !== 'predigt') {
                                   try {
                                     const bibleData = JSON.parse(component.bible_text);
                                     const plainText = bibleData.text || (bibleData.verses?.map((v: any) => v.text).join(' ') || '');
@@ -593,7 +658,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                   }
                                 }
                                 // Für alle anderen Text-Komponenten
-                                if (component.content && config?.hasText) {
+                                else if (component.content && config?.hasText) {
                                   const textDuration = calculateTextDurationFormatted(component.content);
                                   if (textDuration !== '0:00') {
                                     return (
@@ -694,17 +759,31 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                         });
                                         
                                         if (response.success && response.data) {
+                                          // Auto-Titel generieren basierend auf Komponenten-Typ
+                                          let autoTitle = component.title;
+                                          if (component.component_type === 'altes_testament') {
+                                            autoTitle = `Altes Testament: ${reference} (${translation})`;
+                                          } else if (component.component_type === 'epistel') {
+                                            autoTitle = `Epistel: ${reference} (${translation})`;
+                                          } else if (component.component_type === 'evangelium') {
+                                            autoTitle = `Evangelium: ${reference} (${translation})`;
+                                          } else if (component.component_type === 'predigttext' || component.component_type === 'predigt') {
+                                            autoTitle = `Predigttext: ${reference} (${translation})`;
+                                          }
+                                          
                                           // Für Psalm: Text ins content-Feld laden
                                           // Für AT/Epistel/Evangelium/Predigttext: vollständige Daten speichern
                                           if (component.component_type === 'psalm') {
                                             const plainText = response.data.text || (response.data.verses?.map(v => v.text).join(' ') || '');
                                             updateComponentWithAutoDuration(index, { 
+                                              title: autoTitle,
                                               content: plainText,
                                               bible_translation: translation,
                                               bible_text: JSON.stringify(response.data)
                                             });
                                           } else {
                                             updateComponent(index, { 
+                                              title: autoTitle,
                                               bible_translation: translation,
                                               bible_text: JSON.stringify(response.data)
                                             });
@@ -959,7 +1038,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                       </div>
                     </div>
                   </div>
-                            </motion.div>
+                            </div>
                           )}
                         </Draggable>
                       );
@@ -971,52 +1050,68 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
             </Droppable>
           </DragDropContext>
 
-          {/* Add Component Buttons */}
-          <div className="mt-6">
-            <h3 className="text-sm font-medium text-gray-700 mb-3">Komponente hinzufügen:</h3>
-            {(() => {
-              const categories = getComponentsByCategory();
-              return Object.entries(categories).map(([categoryName, configs]) => (
-                <div key={categoryName} className="mb-4">
-                  <h4 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
-                    {categoryName === 'sprechakte' && 'Sprechakte'}
-                    {categoryName === 'gebete' && 'Gebete & Segen'}
-                    {categoryName === 'lieder' && 'Lieder'}
-                    {categoryName === 'liturgien' && 'Liturgien'}
-                    {categoryName === 'bibellesungen' && 'Bibellesungen'}
-                    {categoryName === 'predigt' && 'Predigt'}
-                    {categoryName === 'sakramente' && 'Sakramente'}
-                    {categoryName === 'kasualien' && 'Kasualien'}
-                    {categoryName === 'frei' && 'Freie Komponenten'}
-                  </h4>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-                    {configs.map(config => (
-                      <motion.button
-                        key={config.type}
-                        whileHover={{ scale: 1.05 }}
-                        whileTap={{ scale: 0.95 }}
-                        onClick={() => addComponent(config.type)}
-                        className={`flex items-center justify-center space-x-2 p-3 ${config.bgColor} hover:bg-${config.color}-200 ${config.textColor} rounded-lg transition-colors`}
-                      >
-                        <span className="text-lg">{config.icon}</span>
-                        <span className="text-sm">{config.label}</span>
-                      </motion.button>
-                    ))}
-                  </div>
-                </div>
-              ));
-            })()}
-          </div>
 
-          {/* Floating Quick Actions Panel - Sticky for better UX */}
-          {components.length > 3 && (
+          {/* Enhanced Floating Actions Panel */}
+          {components.length > 0 && (
             <div className="sticky bottom-4 left-0 right-0 z-10 mt-4">
               <div className="flex justify-center">
                 <div className="flex items-center space-x-3 bg-white/95 backdrop-blur-sm border border-gray-200 rounded-full px-4 py-2 shadow-lg">
                   <span className="text-sm font-medium text-gray-600">
                     {components.length} Komponenten
                   </span>
+                  
                   <div className="border-l border-gray-200 h-6"></div>
+                  
+                  {/* Add Component Quick Menu */}
+                  <div className="relative group">
+                    <button
+                      className="flex items-center space-x-1 px-3 py-2 text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                      title="Komponente hinzufügen"
+                    >
+                      <PlusIcon className="w-4 h-4" />
+                      <span className="text-sm font-medium">Hinzufügen</span>
+                    </button>
+                    
+                    {/* Dropdown Menu */}
+                    <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
+                      <div className="bg-white border border-gray-200 rounded-xl shadow-xl p-4 w-80 max-h-96 overflow-y-auto">
+                        <h4 className="font-medium text-gray-900 mb-3">Komponente hinzufügen</h4>
+                        {(() => {
+                          const categories = getComponentsByCategory();
+                          return Object.entries(categories).map(([categoryName, configs]) => (
+                            <div key={categoryName} className="mb-4 last:mb-0">
+                              <h5 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+                                {categoryName === 'sprechakte' && 'Sprechakte'}
+                                {categoryName === 'gebete' && 'Gebete & Segen'}
+                                {categoryName === 'lieder' && 'Lieder'}
+                                {categoryName === 'liturgien' && 'Liturgien'}
+                                {categoryName === 'bibellesungen' && 'Bibellesungen'}
+                                {categoryName === 'predigt' && 'Predigt'}
+                                {categoryName === 'sakramente' && 'Sakramente'}
+                                {categoryName === 'kasualien' && 'Kasualien'}
+                                {categoryName === 'frei' && 'Freie Komponenten'}
+                              </h5>
+                              <div className="grid grid-cols-2 gap-1">
+                                {configs.map(config => (
+                                  <button
+                                    key={config.type}
+                                    onClick={() => addComponent(config.type)}
+                                    className={`flex items-center space-x-2 p-2 ${config.bgColor} hover:bg-${config.color}-200 ${config.textColor} rounded-lg transition-colors text-xs`}
+                                  >
+                                    <span>{config.icon}</span>
+                                    <span>{config.label}</span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          ));
+                        })()}
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div className="border-l border-gray-200 h-6"></div>
+                  
                   <button
                     onClick={saveComponents}
                     disabled={saving}
