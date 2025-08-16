@@ -521,3 +521,48 @@ export const getComponentsByCategory = () => {
   
   return categories;
 };
+
+// Vordefinierte Texte für liturgische Komponenten
+export const LITURGICAL_TEXTS = {
+  glaubensbekenntnis: {
+    apostolisch: {
+      title: 'Apostolisches Glaubensbekenntnis',
+      text: 'Ich glaube an Gott, den Vater, den Allmächtigen, den Schöpfer des Himmels und der Erde. Und an Jesus Christus, seinen eingeborenen Sohn, unsern Herrn, empfangen durch den Heiligen Geist, geboren von der Jungfrau Maria, gelitten unter Pontius Pilatus, gekreuzigt, gestorben und begraben, hinabgestiegen in das Reich des Todes, am dritten Tage auferstanden von den Toten, aufgefahren in den Himmel; er sitzt zur Rechten Gottes, des allmächtigen Vaters; von dort wird er kommen, zu richten die Lebenden und die Toten. Ich glaube an den Heiligen Geist, die heilige christliche Kirche, Gemeinschaft der Heiligen, Vergebung der Sünden, Auferstehung der Toten und das ewige Leben. Amen.',
+      duration: 3
+    },
+    taufe: {
+      title: 'Glaubensbekenntnis für Taufen',
+      text: 'Ich glaube an Gott. Gott liebt uns wie ein Vater und eine Mutter, Er hat uns und alles in der Welt geschaffen. Wir vertrauen darauf, dass er immer und überall für uns da ist. Ich glaube an Jesus Christus, den Sohn Gottes. Sein Leben ist Vorbild für alle. Durch sein Leiden und Sterben ist er uns auch in dunklen Zeiten nah. Seine Auferstehung gibt Hoffnung, dass es in unserem Leben immer wieder hell wird. Ich glaube an die Heilige Geistkraft, Gottes Kraft in uns. Sie führt uns auf gute Wege, schenkt Vergebung und verbindet uns zu einer großen Gemeinschaft. Amen.',
+      duration: 3
+    },
+    nizaenisch: {
+      title: 'Nizänisches Glaubensbekenntnis',
+      text: 'Wir glauben an den einen Gott, den Vater, den Allmächtigen, der alles geschaffen hat, Himmel und Erde, die sichtbare und die unsichtbare Welt. Und an den einen Herrn Jesus Christus, Gottes eingeborenen Sohn, aus dem Vater geboren vor aller Zeit...',
+      duration: 4
+    }
+  },
+  vater_unser: {
+    standard: {
+      title: 'Vater Unser',
+      text: 'Vater unser im Himmel, geheiligt werde dein Name. Dein Reich komme. Dein Wille geschehe, wie im Himmel so auf Erden. Unser tägliches Brot gib uns heute. Und vergib uns unsere Schuld, wie auch wir vergeben unsern Schuldigern. Und führe uns nicht in Versuchung, sondern erlöse uns von dem Bösen. Denn dein ist das Reich und die Kraft und die Herrlichkeit in Ewigkeit. Amen.',
+      duration: 2
+    },
+    gesungen: {
+      title: 'Vater Unser (gesungen)',
+      text: 'Vater unser im Himmel, geheiligt werde dein Name. Dein Reich komme. Dein Wille geschehe, wie im Himmel so auf Erden. Unser tägliches Brot gib uns heute. Und vergib uns unsere Schuld, wie auch wir vergeben unsern Schuldigern. Und führe uns nicht in Versuchung, sondern erlöse uns von dem Bösen. Denn dein ist das Reich und die Kraft und die Herrlichkeit in Ewigkeit. Amen.',
+      duration: 3
+    }
+  },
+  segen: {
+    aaronitisch: {
+      title: 'Aaronitischer Segen',
+      text: 'Der Herr segne dich und behüte dich. Der Herr lasse leuchten sein Angesicht über dir und sei dir gnädig. Der Herr erhebe sein Angesicht auf dich und schenke dir seinen Frieden. Amen.',
+      duration: 2
+    },
+    trinitarisch: {
+      title: 'Trinitarischer Segen',
+      text: 'Es segne euch der allmächtige Gott, der Vater und der Sohn und der Heilige Geist. Amen.',
+      duration: 1
+    }
+  }
+};

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { 
   ChevronDownIcon, 
@@ -43,8 +43,29 @@ export const ServiceComponent: React.FC<ServiceComponentProps> = ({
   const [isExpanded, setIsExpanded] = useState(false);
   const [isEditMode, setIsEditMode] = useState(isEditing);
   const [localComponent, setLocalComponent] = useState(component);
+  const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   
   const config = getComponentConfig(component.component_type);
+
+  // Auto-save mit Debounce
+  const debouncedSave = useCallback((updatedComponent: ServiceComponentData) => {
+    if (saveTimeoutRef.current) {
+      clearTimeout(saveTimeoutRef.current);
+    }
+    
+    saveTimeoutRef.current = setTimeout(() => {
+      onUpdate(updatedComponent);
+    }, 800); // 800ms Verzögerung
+  }, [onUpdate]);
+
+  // Cleanup des Timeouts
+  useEffect(() => {
+    return () => {
+      if (saveTimeoutRef.current) {
+        clearTimeout(saveTimeoutRef.current);
+      }
+    };
+  }, []);
   
   // Automatische Zeitberechnung für Textfelder
   const calculatedDuration = config.hasText && localComponent.content 
@@ -68,12 +89,19 @@ export const ServiceComponent: React.FC<ServiceComponentProps> = ({
     setIsEditMode(false);
   };
 
-  const updateField = (field: keyof ServiceComponentData, value: any) => {
-    setLocalComponent(prev => ({
-      ...prev,
+  const updateField = useCallback((field: keyof ServiceComponentData, value: any) => {
+    const updatedComponent = {
+      ...localComponent,
       [field]: value
-    }));
-  };
+    };
+    
+    setLocalComponent(updatedComponent);
+    
+    // Auto-save nur für Textfelder, nicht bei jedem Titel-Keystroke
+    if (field !== 'title') {
+      debouncedSave(updatedComponent);
+    }
+  }, [localComponent, debouncedSave]);
 
   return (
     <motion.div
@@ -178,6 +206,7 @@ export const ServiceComponent: React.FC<ServiceComponentProps> = ({
               type="text"
               value={localComponent.title}
               onChange={(e) => updateField('title', e.target.value)}
+              onBlur={() => debouncedSave(localComponent)}
               className="input-field"
               placeholder={`${config.label} Titel`}
             />

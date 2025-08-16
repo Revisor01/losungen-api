@@ -12,7 +12,11 @@
       "Bash(php:*)",
       "Bash(rm:*)",
       "Bash(cp:*)",
-      "Bash(curl:*)"
+      "Bash(curl:*)",
+      "WebFetch(domain:losung.konfi-quest.de)",
+      "Bash(npm install:*)",
+      "Bash(cat:*)",
+      "Bash(scp:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
