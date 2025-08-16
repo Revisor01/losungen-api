@@ -16,7 +16,9 @@
       "WebFetch(domain:losung.konfi-quest.de)",
       "Bash(npm install:*)",
       "Bash(cat:*)",
-      "Bash(scp:*)"
+      "Bash(scp:*)",
+      "Bash(docker exec:*)",
+      "Bash(docker-compose up:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

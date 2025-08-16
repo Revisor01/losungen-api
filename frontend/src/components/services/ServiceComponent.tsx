@@ -224,7 +224,14 @@ export const ServiceComponent: React.FC<ServiceComponentProps> = ({
                   <input
                     type="text"
                     value={localComponent.hymn_number || ''}
-                    onChange={(e) => updateField('hymn_number', e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      updateField('hymn_number', value);
+                      // Auto-Titel für Lieder: EG 324, 1-3
+                      if (value && value.match(/^EG\s*\d+.*$/i)) {
+                        updateField('title', value);
+                      }
+                    }}
                     className="input-field"
                     placeholder="EG 123, HELM 45, ..."
                   />
@@ -239,7 +246,14 @@ export const ServiceComponent: React.FC<ServiceComponentProps> = ({
                   <input
                     type="text"
                     value={localComponent.bible_reference || ''}
-                    onChange={(e) => updateField('bible_reference', e.target.value)}
+                    onChange={(e) => {
+                      const value = e.target.value;
+                      updateField('bible_reference', value);
+                      // Auto-Titel für Bibelstellen
+                      if (value) {
+                        updateField('title', value);
+                      }
+                    }}
                     className="input-field"
                     placeholder={config.placeholder}
                   />
@@ -277,6 +291,7 @@ export const ServiceComponent: React.FC<ServiceComponentProps> = ({
                     if (selectedText) {
                       updateField('content', selectedText.text);
                       updateField('duration_minutes', selectedText.duration);
+                      updateField('title', selectedText.title);
                     }
                   }
                 }}
@@ -289,6 +304,19 @@ export const ServiceComponent: React.FC<ServiceComponentProps> = ({
                   </option>
                 ))}
               </select>
+            </div>
+          )}
+          
+          {/* Hardkodierter Vater Unser Text ohne Auswahl */}
+          {config.type === 'vater_unser' && (
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <h4 className="font-medium text-gray-700 mb-2">Vater Unser</h4>
+              <div className="text-sm text-gray-600 font-serif leading-relaxed whitespace-pre-wrap">
+                {LITURGICAL_TEXTS.vater_unser.standard.text}
+              </div>
+              <div className="mt-2 text-xs text-gray-500">
+                Dauer: {LITURGICAL_TEXTS.vater_unser.standard.duration} Min
+              </div>
             </div>
           )}
 
