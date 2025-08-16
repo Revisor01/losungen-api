@@ -316,34 +316,26 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
 
   // Berechne kalkulierte Gesamtzeit: berechnete Zeit + nicht-berechnete Komponenten + Lieder
   const calculateTotalCalculatedDuration = () => {
-    let totalMinutes = 0;
+    let calculatedSeconds = 0;  // Berechnete Zeit aus Texten
+    let nonCalculatedMinutes = 0; // Manuelle Zeit für nicht-berechnete Komponenten
+    let liederMinutes = 0;       // Manuelle Zeit für Lieder
     
     components.forEach(component => {
       const config = COMPONENT_CONFIGS[component.component_type as ComponentType];
       
-      // Für Predigt-Komponenten: Nur Content berechnen
+      // Für Predigt-Komponenten: Content berechnen
       if (component.component_type === 'predigt' && component.content) {
         const wordCount = component.content.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
-        const predightSeconds = Math.round((wordCount / wordsPerMinute) * 60);
-        totalMinutes += Math.ceil(predightSeconds / 60);
+        calculatedSeconds += Math.round((wordCount / wordsPerMinute) * 60);
       }
-      // Für Lieder: Manuelle Zeit + eventuelle berechnete Zeit
+      // Für Lieder: Nur manuelle Zeit
       else if (component.component_type === 'lied') {
-        let liedMinutes = component.duration_minutes || 0;
-        
-        // Falls Lied auch berechnete Zeit hat (falls Text vorhanden)
-        if (component.content) {
-          const wordCount = component.content.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
-          const calculatedMinutes = Math.ceil((wordCount / wordsPerMinute) * 60 / 60);
-          liedMinutes += calculatedMinutes;
-        }
-        
-        totalMinutes += liedMinutes;
+        liederMinutes += component.duration_minutes || 0;
       }
       // Für Text-Komponenten mit Berechnung
       else if (component.content && config?.hasText) {
         const wordCount = component.content.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
-        totalMinutes += Math.ceil((wordCount / wordsPerMinute) * 60 / 60);
+        calculatedSeconds += Math.round((wordCount / wordsPerMinute) * 60);
       }
       // Für Bibel-Komponenten mit Berechnung (außer Psalm und Predigt)
       else if (component.bible_text && component.component_type !== 'psalm' && component.component_type !== 'predigt') {
@@ -351,20 +343,33 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
           const bibleData = JSON.parse(component.bible_text);
           const plainText = bibleData.text || (bibleData.verses?.map((v: any) => v.text).join(' ') || '');
           const wordCount = plainText.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
-          totalMinutes += Math.ceil((wordCount / wordsPerMinute) * 60 / 60);
+          calculatedSeconds += Math.round((wordCount / wordsPerMinute) * 60);
         } catch (error) {
           // Fallback zu content
         }
       }
       // Für Komponenten ohne Berechnung (Kyrie, Gloria, etc.): Manuelle Zeit
       else if (!config?.hasText && component.duration_minutes) {
-        totalMinutes += component.duration_minutes;
+        nonCalculatedMinutes += component.duration_minutes;
       }
     });
     
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    return hours > 0 ? `${hours}:${minutes.toString().padStart(2, '0')}` : `${minutes}:00`;
+    // Format: "8:30 + 12 Min + 15 Min"
+    const calculatedMinutes = Math.floor(calculatedSeconds / 60);
+    const calculatedSecondsRest = calculatedSeconds % 60;
+    const calculatedTimeStr = calculatedSecondsRest > 0 
+      ? `${calculatedMinutes}:${calculatedSecondsRest.toString().padStart(2, '0')}`
+      : `${calculatedMinutes}:00`;
+    
+    let result = calculatedTimeStr;
+    if (nonCalculatedMinutes > 0) {
+      result += ` + ${nonCalculatedMinutes} Min`;
+    }
+    if (liederMinutes > 0) {
+      result += ` + ${liederMinutes} Min`;
+    }
+    
+    return result;
   };
 
   if (loading) {
@@ -608,7 +613,13 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                           <input
                             type="text"
                             value={component.title}
-                            onChange={(e) => updateComponent(index, { title: e.target.value })}
+                            onChange={(e) => {
+                              // Lokale State-Update ohne Autosave
+                              const newComponents = [...components];
+                              newComponents[index] = { ...newComponents[index], title: e.target.value };
+                              setComponents(newComponents);
+                            }}
+                            onBlur={(e) => updateComponent(index, { title: e.target.value })}
                             className="font-heading text-lg font-semibold text-gray-900 bg-transparent focus:outline-none focus:bg-gray-50 px-2 py-1 rounded border-0 flex-1 min-w-0"
                           />
                           <div className="flex items-center space-x-3">
@@ -716,9 +727,9 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                   }}
                                   onBlur={(e) => {
                                     const value = e.target.value;
-                                    // Auto-Titel für Lieder: EG 324, 1-3 Format - nur beim Verlassen des Feldes
+                                    // Auto-Titel für Lieder: Lied: EG 324, 1-3 Format - nur beim Verlassen des Feldes
                                     if (value && value.match(/^(EG|HELM|GL|F&L)\s*\d+/i)) {
-                                      updateComponent(index, { title: value });
+                                      updateComponent(index, { title: `Lied: ${value}` });
                                     }
                                   }}
                                   placeholder="z.B. EG 324, 1-3: Ich singe dir mit Herz und Mund"
@@ -996,7 +1007,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                   </div>
                                 </div>
                                 {/* Liturgische Text-Auswahl */}
-                                {(component.component_type === 'glaubensbekenntnis' || component.component_type === 'segen') && (
+                                {(component.component_type === 'glaubensbekenntnis' || component.component_type === 'segen' || component.component_type === 'gloria') && (
                                   <div className="mb-4">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                       Text-Vorlage wählen
@@ -1034,6 +1045,16 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                     <h4 className="font-medium text-gray-700 mb-3">Vater Unser</h4>
                                     <div className="text-sm text-gray-700 font-serif leading-relaxed whitespace-pre-wrap">
                                       {LITURGICAL_TEXTS.vater_unser.standard.text}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Gloria hardkodiert */}
+                                {component.component_type === 'gloria' && (
+                                  <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                                    <h4 className="font-medium text-gray-700 mb-3">Gloria - Allein Gott in der Höh sei Ehr</h4>
+                                    <div className="text-sm text-gray-700 font-serif leading-relaxed whitespace-pre-wrap">
+                                      {LITURGICAL_TEXTS.gloria.standard.text}
                                     </div>
                                   </div>
                                 )}
@@ -1103,8 +1124,8 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                     <div className="flex items-center ml-4">
                       {/* Primary Actions - Always Visible */}
                       <div className="flex items-center space-x-1">
-                        {/* Expand Button - ausgeblendet für Kyrie und Gloria */}
-                        {!(component.component_type === 'kyrie' || component.component_type === 'gloria') && (
+                        {/* Expand Button - ausgeblendet für Kyrie und Vater Unser */}
+                        {!(component.component_type === 'kyrie' || component.component_type === 'vater_unser') && (
                           <button
                             type="button"
                             onClick={() => toggleComponentExpansion(index)}

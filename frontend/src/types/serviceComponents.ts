@@ -651,6 +651,26 @@ Amen.`,
       duration: 1
     }
   },
+  gloria: {
+    standard: {
+      title: 'Gloria - Allein Gott in der Höh sei Ehr',
+      text: `Allein Gott in der Höh sei Ehr
+und Dank für seine Gnade,
+darum dass nun und nimmermehr
+uns rühren kann kein Schade.
+Ein Wohlgefallen Gott an uns hat;
+nun ist groß Fried ohn Unterlass,
+all Fehd hat nun ein Ende.
+
+Wir loben, preisn, anbeten dich
+für deine Ehr; wir danken,
+dass du, Gott Vater, ewiglich
+regierst ohn alles Wanken.
+Ganz ungemessn ist deine Macht,
+fort g'schieht, was dein Will hat bedacht.
+Wohl uns des feinen Herren!`
+    }
+  },
   psalm: {
     psalm63: {
       title: 'Psalm 63 (Wechselgebet)',
