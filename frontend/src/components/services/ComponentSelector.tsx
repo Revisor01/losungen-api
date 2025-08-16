@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { PlusIcon, XMarkIcon } from '@heroicons/react/24/outline';
+import { PlusIcon, XMarkIcon, MagnifyingGlassIcon } from '@heroicons/react/24/outline';
 import { 
   ComponentType, 
   getComponentsByCategory, 
@@ -19,8 +19,21 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
   
   const categories = getComponentsByCategory();
+  
+  // Gefilterte Komponenten basierend auf Suchbegriff
+  const filteredComponents = useMemo(() => {
+    if (!selectedCategory || !searchTerm.trim()) {
+      return selectedCategory ? categories[selectedCategory] || [] : [];
+    }
+    
+    return categories[selectedCategory]?.filter(config =>
+      config.label.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      config.type.toLowerCase().includes(searchTerm.toLowerCase())
+    ) || [];
+  }, [categories, selectedCategory, searchTerm]);
   const categoryNames = {
     'sprechakte': '🎙️ Sprechakte',
     'gebete': '🙏 Gebete & Segen',
@@ -35,6 +48,7 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
     onSelectComponent(type);
     setIsOpen(false);
     setSelectedCategory(null);
+    setSearchTerm('');
   };
 
   return (
@@ -93,15 +107,32 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
                         {categoryNames[selectedCategory as keyof typeof categoryNames]}
                       </h3>
                       <button
-                        onClick={() => setSelectedCategory(null)}
+                        onClick={() => {
+                          setSelectedCategory(null);
+                          setSearchTerm('');
+                        }}
                         className="text-sm text-blue-600 hover:text-blue-700"
                       >
                         ← Zurück zu Kategorien
                       </button>
                     </div>
+
+                    {/* Suchfeld */}
+                    <div className="relative mb-4">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <MagnifyingGlassIcon className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        type="text"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        placeholder="Komponente suchen..."
+                      />
+                    </div>
                     
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {categories[selectedCategory]?.map((config: ComponentConfig) => {
+                      {(searchTerm.trim() ? filteredComponents : categories[selectedCategory])?.map((config: ComponentConfig) => {
                         const isUsed = existingComponents.includes(config.type);
                         return (
                           <motion.button
@@ -110,25 +141,25 @@ export const ComponentSelector: React.FC<ComponentSelectorProps> = ({
                             whileTap={{ scale: 0.98 }}
                             onClick={() => handleSelectComponent(config.type)}
                             disabled={isUsed}
-                            className={`p-4 rounded-lg border-2 text-left transition-all ${
+                            className={`p-4 rounded-lg border-2 text-left transition-all overflow-hidden ${
                               isUsed 
                                 ? 'border-gray-200 bg-gray-50 opacity-50 cursor-not-allowed'
                                 : `${config.borderColor} ${config.bgColor} hover:shadow-md`
                             }`}
                           >
-                            <div className="flex items-center space-x-3">
-                              <span className="text-2xl">{config.icon}</span>
-                              <div>
-                                <h4 className={`font-semibold ${config.textColor}`}>
+                            <div className="flex items-center space-x-3 min-w-0">
+                              <span className="text-2xl flex-shrink-0">{config.icon}</span>
+                              <div className="min-w-0 flex-1">
+                                <h4 className={`font-semibold ${config.textColor} truncate`}>
                                   {config.label}
                                 </h4>
-                                <p className="text-xs text-gray-600 mt-1">
+                                <p className="text-xs text-gray-600 mt-1 line-clamp-2">
                                   {config.hasText && 'Text-Eingabe'}
                                   {config.hasNumber && 'Nummer/Referenz'}
                                   {config.defaultDuration && ` • ${config.defaultDuration} Min`}
                                 </p>
                                 {isUsed && (
-                                  <p className="text-xs text-gray-500 mt-1">
+                                  <p className="text-xs text-gray-500 mt-1 truncate">
                                     Bereits hinzugefügt
                                   </p>
                                 )}

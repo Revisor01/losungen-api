@@ -11,7 +11,8 @@ import {
   ComponentType, 
   getComponentConfig, 
   calculateDuration, 
-  formatDuration 
+  formatDuration,
+  LITURGICAL_TEXTS
 } from '../../types/serviceComponents';
 
 interface ServiceComponentData {
@@ -258,6 +259,36 @@ export const ServiceComponent: React.FC<ServiceComponentProps> = ({
                   min="1"
                 />
               </div>
+            </div>
+          )}
+
+          {/* Liturgische Text-Auswahl */}
+          {config.hasText && (config.type === 'glaubensbekenntnis' || config.type === 'vater_unser' || config.type === 'segen') && (
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Text-Vorlage wählen
+              </label>
+              <select
+                onChange={(e) => {
+                  const selectedKey = e.target.value;
+                  if (selectedKey && LITURGICAL_TEXTS[config.type as keyof typeof LITURGICAL_TEXTS]) {
+                    const categoryTexts = LITURGICAL_TEXTS[config.type as keyof typeof LITURGICAL_TEXTS];
+                    const selectedText = (categoryTexts as any)[selectedKey];
+                    if (selectedText) {
+                      updateField('content', selectedText.text);
+                      updateField('duration_minutes', selectedText.duration);
+                    }
+                  }
+                }}
+                className="input-field mb-3"
+              >
+                <option value="">-- Text-Vorlage wählen --</option>
+                {LITURGICAL_TEXTS[config.type as keyof typeof LITURGICAL_TEXTS] && Object.entries(LITURGICAL_TEXTS[config.type as keyof typeof LITURGICAL_TEXTS]).map(([key, template]) => (
+                  <option key={key} value={key}>
+                    {(template as any).title} ({(template as any).duration} Min)
+                  </option>
+                ))}
+              </select>
             </div>
           )}
 
