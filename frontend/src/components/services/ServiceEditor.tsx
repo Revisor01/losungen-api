@@ -23,7 +23,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { apiService } from '../../services/api';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorMessage } from '../ui/ErrorMessage';
-import { COMPONENT_CONFIGS, getComponentsByCategory, ComponentType } from '../../types/serviceComponents';
+import { COMPONENT_CONFIGS, getComponentsByCategory, ComponentType, LITURGICAL_TEXTS } from '../../types/serviceComponents';
 
 interface ServiceComponent {
   id?: number;
@@ -603,13 +603,16 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                             type="text"
                             value={component.title}
                             onChange={(e) => updateComponent(index, { title: e.target.value })}
-                            className="font-heading text-lg font-semibold text-gray-900 bg-transparent focus:outline-none focus:bg-gray-50 px-2 py-1 rounded w-full border-0"
+                            className="font-heading text-lg font-semibold text-gray-900 bg-transparent focus:outline-none focus:bg-gray-50 px-2 py-1 rounded border-0 flex-1 min-w-0"
                           />
                           <div className="flex items-center space-x-3">
                             <div className="flex items-center space-x-2">
                               <ClockIcon className="w-4 h-4 text-gray-400" />
-                              {/* Kalkulierte Zeit VOR manueller Zeit */}
+                              {/* Zeit-Anzeige: Berechnete + Manuelle Zeit */}
                               {(() => {
+                                let calculatedTime = '';
+                                let hasCalculation = false;
+                                
                                 // Für Predigt-Komponenten: Content + Bibeltext addieren
                                 if (component.component_type === 'predigt' && (component.content || component.bible_text)) {
                                   let totalSeconds = 0;
@@ -635,12 +638,8 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                   if (totalSeconds > 0) {
                                     const minutes = Math.floor(totalSeconds / 60);
                                     const seconds = totalSeconds % 60;
-                                    const formatted = seconds > 0 ? `${minutes}:${seconds.toString().padStart(2, '0')}` : `${minutes}:00`;
-                                    return (
-                                      <span className="text-sm font-semibold text-purple-600 mr-2" title="Berechnete Zeit für Predigt + Predigttext">
-                                        {formatted}
-                                      </span>
-                                    );
+                                    calculatedTime = seconds > 0 ? `${minutes}:${seconds.toString().padStart(2, '0')}` : `${minutes}:00`;
+                                    hasCalculation = true;
                                   }
                                 }
                                 // Für Bibel-Komponenten (außer Psalm und Predigt)
@@ -648,27 +647,56 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                   try {
                                     const bibleData = JSON.parse(component.bible_text);
                                     const plainText = bibleData.text || (bibleData.verses?.map((v: any) => v.text).join(' ') || '');
-                                    const textDuration = calculateTextDurationFormatted(plainText);
-                                    return (
-                                      <span className="text-sm font-semibold text-blue-600 mr-2" title="Berechnete Zeit für Bibeltext">
-                                        {textDuration}
-                                      </span>
-                                    );
+                                    calculatedTime = calculateTextDurationFormatted(plainText);
+                                    hasCalculation = calculatedTime !== '0:00';
                                   } catch (error) {
                                     // Fallback zu content
                                   }
                                 }
                                 // Für alle anderen Text-Komponenten
                                 else if (component.content && config?.hasText) {
-                                  const textDuration = calculateTextDurationFormatted(component.content);
-                                  if (textDuration !== '0:00') {
+                                  calculatedTime = calculateTextDurationFormatted(component.content);
+                                  hasCalculation = calculatedTime !== '0:00';
+                                }
+                                
+                                // Anzeige je nach Komponententyp
+                                if (component.component_type === 'lied') {
+                                  // Lieder: Manuelle + berechnete Zeit
+                                  const manual = component.duration_minutes || 0;
+                                  if (hasCalculation && calculatedTime) {
                                     return (
-                                      <span className="text-sm font-semibold text-green-600 mr-2" title="Berechnete Sprechdauer">
-                                        {textDuration}
+                                      <span className="text-sm font-semibold text-purple-600 mr-2" title="Berechnete + Manuelle Zeit">
+                                        {calculatedTime} + {manual} Min
+                                      </span>
+                                    );
+                                  } else if (manual > 0) {
+                                    return (
+                                      <span className="text-sm font-semibold text-purple-600 mr-2" title="Manuelle Zeit">
+                                        + {manual} Min
+                                      </span>
+                                    );
+                                  }
+                                } else if (hasCalculation) {
+                                  // Komponenten mit Berechnung: Nur berechnete Zeit anzeigen
+                                  const colorClass = component.component_type === 'predigt' ? 'text-purple-600' : 
+                                                   component.bible_text ? 'text-blue-600' : 'text-green-600';
+                                  return (
+                                    <span className={`text-sm font-semibold ${colorClass} mr-2`} title="Berechnete Sprechdauer">
+                                      {calculatedTime}
+                                    </span>
+                                  );
+                                } else {
+                                  // Komponenten ohne Berechnung: + XX Min für manuelle Zeit
+                                  const manual = component.duration_minutes || 0;
+                                  if (manual > 0) {
+                                    return (
+                                      <span className="text-sm font-semibold text-gray-600 mr-2" title="Manuelle Zeit">
+                                        + {manual} Min
                                       </span>
                                     );
                                   }
                                 }
+                                
                                 return null;
                               })()}
                               <input
@@ -693,7 +721,17 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                 </label>
                                 <textarea
                                   value={component.hymn_number || ''}
-                                  onChange={(e) => updateComponent(index, { hymn_number: e.target.value })}
+                                  onChange={(e) => {
+                                    const value = e.target.value;
+                                    const updates: Partial<ServiceComponent> = { hymn_number: value };
+                                    
+                                    // Auto-Titel für Lieder: EG 324, 1-3 Format
+                                    if (value && value.match(/^(EG|HELM|GL|F&L)\s*\d+/i)) {
+                                      updates.title = value;
+                                    }
+                                    
+                                    updateComponent(index, updates);
+                                  }}
                                   placeholder="z.B. EG 324, 1-3: Ich singe dir mit Herz und Mund"
                                   className="input-field text-sm resize-none min-h-[100px] font-sans"
                                   rows={4}
@@ -734,7 +772,29 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                   <input
                                     type="text"
                                     value={component.bible_reference || ''}
-                                    onChange={(e) => updateComponent(index, { bible_reference: e.target.value })}
+                                    onChange={(e) => {
+                                      const value = e.target.value;
+                                      const updates: Partial<ServiceComponent> = { bible_reference: value };
+                                      
+                                      // Auto-Titel für Bibelstellen basierend auf Komponententyp
+                                      if (value) {
+                                        if (component.component_type === 'psalm') {
+                                          updates.title = `Psalm ${value}`;
+                                        } else if (component.component_type === 'predigttext') {
+                                          updates.title = `Predigttext: ${value}`;
+                                        } else if (component.component_type === 'evangelium') {
+                                          updates.title = `Evangelium: ${value}`;
+                                        } else if (component.component_type === 'epistel') {
+                                          updates.title = `Epistel: ${value}`;
+                                        } else if (component.component_type === 'altes_testament') {
+                                          updates.title = `AT: ${value}`;
+                                        } else {
+                                          updates.title = value;
+                                        }
+                                      }
+                                      
+                                      updateComponent(index, updates);
+                                    }}
                                     placeholder="z.B. Johannes 3,16"
                                     className="input-field text-sm font-sans flex-1"
                                   />
@@ -947,26 +1007,93 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                     </button>
                                   </div>
                                 </div>
-                                <textarea
-                                  id={`editor-${index}`}
-                                  value={component.content || ''}
-                                  onChange={(e) => {
-                                    updateComponentWithAutoDuration(index, { content: e.target.value });
-                                  }}
-                                  className="input-field text-sm font-sans border border-gray-300 rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                                  style={{ 
-                                    minHeight: component.component_type === 'predigt' ? '400px' : '200px',
-                                    height: 'auto',
-                                    fontFamily: 'system-ui, -apple-system, sans-serif'
-                                  }}
-                                  rows={component.component_type === 'predigt' ? 20 : 8}
-                                  onInput={(e) => {
-                                    // Auto-resize basierend auf Inhalt
-                                    const target = e.target as HTMLTextAreaElement;
-                                    target.style.height = 'auto';
-                                    target.style.height = `${Math.max(target.scrollHeight, component.component_type === 'predigt' ? 400 : 200)}px`;
-                                  }}
-                                />
+                                {/* Liturgische Text-Auswahl */}
+                                {(component.component_type === 'glaubensbekenntnis' || component.component_type === 'segen') && (
+                                  <div className="mb-4">
+                                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                                      Text-Vorlage wählen
+                                    </label>
+                                    <select
+                                      onChange={(e) => {
+                                        const selectedKey = e.target.value;
+                                        if (selectedKey && LITURGICAL_TEXTS[component.component_type as keyof typeof LITURGICAL_TEXTS]) {
+                                          const categoryTexts = LITURGICAL_TEXTS[component.component_type as keyof typeof LITURGICAL_TEXTS];
+                                          const selectedText = (categoryTexts as any)[selectedKey];
+                                          if (selectedText) {
+                                            updateComponent(index, { 
+                                              content: selectedText.text,
+                                              duration_minutes: selectedText.duration,
+                                              title: selectedText.title
+                                            });
+                                          }
+                                        }
+                                      }}
+                                      className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                                      defaultValue=""
+                                    >
+                                      <option value="">-- Text-Vorlage wählen --</option>
+                                      {LITURGICAL_TEXTS[component.component_type as keyof typeof LITURGICAL_TEXTS] && Object.entries(LITURGICAL_TEXTS[component.component_type as keyof typeof LITURGICAL_TEXTS]).map(([key, template]) => (
+                                        <option key={key} value={key}>
+                                          {(template as any).title} ({(template as any).duration} Min)
+                                        </option>
+                                      ))}
+                                    </select>
+                                  </div>
+                                )}
+                                
+                                {/* Vater Unser hardkodiert */}
+                                {component.component_type === 'vater_unser' && (
+                                  <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                                    <h4 className="font-medium text-gray-700 mb-3">Vater Unser</h4>
+                                    <div className="text-sm text-gray-700 font-serif leading-relaxed whitespace-pre-wrap">
+                                      {LITURGICAL_TEXTS.vater_unser.standard.text}
+                                    </div>
+                                    <div className="mt-3 text-xs text-gray-500">
+                                      Dauer: {LITURGICAL_TEXTS.vater_unser.standard.duration} Min
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Ausgewählter liturgischer Text anzeigen (read-only) */}
+                                {(component.component_type === 'glaubensbekenntnis' || component.component_type === 'segen') && component.content && (
+                                  <div className="bg-gray-50 p-4 rounded-lg mb-4">
+                                    <h4 className="font-medium text-gray-700 mb-3">{component.title || 'Ausgewählter Text'}</h4>
+                                    <div className="text-sm text-gray-700 font-serif leading-relaxed whitespace-pre-wrap">
+                                      {component.content}
+                                    </div>
+                                    <div className="mt-3 text-xs text-gray-500">
+                                      Dauer: {component.duration_minutes} Min
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                {/* Normale Textarea für andere Komponenten */}
+                                {!(component.component_type === 'vater_unser' || 
+                                   component.component_type === 'glaubensbekenntnis' || 
+                                   component.component_type === 'segen' ||
+                                   component.component_type === 'kyrie' ||
+                                   component.component_type === 'gloria') && (
+                                  <textarea
+                                    id={`editor-${index}`}
+                                    value={component.content || ''}
+                                    onChange={(e) => {
+                                      updateComponentWithAutoDuration(index, { content: e.target.value });
+                                    }}
+                                    className="input-field text-sm font-sans border border-gray-300 rounded p-3 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                                    style={{ 
+                                      minHeight: component.component_type === 'predigt' ? '400px' : '200px',
+                                      height: 'auto',
+                                      fontFamily: 'system-ui, -apple-system, sans-serif'
+                                    }}
+                                    rows={component.component_type === 'predigt' ? 20 : 8}
+                                    onInput={(e) => {
+                                      // Auto-resize basierend auf Inhalt
+                                      const target = e.target as HTMLTextAreaElement;
+                                      target.style.height = 'auto';
+                                      target.style.height = `${Math.max(target.scrollHeight, component.component_type === 'predigt' ? 400 : 200)}px`;
+                                    }}
+                                  />
+                                )}
                                 <div className="mt-2 flex justify-between text-xs text-gray-500">
                                   <span>
                                     {(component.content || '').length} Zeichen, {(component.content || '').trim().split(/\s+/).filter(w => w.length > 0).length} Wörter
@@ -992,18 +1119,21 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                     <div className="flex items-center ml-4">
                       {/* Primary Actions - Always Visible */}
                       <div className="flex items-center space-x-1">
-                        <button
-                          type="button"
-                          onClick={() => toggleComponentExpansion(index)}
-                          className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-all duration-200 hover:scale-105" 
-                          title={expandedComponents.has(index) ? "Einklappen" : "Ausklappen"}
-                        >
-                          {expandedComponents.has(index) ? (
-                            <ChevronUpIcon className="w-5 h-5" />
-                          ) : (
-                            <ChevronDownIcon className="w-5 h-5" />
-                          )}
-                        </button>
+                        {/* Expand Button - ausgeblendet für Kyrie und Gloria */}
+                        {!(component.component_type === 'kyrie' || component.component_type === 'gloria') && (
+                          <button
+                            type="button"
+                            onClick={() => toggleComponentExpansion(index)}
+                            className="p-2 hover:bg-gray-100 rounded-lg text-gray-600 transition-all duration-200 hover:scale-105" 
+                            title={expandedComponents.has(index) ? "Einklappen" : "Ausklappen"}
+                          >
+                            {expandedComponents.has(index) ? (
+                              <ChevronUpIcon className="w-5 h-5" />
+                            ) : (
+                              <ChevronDownIcon className="w-5 h-5" />
+                            )}
+                          </button>
+                        )}
                         
                         {/* Quick Delete - Always visible for efficiency */}
                         <button
