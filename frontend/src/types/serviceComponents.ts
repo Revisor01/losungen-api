@@ -525,42 +525,198 @@ export const LITURGICAL_TEXTS = {
   glaubensbekenntnis: {
     apostolisch: {
       title: 'Apostolisches Glaubensbekenntnis',
-      text: 'Ich glaube an Gott, den Vater, den Allmächtigen, den Schöpfer des Himmels und der Erde. Und an Jesus Christus, seinen eingeborenen Sohn, unsern Herrn, empfangen durch den Heiligen Geist, geboren von der Jungfrau Maria, gelitten unter Pontius Pilatus, gekreuzigt, gestorben und begraben, hinabgestiegen in das Reich des Todes, am dritten Tage auferstanden von den Toten, aufgefahren in den Himmel; er sitzt zur Rechten Gottes, des allmächtigen Vaters; von dort wird er kommen, zu richten die Lebenden und die Toten. Ich glaube an den Heiligen Geist, die heilige christliche Kirche, Gemeinschaft der Heiligen, Vergebung der Sünden, Auferstehung der Toten und das ewige Leben. Amen.',
+      text: `Ich glaube an Gott, den Vater,
+den Allmächtigen,
+den Schöpfer des Himmels und der Erde.
+
+Und an Jesus Christus,
+seinen eingeborenen Sohn, unsern Herrn,
+empfangen durch den Heiligen Geist,
+geboren von der Jungfrau Maria,
+gelitten unter Pontius Pilatus,
+gekreuzigt, gestorben und begraben,
+hinabgestiegen in das Reich des Todes,
+am dritten Tage auferstanden von den Toten,
+aufgefahren in den Himmel;
+er sitzt zur Rechten Gottes, des allmächtigen Vaters;
+von dort wird er kommen,
+zu richten die Lebenden und die Toten.
+
+Ich glaube an den Heiligen Geist,
+die heilige christliche Kirche,
+Gemeinschaft der Heiligen,
+Vergebung der Sünden,
+Auferstehung der Toten
+und das ewige Leben.
+Amen.`,
       duration: 3
     },
     taufe: {
       title: 'Glaubensbekenntnis für Taufen',
-      text: 'Ich glaube an Gott. Gott liebt uns wie ein Vater und eine Mutter, Er hat uns und alles in der Welt geschaffen. Wir vertrauen darauf, dass er immer und überall für uns da ist. Ich glaube an Jesus Christus, den Sohn Gottes. Sein Leben ist Vorbild für alle. Durch sein Leiden und Sterben ist er uns auch in dunklen Zeiten nah. Seine Auferstehung gibt Hoffnung, dass es in unserem Leben immer wieder hell wird. Ich glaube an die Heilige Geistkraft, Gottes Kraft in uns. Sie führt uns auf gute Wege, schenkt Vergebung und verbindet uns zu einer großen Gemeinschaft. Amen.',
+      text: `Ich glaube an Gott.
+Gott liebt uns wie ein Vater und eine Mutter,
+Er hat uns und alles in der Welt geschaffen.
+Wir vertrauen darauf, dass er immer und überall für uns da ist.
+
+Ich glaube an Jesus Christus, den Sohn Gottes.
+Sein Leben ist Vorbild für alle.
+Durch sein Leiden und Sterben ist er uns auch in dunklen Zeiten nah.
+Seine Auferstehung gibt Hoffnung,
+dass es in unserem Leben immer wieder hell wird.
+
+Ich glaube an die Heilige Geistkraft,
+Gottes Kraft in uns.
+Sie führt uns auf gute Wege,
+schenkt Vergebung
+und verbindet uns zu einer großen Gemeinschaft.
+Amen.`,
       duration: 3
     },
     nizaenisch: {
       title: 'Nizänisches Glaubensbekenntnis',
-      text: 'Wir glauben an den einen Gott, den Vater, den Allmächtigen, der alles geschaffen hat, Himmel und Erde, die sichtbare und die unsichtbare Welt. Und an den einen Herrn Jesus Christus, Gottes eingeborenen Sohn, aus dem Vater geboren vor aller Zeit...',
+      text: `Wir glauben an den einen Gott,
+den Vater, den Allmächtigen,
+der alles geschaffen hat,
+Himmel und Erde,
+die sichtbare und die unsichtbare Welt.
+
+Und an den einen Herrn Jesus Christus,
+Gottes eingeborenen Sohn,
+aus dem Vater geboren vor aller Zeit,
+Gott von Gott, Licht vom Licht,
+wahrer Gott vom wahren Gott,
+gezeugt, nicht geschaffen,
+eines Wesens mit dem Vater;
+durch ihn ist alles geschaffen.
+Amen.`,
       duration: 4
     }
   },
   vater_unser: {
     standard: {
       title: 'Vater Unser',
-      text: 'Vater unser im Himmel, geheiligt werde dein Name. Dein Reich komme. Dein Wille geschehe, wie im Himmel so auf Erden. Unser tägliches Brot gib uns heute. Und vergib uns unsere Schuld, wie auch wir vergeben unsern Schuldigern. Und führe uns nicht in Versuchung, sondern erlöse uns von dem Bösen. Denn dein ist das Reich und die Kraft und die Herrlichkeit in Ewigkeit. Amen.',
+      text: `Vater unser im Himmel,
+geheiligt werde dein Name.
+Dein Reich komme.
+Dein Wille geschehe,
+wie im Himmel so auf Erden.
+Unser tägliches Brot gib uns heute.
+Und vergib uns unsere Schuld,
+wie auch wir vergeben unsern Schuldigern.
+Und führe uns nicht in Versuchung,
+sondern erlöse uns von dem Bösen.
+Denn dein ist das Reich
+und die Kraft
+und die Herrlichkeit
+in Ewigkeit.
+Amen.`,
       duration: 2
     },
     gesungen: {
       title: 'Vater Unser (gesungen)',
-      text: 'Vater unser im Himmel, geheiligt werde dein Name. Dein Reich komme. Dein Wille geschehe, wie im Himmel so auf Erden. Unser tägliches Brot gib uns heute. Und vergib uns unsere Schuld, wie auch wir vergeben unsern Schuldigern. Und führe uns nicht in Versuchung, sondern erlöse uns von dem Bösen. Denn dein ist das Reich und die Kraft und die Herrlichkeit in Ewigkeit. Amen.',
+      text: `Vater unser im Himmel,
+geheiligt werde dein Name.
+Dein Reich komme.
+Dein Wille geschehe,
+wie im Himmel so auf Erden.
+Unser tägliches Brot gib uns heute.
+Und vergib uns unsere Schuld,
+wie auch wir vergeben unsern Schuldigern.
+Und führe uns nicht in Versuchung,
+sondern erlöse uns von dem Bösen.
+Denn dein ist das Reich
+und die Kraft
+und die Herrlichkeit
+in Ewigkeit.
+Amen.`,
       duration: 3
     }
   },
   segen: {
     aaronitisch: {
       title: 'Aaronitischer Segen',
-      text: 'Der Herr segne dich und behüte dich. Der Herr lasse leuchten sein Angesicht über dir und sei dir gnädig. Der Herr erhebe sein Angesicht auf dich und schenke dir seinen Frieden. Amen.',
+      text: `Der Herr segne dich und behüte dich.
+
+Der Herr lasse leuchten sein Angesicht über dir
+und sei dir gnädig.
+
+Der Herr erhebe sein Angesicht auf dich
+und schenke dir seinen Frieden.
+
+Amen.`,
       duration: 2
     },
     trinitarisch: {
       title: 'Trinitarischer Segen',
-      text: 'Es segne euch der allmächtige Gott, der Vater und der Sohn und der Heilige Geist. Amen.',
+      text: `Es segne euch der allmächtige Gott,
+der Vater und der Sohn
+und der Heilige Geist.
+
+Amen.`,
       duration: 1
+    }
+  },
+  psalm: {
+    psalm63: {
+      title: 'Psalm 63 (Wechselgebet)',
+      text: `Gott, du bist mein Gott, den ich suche.
+
+Es dürstet meine Seele nach dir,
+
+mein ganzer Mensch verlangt nach dir
+aus trockenem, dürrem Land, wo kein Wasser ist.
+
+So schaue ich aus nach dir in deinem Heiligtum,
+wollte gerne sehen deine Macht und Herrlichkeit.
+
+Denn deine Güte ist besser als Leben;
+meine Lippen preisen dich.
+
+So will ich dich loben mein Leben lang
+und meine Hände in deinem Namen aufheben.
+
+Das ist meines Herzens Freude und Wonne,
+wenn ich dich mit fröhlichem Munde loben kann;
+
+wenn ich mich zu Bette lege, so denke ich an dich,
+wenn ich wach liege, sinne ich über dich nach.
+
+Denn du bist mein Helfer,
+und unter dem Schatten deiner Flügel frohlocke ich.
+
+Meine Seele hängt an dir;
+deine rechte Hand hält mich.`,
+      duration: 4
+    },
+    psalm23: {
+      title: 'Psalm 23 (Wechselgebet)',
+      text: `Der Herr ist mein Hirte,
+mir wird nichts mangeln.
+
+Er weidet mich auf einer grünen Aue
+und führet mich zum frischen Wasser.
+
+Er erquicket meine Seele.
+Er führet mich auf rechter Straße
+um seines Namens willen.
+
+Und ob ich schon wanderte
+im finstern Tal,
+fürchte ich kein Unglück;
+
+denn du bist bei mir,
+dein Stecken und Stab trösten mich.
+
+Du bereitest vor mir einen Tisch
+im Angesicht meiner Feinde.
+Du salbest mein Haupt mit Öl
+und schenkest mir voll ein.
+
+Gutes und Barmherzigkeit
+werden mir folgen mein Leben lang,
+und ich werde bleiben
+im Hause des Herrn immerdar.`,
+      duration: 3
     }
   }
 };
