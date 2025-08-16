@@ -314,51 +314,57 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
     return components.reduce((total, comp) => total + (comp.duration_minutes || 0), 0);
   };
 
-  // Berechne kalkulierte Gesamtzeit basierend auf Text-Inhalten
+  // Berechne kalkulierte Gesamtzeit: berechnete Zeit + nicht-berechnete Komponenten + Lieder
   const calculateTotalCalculatedDuration = () => {
-    let totalSeconds = 0;
+    let totalMinutes = 0;
     
     components.forEach(component => {
-      // Für Predigt-Komponenten: Content + Bibeltext addieren (ohne Doppelzählung)
-      if (component.component_type === 'predigt') {
-        // Content-Zeit
+      const config = COMPONENT_CONFIGS[component.component_type as ComponentType];
+      
+      // Für Predigt-Komponenten: Nur Content berechnen
+      if (component.component_type === 'predigt' && component.content) {
+        const wordCount = component.content.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
+        const predightSeconds = Math.round((wordCount / wordsPerMinute) * 60);
+        totalMinutes += Math.ceil(predightSeconds / 60);
+      }
+      // Für Lieder: Manuelle Zeit + eventuelle berechnete Zeit
+      else if (component.component_type === 'lied') {
+        let liedMinutes = component.duration_minutes || 0;
+        
+        // Falls Lied auch berechnete Zeit hat (falls Text vorhanden)
         if (component.content) {
           const wordCount = component.content.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
-          totalSeconds += Math.round((wordCount / wordsPerMinute) * 60);
+          const calculatedMinutes = Math.ceil((wordCount / wordsPerMinute) * 60 / 60);
+          liedMinutes += calculatedMinutes;
         }
-        // Bibeltext-Zeit
-        if (component.bible_text) {
-          try {
-            const bibleData = JSON.parse(component.bible_text);
-            const plainText = bibleData.text || (bibleData.verses?.map((v: any) => v.text).join(' ') || '');
-            const wordCount = plainText.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
-            totalSeconds += Math.round((wordCount / wordsPerMinute) * 60);
-          } catch (error) {
-            // Ignore parsing errors
-          }
-        }
+        
+        totalMinutes += liedMinutes;
       }
-      // Für Bibel-Komponenten (außer Psalm und Predigt)
-      else if (component.bible_text && component.component_type !== 'psalm') {
+      // Für Text-Komponenten mit Berechnung
+      else if (component.content && config?.hasText) {
+        const wordCount = component.content.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
+        totalMinutes += Math.ceil((wordCount / wordsPerMinute) * 60 / 60);
+      }
+      // Für Bibel-Komponenten mit Berechnung (außer Psalm und Predigt)
+      else if (component.bible_text && component.component_type !== 'psalm' && component.component_type !== 'predigt') {
         try {
           const bibleData = JSON.parse(component.bible_text);
           const plainText = bibleData.text || (bibleData.verses?.map((v: any) => v.text).join(' ') || '');
           const wordCount = plainText.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
-          totalSeconds += Math.round((wordCount / wordsPerMinute) * 60);
+          totalMinutes += Math.ceil((wordCount / wordsPerMinute) * 60 / 60);
         } catch (error) {
           // Fallback zu content
         }
       }
-      // Für alle anderen Text-Komponenten (außer Predigt - schon behandelt)
-      else if (component.content && component.component_type !== 'predigt') {
-        const wordCount = component.content.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
-        totalSeconds += Math.round((wordCount / wordsPerMinute) * 60);
+      // Für Komponenten ohne Berechnung (Kyrie, Gloria, etc.): Manuelle Zeit
+      else if (!config?.hasText && component.duration_minutes) {
+        totalMinutes += component.duration_minutes;
       }
     });
     
-    const minutes = Math.floor(totalSeconds / 60);
-    const seconds = totalSeconds % 60;
-    return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+    const hours = Math.floor(totalMinutes / 60);
+    const minutes = totalMinutes % 60;
+    return hours > 0 ? `${hours}:${minutes.toString().padStart(2, '0')}` : `${minutes}:00`;
   };
 
   if (loading) {
@@ -613,27 +619,10 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                 let calculatedTime = '';
                                 let hasCalculation = false;
                                 
-                                // Für Predigt-Komponenten: Content + Bibeltext addieren
-                                if (component.component_type === 'predigt' && (component.content || component.bible_text)) {
-                                  let totalSeconds = 0;
-                                  
-                                  // Zeit für Content berechnen
-                                  if (component.content) {
-                                    const wordCount = component.content.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
-                                    totalSeconds += Math.round((wordCount / wordsPerMinute) * 60);
-                                  }
-                                  
-                                  // Zeit für Bibeltext berechnen
-                                  if (component.bible_text) {
-                                    try {
-                                      const bibleData = JSON.parse(component.bible_text);
-                                      const plainText = bibleData.text || (bibleData.verses?.map((v: any) => v.text).join(' ') || '');
-                                      const wordCount = plainText.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
-                                      totalSeconds += Math.round((wordCount / wordsPerMinute) * 60);
-                                    } catch (error) {
-                                      // Ignore parsing errors
-                                    }
-                                  }
+                                // Für Predigt-Komponenten: Nur Content berechnen
+                                if (component.component_type === 'predigt' && component.content) {
+                                  const wordCount = component.content.trim().split(/\s+/).filter((w: string) => w.length > 0).length;
+                                  const totalSeconds = Math.round((wordCount / wordsPerMinute) * 60);
                                   
                                   if (totalSeconds > 0) {
                                     const minutes = Math.floor(totalSeconds / 60);
@@ -723,14 +712,14 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                   value={component.hymn_number || ''}
                                   onChange={(e) => {
                                     const value = e.target.value;
-                                    const updates: Partial<ServiceComponent> = { hymn_number: value };
-                                    
-                                    // Auto-Titel für Lieder: EG 324, 1-3 Format
+                                    updateComponent(index, { hymn_number: value });
+                                  }}
+                                  onBlur={(e) => {
+                                    const value = e.target.value;
+                                    // Auto-Titel für Lieder: EG 324, 1-3 Format - nur beim Verlassen des Feldes
                                     if (value && value.match(/^(EG|HELM|GL|F&L)\s*\d+/i)) {
-                                      updates.title = value;
+                                      updateComponent(index, { title: value });
                                     }
-                                    
-                                    updateComponent(index, updates);
                                   }}
                                   placeholder="z.B. EG 324, 1-3: Ich singe dir mit Herz und Mund"
                                   className="input-field text-sm resize-none min-h-[100px] font-sans"
@@ -746,8 +735,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                               component.component_type === 'altes_testament' || 
                               component.component_type === 'epistel' || 
                               component.component_type === 'evangelium' ||
-                              component.component_type === 'psalm' ||
-                              component.component_type === 'predigt') && (
+                              component.component_type === 'psalm') && (
                               <div>
                                 <div className="flex items-center justify-between mb-1">
                                   <label className="block text-sm font-medium text-gray-700">
@@ -774,26 +762,26 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                     value={component.bible_reference || ''}
                                     onChange={(e) => {
                                       const value = e.target.value;
-                                      const updates: Partial<ServiceComponent> = { bible_reference: value };
-                                      
-                                      // Auto-Titel für Bibelstellen basierend auf Komponententyp
+                                      updateComponent(index, { bible_reference: value });
+                                    }}
+                                    onBlur={(e) => {
+                                      const value = e.target.value;
+                                      // Auto-Titel für Bibelstellen basierend auf Komponententyp - nur beim Verlassen des Feldes
                                       if (value) {
+                                        let autoTitle = value;
                                         if (component.component_type === 'psalm') {
-                                          updates.title = `Psalm ${value}`;
+                                          autoTitle = `Psalm ${value}`;
                                         } else if (component.component_type === 'predigttext') {
-                                          updates.title = `Predigttext: ${value}`;
+                                          autoTitle = `Predigttext: ${value}`;
                                         } else if (component.component_type === 'evangelium') {
-                                          updates.title = `Evangelium: ${value}`;
+                                          autoTitle = `Evangelium: ${value}`;
                                         } else if (component.component_type === 'epistel') {
-                                          updates.title = `Epistel: ${value}`;
+                                          autoTitle = `Epistel: ${value}`;
                                         } else if (component.component_type === 'altes_testament') {
-                                          updates.title = `AT: ${value}`;
-                                        } else {
-                                          updates.title = value;
+                                          autoTitle = `AT: ${value}`;
                                         }
+                                        updateComponent(index, { title: autoTitle });
                                       }
-                                      
-                                      updateComponent(index, updates);
                                     }}
                                     placeholder="z.B. Johannes 3,16"
                                     className="input-field text-sm font-sans flex-1"
@@ -1022,7 +1010,6 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                           if (selectedText) {
                                             updateComponent(index, { 
                                               content: selectedText.text,
-                                              duration_minutes: selectedText.duration,
                                               title: selectedText.title
                                             });
                                           }
@@ -1034,7 +1021,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                       <option value="">-- Text-Vorlage wählen --</option>
                                       {LITURGICAL_TEXTS[component.component_type as keyof typeof LITURGICAL_TEXTS] && Object.entries(LITURGICAL_TEXTS[component.component_type as keyof typeof LITURGICAL_TEXTS]).map(([key, template]) => (
                                         <option key={key} value={key}>
-                                          {(template as any).title} ({(template as any).duration} Min)
+                                          {(template as any).title}
                                         </option>
                                       ))}
                                     </select>
@@ -1047,9 +1034,6 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                     <h4 className="font-medium text-gray-700 mb-3">Vater Unser</h4>
                                     <div className="text-sm text-gray-700 font-serif leading-relaxed whitespace-pre-wrap">
                                       {LITURGICAL_TEXTS.vater_unser.standard.text}
-                                    </div>
-                                    <div className="mt-3 text-xs text-gray-500">
-                                      Dauer: {LITURGICAL_TEXTS.vater_unser.standard.duration} Min
                                     </div>
                                   </div>
                                 )}
@@ -1294,20 +1278,6 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
 
           {/* Save Button - Regular positioned for shorter lists */}
           <div className="mt-6 flex justify-end">
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={saveComponents}
-              disabled={saving}
-              className="flex items-center space-x-2 px-6 py-3 bg-green-600 hover:bg-green-700 text-white font-medium rounded-lg transition-colors disabled:opacity-50"
-            >
-              {saving ? (
-                <LoadingSpinner size="sm" className="text-white" />
-              ) : (
-                <CheckIcon className="w-5 h-5" />
-              )}
-              <span>Änderungen speichern</span>
-            </motion.button>
           </div>
         </div>
       </div>

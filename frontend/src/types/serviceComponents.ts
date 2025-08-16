@@ -548,8 +548,7 @@ Gemeinschaft der Heiligen,
 Vergebung der Sünden,
 Auferstehung der Toten
 und das ewige Leben.
-Amen.`,
-      duration: 3
+Amen.`
     },
     taufe: {
       title: 'Glaubensbekenntnis für Taufen',
@@ -569,8 +568,7 @@ Gottes Kraft in uns.
 Sie führt uns auf gute Wege,
 schenkt Vergebung
 und verbindet uns zu einer großen Gemeinschaft.
-Amen.`,
-      duration: 3
+Amen.`
     },
     nizaenisch: {
       title: 'Nizänisches Glaubensbekenntnis',
@@ -588,8 +586,7 @@ wahrer Gott vom wahren Gott,
 gezeugt, nicht geschaffen,
 eines Wesens mit dem Vater;
 durch ihn ist alles geschaffen.
-Amen.`,
-      duration: 4
+Amen.`
     }
   },
   vater_unser: {
@@ -609,8 +606,7 @@ Denn dein ist das Reich
 und die Kraft
 und die Herrlichkeit
 in Ewigkeit.
-Amen.`,
-      duration: 2
+Amen.`
     },
     gesungen: {
       title: 'Vater Unser (gesungen)',
@@ -628,8 +624,7 @@ Denn dein ist das Reich
 und die Kraft
 und die Herrlichkeit
 in Ewigkeit.
-Amen.`,
-      duration: 3
+Amen.`
     }
   },
   segen: {
