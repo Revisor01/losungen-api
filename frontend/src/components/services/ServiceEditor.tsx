@@ -614,12 +614,11 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                             type="text"
                             value={component.title}
                             onChange={(e) => {
-                              // Lokale State-Update ohne Autosave
+                              // Nur lokale State-Update ohne Autosave
                               const newComponents = [...components];
                               newComponents[index] = { ...newComponents[index], title: e.target.value };
                               setComponents(newComponents);
                             }}
-                            onBlur={(e) => updateComponent(index, { title: e.target.value })}
                             className="font-heading text-lg font-semibold text-gray-900 bg-transparent focus:outline-none focus:bg-gray-50 px-2 py-1 rounded border-0 flex-1 min-w-0"
                           />
                           <div className="flex items-center space-x-3">
@@ -1124,8 +1123,8 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                     <div className="flex items-center ml-4">
                       {/* Primary Actions - Always Visible */}
                       <div className="flex items-center space-x-1">
-                        {/* Expand Button - ausgeblendet für Kyrie und Vater Unser */}
-                        {!(component.component_type === 'kyrie' || component.component_type === 'vater_unser') && (
+                        {/* Expand Button - ausgeblendet für Kyrie und Ehr sei dem Vater */}
+                        {!(component.component_type === 'kyrie' || component.component_type === 'ehr_sei_dem_vater') && (
                           <button
                             type="button"
                             onClick={() => toggleComponentExpansion(index)}

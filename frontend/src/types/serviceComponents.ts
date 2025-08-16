@@ -208,7 +208,7 @@ export const COMPONENT_CONFIGS: Record<ComponentType, ComponentConfig> = {
     bgColor: 'bg-orange-50',
     borderColor: 'border-orange-200',
     textColor: 'text-orange-900',
-    hasText: false,
+    hasText: true,
     hasNumber: false,
     icon: '✨',
     category: 'liturgien',
