@@ -277,7 +277,7 @@ export const ServiceComponent: React.FC<ServiceComponentProps> = ({
           )}
 
           {/* Liturgische Text-Auswahl */}
-          {config.hasText && (config.type === 'glaubensbekenntnis' || config.type === 'vater_unser' || config.type === 'segen') && (
+          {config.hasText && (config.type === 'glaubensbekenntnis' || config.type === 'vater_unser' || config.type === 'segen' || config.type === 'psalm') && (
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Text-Vorlage wählen
@@ -307,21 +307,21 @@ export const ServiceComponent: React.FC<ServiceComponentProps> = ({
             </div>
           )}
           
-          {/* Hardkodierter Vater Unser Text ohne Auswahl */}
+          {/* Hardkodierter Vater Unser Text */}
           {config.type === 'vater_unser' && (
             <div className="bg-gray-50 p-4 rounded-lg">
-              <h4 className="font-medium text-gray-700 mb-2">Vater Unser</h4>
+              <h4 className="font-medium text-gray-700 mb-2">{localComponent.content ? 'Ausgewählter Text:' : 'Vater Unser (Standard)'}</h4>
               <div className="text-sm text-gray-600 font-serif leading-relaxed whitespace-pre-wrap">
-                {LITURGICAL_TEXTS.vater_unser.standard.text}
+                {localComponent.content || LITURGICAL_TEXTS.vater_unser.standard.text}
               </div>
               <div className="mt-2 text-xs text-gray-500">
-                Dauer: {LITURGICAL_TEXTS.vater_unser.standard.duration} Min
+                Dauer: {localComponent.duration_minutes || LITURGICAL_TEXTS.vater_unser.standard.duration} Min
               </div>
             </div>
           )}
 
           {/* Text-Inhalt */}
-          {config.hasText && (
+          {config.hasText && !(config.type === 'vater_unser') && (
             <div>
               <div className="flex items-center justify-between mb-1">
                 <label className="block text-sm font-medium text-gray-700">
