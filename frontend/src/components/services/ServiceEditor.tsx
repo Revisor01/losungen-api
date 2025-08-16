@@ -79,6 +79,7 @@ export const ServiceEditor: React.FC = () => {
     const saved = localStorage.getItem('wordsPerMinute');
     return saved ? parseInt(saved) : 110;
   });
+  const [componentSearchTerm, setComponentSearchTerm] = useState('');
 
   useEffect(() => {
     if (serviceId) {
@@ -1076,35 +1077,67 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                     <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
                       <div className="bg-white border border-gray-200 rounded-xl shadow-xl p-4 w-80 max-h-96 overflow-y-auto">
                         <h4 className="font-medium text-gray-900 mb-3">Komponente hinzufügen</h4>
+                        
+                        {/* Suchfeld */}
+                        <div className="relative mb-3">
+                          <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                            </svg>
+                          </div>
+                          <input
+                            type="text"
+                            value={componentSearchTerm}
+                            onChange={(e) => setComponentSearchTerm(e.target.value)}
+                            className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+                            placeholder="Komponente suchen..."
+                          />
+                        </div>
+                        
                         {(() => {
                           const categories = getComponentsByCategory();
-                          return Object.entries(categories).map(([categoryName, configs]) => (
-                            <div key={categoryName} className="mb-4 last:mb-0">
-                              <h5 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
-                                {categoryName === 'sprechakte' && 'Sprechakte'}
-                                {categoryName === 'gebete' && 'Gebete & Segen'}
-                                {categoryName === 'lieder' && 'Lieder'}
-                                {categoryName === 'liturgien' && 'Liturgien'}
-                                {categoryName === 'bibellesungen' && 'Bibellesungen'}
-                                {categoryName === 'predigt' && 'Predigt'}
-                                {categoryName === 'sakramente' && 'Sakramente'}
-                                {categoryName === 'kasualien' && 'Kasualien'}
-                                {categoryName === 'frei' && 'Freie Komponenten'}
-                              </h5>
-                              <div className="grid grid-cols-2 gap-1">
-                                {configs.map(config => (
-                                  <button
-                                    key={config.type}
-                                    onClick={() => addComponent(config.type)}
-                                    className={`flex items-center space-x-2 p-2 ${config.bgColor} hover:bg-${config.color}-200 ${config.textColor} rounded-lg transition-colors text-xs`}
-                                  >
-                                    <span>{config.icon}</span>
-                                    <span>{config.label}</span>
-                                  </button>
-                                ))}
+                          const searchTerm = componentSearchTerm.toLowerCase();
+                          
+                          return Object.entries(categories).map(([categoryName, configs]) => {
+                            // Filtere Komponenten basierend auf Suchbegriff
+                            const filteredConfigs = searchTerm 
+                              ? configs.filter(config => 
+                                  config.label.toLowerCase().includes(searchTerm) ||
+                                  config.type.toLowerCase().includes(searchTerm)
+                                )
+                              : configs;
+                            
+                            // Zeige Kategorie nur wenn es gefilterte Komponenten gibt
+                            if (filteredConfigs.length === 0) return null;
+                            
+                            return (
+                              <div key={categoryName} className="mb-4 last:mb-0">
+                                <h5 className="text-xs font-semibold text-gray-600 uppercase tracking-wide mb-2">
+                                  {categoryName === 'sprechakte' && 'Sprechakte'}
+                                  {categoryName === 'gebete' && 'Gebete & Segen'}
+                                  {categoryName === 'lieder' && 'Lieder'}
+                                  {categoryName === 'liturgien' && 'Liturgien'}
+                                  {categoryName === 'bibellesungen' && 'Bibellesungen'}
+                                  {categoryName === 'predigt' && 'Predigt'}
+                                  {categoryName === 'sakramente' && 'Sakramente'}
+                                  {categoryName === 'kasualien' && 'Kasualien'}
+                                  {categoryName === 'frei' && 'Freie Komponenten'}
+                                </h5>
+                                <div className="grid grid-cols-2 gap-1">
+                                  {filteredConfigs.map(config => (
+                                    <button
+                                      key={config.type}
+                                      onClick={() => addComponent(config.type)}
+                                      className={`flex items-center space-x-2 p-2 ${config.bgColor} hover:bg-${config.color}-200 ${config.textColor} rounded-lg transition-colors text-xs truncate`}
+                                    >
+                                      <span className="flex-shrink-0">{config.icon}</span>
+                                      <span className="truncate">{config.label}</span>
+                                    </button>
+                                  ))}
+                                </div>
                               </div>
-                            </div>
-                          ));
+                            );
+                          });
                         })()}
                       </div>
                     </div>
