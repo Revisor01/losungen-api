@@ -3,14 +3,15 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { apiService } from '../../services/api';
 import { LoadingSpinner } from '../ui/LoadingSpinner';
 import { ErrorMessage } from '../ui/ErrorMessage';
-import { COMPONENT_CONFIGS, ComponentType } from '../../types/serviceComponents';
+import { COMPONENT_CONFIGS, ComponentType, LITURGICAL_TEXTS } from '../../types/serviceComponents';
 import { 
   ArrowLeftIcon, 
   ChevronLeftIcon, 
   ChevronRightIcon,
   PlayIcon,
   PauseIcon,
-  ClockIcon
+  ClockIcon,
+  QueueListIcon
 } from '@heroicons/react/24/outline';
 
 interface ServiceComponent {
@@ -46,6 +47,7 @@ export const ServiceCelebration: React.FC = () => {
   const [isTimerRunning, setIsTimerRunning] = useState(false);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [componentStartTime, setComponentStartTime] = useState<number | null>(null);
+  const [viewMode, setViewMode] = useState<'single' | 'overview'>('single');
 
   useEffect(() => {
     loadService();
@@ -160,7 +162,60 @@ export const ServiceCelebration: React.FC = () => {
     }
   };
 
+  const renderLiturgicalContent = (component: ServiceComponent) => {
+    // Hardcodierte liturgische Texte anzeigen
+    if (component.component_type === 'vater_unser') {
+      return (
+        <div className="mt-6 bg-amber-50 border-l-4 border-amber-400 p-6 rounded-r-lg">
+          <h3 className="font-semibold text-amber-900 mb-4 text-lg">Vater Unser</h3>
+          <div className="text-amber-800 leading-relaxed text-lg whitespace-pre-wrap font-serif">
+            {LITURGICAL_TEXTS.vater_unser.standard.text}
+          </div>
+        </div>
+      );
+    }
+    
+    if (component.component_type === 'gloria') {
+      return (
+        <div className="mt-6 bg-orange-50 border-l-4 border-orange-400 p-6 rounded-r-lg">
+          <h3 className="font-semibold text-orange-900 mb-4 text-lg">Gloria</h3>
+          <div className="text-orange-800 leading-relaxed text-lg whitespace-pre-wrap font-serif">
+            {LITURGICAL_TEXTS.gloria.standard.text}
+          </div>
+        </div>
+      );
+    }
+
+    if (component.component_type === 'glaubensbekenntnis' && component.content) {
+      return (
+        <div className="mt-6 bg-orange-50 border-l-4 border-orange-400 p-6 rounded-r-lg">
+          <h3 className="font-semibold text-orange-900 mb-4 text-lg">Glaubensbekenntnis</h3>
+          <div className="text-orange-800 leading-relaxed text-lg whitespace-pre-wrap font-serif">
+            {component.content}
+          </div>
+        </div>
+      );
+    }
+
+    if (component.component_type === 'segen' && component.content) {
+      return (
+        <div className="mt-6 bg-green-50 border-l-4 border-green-400 p-6 rounded-r-lg">
+          <h3 className="font-semibold text-green-900 mb-4 text-lg">Segen</h3>
+          <div className="text-green-800 leading-relaxed text-lg whitespace-pre-wrap font-serif">
+            {component.content}
+          </div>
+        </div>
+      );
+    }
+    
+    return null;
+  };
+
   const renderContent = (component: ServiceComponent) => {
+    // Erst liturgische Texte prüfen
+    const liturgicalContent = renderLiturgicalContent(component);
+    if (liturgicalContent) return liturgicalContent;
+    
     if (!component.content) return null;
 
     // Format text with bold and italic
@@ -214,6 +269,23 @@ export const ServiceCelebration: React.FC = () => {
           </div>
         </div>
 
+        {/* View Mode Toggle */}
+        <div className="flex items-center space-x-4">
+          <button
+            onClick={() => setViewMode(viewMode === 'single' ? 'overview' : 'single')}
+            className={`flex items-center space-x-2 px-3 py-2 rounded-lg transition-colors ${
+              viewMode === 'overview' 
+                ? 'bg-blue-100 text-blue-700' 
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+            }`}
+          >
+            <QueueListIcon className="w-4 h-4" />
+            <span className="text-sm font-medium">
+              {viewMode === 'single' ? 'Übersicht' : 'Einzeln'}
+            </span>
+          </button>
+        </div>
+
         {/* Timer und Navigation */}
         <div className="flex items-center space-x-6">
           <div className="flex items-center space-x-2 text-lg font-mono">
@@ -242,63 +314,105 @@ export const ServiceCelebration: React.FC = () => {
       {/* Main Content */}
       <div className="flex-1 p-8">
         <div className="max-w-4xl mx-auto">
-          {currentComponent && (
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
-              {/* Component Header */}
-              <div className="flex items-center space-x-4 mb-6">
-                <div className={`p-3 rounded-lg ${config?.bgColor || 'bg-gray-100'}`}>
-                  <span className="text-2xl">{config?.icon || '📄'}</span>
-                </div>
-                <div className="flex-1">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-1">
-                    {currentComponent.title}
-                  </h2>
-                  <div className="flex items-center space-x-4 text-sm text-gray-600">
-                    <span className="capitalize">{config?.label || currentComponent.component_type}</span>
-                    {currentComponent.duration_minutes && (
-                      <span>⏱️ {currentComponent.duration_minutes} Min</span>
-                    )}
-                    {currentComponent.hymn_number && (
-                      <span>🎵 Nr. {currentComponent.hymn_number}</span>
-                    )}
+          {viewMode === 'single' ? (
+            // Einzelansicht
+            currentComponent && (
+              <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+                {/* Component Header */}
+                <div className="flex items-center space-x-4 mb-6">
+                  <div className={`p-3 rounded-lg ${config?.bgColor || 'bg-gray-100'}`}>
+                    <span className="text-2xl">{config?.icon || '📄'}</span>
+                  </div>
+                  <div className="flex-1">
+                    <h2 className="text-2xl font-bold text-gray-900 mb-1">
+                      {currentComponent.title}
+                    </h2>
+                    <div className="flex items-center space-x-4 text-sm text-gray-600">
+                      <span className="capitalize">{config?.label || currentComponent.component_type}</span>
+                      {currentComponent.duration_minutes && (
+                        <span>⏱️ {currentComponent.duration_minutes} Min</span>
+                      )}
+                      {currentComponent.hymn_number && (
+                        <span>🎵 Nr. {currentComponent.hymn_number}</span>
+                      )}
+                    </div>
                   </div>
                 </div>
+
+                {/* Bible Text */}
+                {renderBibleText(currentComponent)}
+
+                {/* Content */}
+                {renderContent(currentComponent)}
               </div>
+            )
+          ) : (
+            // Übersichtsansicht - alle Komponenten untereinander
+            <div className="space-y-8">
+              {service.components.map((component, index) => {
+                const componentConfig = COMPONENT_CONFIGS[component.component_type as ComponentType];
+                return (
+                  <div key={component.id || index} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+                    {/* Component Header */}
+                    <div className="flex items-center space-x-4 mb-4">
+                      <div className={`p-2 rounded-lg ${componentConfig?.bgColor || 'bg-gray-100'}`}>
+                        <span className="text-xl">{componentConfig?.icon || '📄'}</span>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-xl font-bold text-gray-900 mb-1">
+                          {component.title}
+                        </h3>
+                        <div className="flex items-center space-x-4 text-sm text-gray-600">
+                          <span className="capitalize">{componentConfig?.label || component.component_type}</span>
+                          {component.duration_minutes && (
+                            <span>⏱️ {component.duration_minutes} Min</span>
+                          )}
+                          {component.hymn_number && (
+                            <span>🎵 Nr. {component.hymn_number}</span>
+                          )}
+                        </div>
+                      </div>
+                    </div>
 
-              {/* Bible Text */}
-              {renderBibleText(currentComponent)}
+                    {/* Bible Text */}
+                    {renderBibleText(component)}
 
-              {/* Content */}
-              {renderContent(currentComponent)}
+                    {/* Content */}
+                    {renderContent(component)}
+                  </div>
+                );
+              })}
             </div>
           )}
         </div>
       </div>
 
-      {/* Navigation Footer */}
-      <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-center space-x-6">
-        <button
-          onClick={prevComponent}
-          disabled={currentComponentIndex === 0}
-          className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
-        >
-          <ChevronLeftIcon className="w-4 h-4" />
-          <span>Vorherige</span>
-        </button>
+      {/* Navigation Footer - nur in Einzelansicht */}
+      {viewMode === 'single' && (
+        <div className="bg-white border-t border-gray-200 px-6 py-4 flex items-center justify-center space-x-6">
+          <button
+            onClick={prevComponent}
+            disabled={currentComponentIndex === 0}
+            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 hover:bg-gray-200 disabled:opacity-50 disabled:cursor-not-allowed rounded-lg transition-colors"
+          >
+            <ChevronLeftIcon className="w-4 h-4" />
+            <span>Vorherige</span>
+          </button>
 
-        <div className="text-sm text-gray-600 font-medium">
-          {currentComponent?.title}
+          <div className="text-sm text-gray-600 font-medium">
+            {currentComponent?.title}
+          </div>
+
+          <button
+            onClick={nextComponent}
+            disabled={currentComponentIndex === service.components.length - 1}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
+          >
+            <span>Nächste</span>
+            <ChevronRightIcon className="w-4 h-4" />
+          </button>
         </div>
-
-        <button
-          onClick={nextComponent}
-          disabled={currentComponentIndex === service.components.length - 1}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-white rounded-lg transition-colors"
-        >
-          <span>Nächste</span>
-          <ChevronRightIcon className="w-4 h-4" />
-        </button>
-      </div>
+      )}
     </div>
   );
 };
