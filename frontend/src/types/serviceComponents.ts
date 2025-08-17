@@ -638,8 +638,7 @@ und sei dir gnädig.
 Der Herr erhebe sein Angesicht auf dich
 und schenke dir seinen Frieden.
 
-Amen.`,
-      duration: 2
+Amen.`
     },
     trinitarisch: {
       title: 'Trinitarischer Segen',
@@ -647,8 +646,7 @@ Amen.`,
 der Vater und der Sohn
 und der Heilige Geist.
 
-Amen.`,
-      duration: 1
+Amen.`
     }
   },
   gloria: {

@@ -73,6 +73,7 @@ export const ServiceEditor: React.FC = () => {
   const [deleting, setDeleting] = useState(false);
   const [expandedComponents, setExpandedComponents] = useState<Set<number>>(new Set());
   const [componentStyles, setComponentStyles] = useState<{ [key: number]: { bold: boolean; italic: boolean } }>({});
+  const [localTitles, setLocalTitles] = useState<{ [key: number]: string }>({});
   const [loadingBible, setLoadingBible] = useState<{ [key: number]: boolean }>({});
   const [wordsPerMinute, setWordsPerMinute] = useState<number>(() => {
     // Lade Sprechgeschwindigkeit aus localStorage oder nutze Default
@@ -612,12 +613,21 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                         <div className="flex items-center justify-between mb-3">
                           <input
                             type="text"
-                            value={component.title}
+                            value={localTitles[index] !== undefined ? localTitles[index] : component.title}
                             onChange={(e) => {
-                              // Nur lokale State-Update ohne Autosave
-                              const newComponents = [...components];
-                              newComponents[index] = { ...newComponents[index], title: e.target.value };
-                              setComponents(newComponents);
+                              // Nur lokalen Titel-State updaten
+                              setLocalTitles(prev => ({ ...prev, [index]: e.target.value }));
+                            }}
+                            onBlur={() => {
+                              // Bei Blur: echtes Update
+                              const title = localTitles[index] !== undefined ? localTitles[index] : component.title;
+                              updateComponent(index, { title });
+                              // Lokalen State clearen
+                              setLocalTitles(prev => {
+                                const newTitles = { ...prev };
+                                delete newTitles[index];
+                                return newTitles;
+                              });
                             }}
                             className="font-heading text-lg font-semibold text-gray-900 bg-transparent focus:outline-none focus:bg-gray-50 px-2 py-1 rounded border-0 flex-1 min-w-0"
                           />
@@ -1006,7 +1016,7 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                   </div>
                                 </div>
                                 {/* Liturgische Text-Auswahl */}
-                                {(component.component_type === 'glaubensbekenntnis' || component.component_type === 'segen' || component.component_type === 'gloria') && (
+                                {(component.component_type === 'glaubensbekenntnis' || component.component_type === 'segen') && (
                                   <div className="mb-4">
                                     <label className="block text-sm font-medium text-gray-700 mb-2">
                                       Text-Vorlage wählen
@@ -1106,11 +1116,6 @@ ${service?.notes ? `\n📝 Hinweise: ${service.notes}` : ''}`;
                                     ⏱️ ~{calculateTextDurationFormatted(component.content || '')} Min (bei {wordsPerMinute} Wörtern/Min)
                                   </span>
                                 </div>
-                                {component.content && component.content.length > 50 && (
-                                  <div className="text-xs text-gray-400 mt-1">
-                                    💡 Markieren Sie Text und nutzen Sie die Buttons für Formatierung
-                                  </div>
-                                )}
                               </div>
                             )}
                           </div>
