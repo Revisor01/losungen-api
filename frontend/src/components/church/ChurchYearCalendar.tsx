@@ -62,8 +62,18 @@ export const ChurchYearCalendar: React.FC = () => {
 
   const loadChurchYearData = async () => {
     try {
-      // Load events from database API
-      const response = await apiService.getUpcomingChurchEvents(50); // Get more events for full year view
+      // Load events from database API - get past and future events
+      const today = new Date();
+      const startDate = new Date(today);
+      startDate.setMonth(today.getMonth() - 6); // 6 Monate zurück
+      const endDate = new Date(today);
+      endDate.setFullYear(today.getFullYear() + 2); // 2 Jahre voraus
+      
+      const response = await apiService.getChurchEvents('range', {
+        start: startDate.toISOString().split('T')[0],
+        end: endDate.toISOString().split('T')[0],
+        limit: 500
+      });
       if (response.success && response.data) {
         const churchEvents: ChurchEvent[] = response.data.map(event => ({
           uid: event.uid,
