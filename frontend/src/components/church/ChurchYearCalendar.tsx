@@ -674,59 +674,35 @@ export const ChurchYearCalendar: React.FC = () => {
                   {/* Wochenspruch - volle Breite */}
                   <div className="mb-4">
                     {selectedEvent.weeklyVerse && (
-                      <div className="bg-gray-50 rounded-lg p-4">
+                      <motion.div
+                        className="bg-gray-50 rounded-lg p-4 cursor-pointer hover:bg-gray-100 transition-colors group"
+                        onClick={() => selectedEvent.weeklyVerseReference && handleBibleReferenceClick(selectedEvent.weeklyVerseReference)}
+                        whileHover={{ scale: 1.01 }}
+                      >
                         <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
                           <BookOpenIcon className="w-4 h-4 mr-2" />
                           Wochenspruch
                           {selectedEvent.weeklyVerseReference && (
-                            <motion.button
-                              whileHover={{ scale: 1.1 }}
-                              whileTap={{ scale: 0.9 }}
-                              onClick={() => handleBibleReferenceClick(selectedEvent.weeklyVerseReference!)}
-                              className="ml-2 p-1 rounded hover:bg-gray-200 transition-colors"
-                              title="Bibelstelle suchen"
-                            >
-                              <MagnifyingGlassIcon className="w-4 h-4 text-gray-600" />
-                            </motion.button>
+                            <MagnifyingGlassIcon className="w-4 h-4 text-gray-400 group-hover:text-gray-600 ml-auto transition-colors" />
                           )}
                         </h4>
                         <p className="text-sm text-gray-700">{selectedEvent.weeklyVerse}</p>
                         {selectedEvent.weeklyVerseReference && (
                           <p className="text-xs text-gray-500 mt-1 italic">— {selectedEvent.weeklyVerseReference}</p>
                         )}
-                      </div>
+                      </motion.div>
                     )}
                   </div>
 
                   {/* 2x2 Grid: Psalm, AT, Epistel, Evangelium */}
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     {selectedEvent.psalm && (
-                      <div className="bg-gray-50 hover:bg-gray-100 rounded-lg p-4 transition-colors">
-                        <div className="flex items-center justify-between">
-                          <div className="flex-1">
-                            <h4 className="font-semibold text-gray-900 mb-2 flex items-center">
-                              Psalm
-                              <motion.button
-                                whileHover={{ scale: 1.1 }}
-                                whileTap={{ scale: 0.9 }}
-                                onClick={() => handleBibleReferenceClick(selectedEvent.psalm!)}
-                                className="ml-2 p-1 rounded hover:bg-gray-200 transition-colors"
-                                title="Bibelstelle suchen"
-                              >
-                                <MagnifyingGlassIcon className="w-4 h-4 text-gray-600" />
-                              </motion.button>
-                            </h4>
-                            <p className="text-sm text-gray-700">
-                              {selectedEvent.psalm}
-                              {selectedEvent.psalm_eg && (
-                                <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
-                                  {selectedEvent.psalm_eg}
-                                </span>
-                              )}
-                            </p>
-                          </div>
-                        </div>
-                      </div>
+                      <BibleReferenceCard
+                        title="Psalm"
+                        reference={selectedEvent.psalm}
+                        onClick={handleBibleReferenceClick}
+                        badge={selectedEvent.psalm_eg ? selectedEvent.psalm_eg.toString() : undefined}
+                      />
                     )}
                     
                     {selectedEvent.oldTestamentReading && (
@@ -927,9 +903,10 @@ interface BibleReferenceCardProps {
   title: string;
   reference: string;
   onClick: (reference: string) => void;
+  badge?: string;
 }
 
-const BibleReferenceCard: React.FC<BibleReferenceCardProps> = ({ title, reference, onClick }) => (
+const BibleReferenceCard: React.FC<BibleReferenceCardProps> = ({ title, reference, onClick, badge }) => (
   <motion.button
     whileHover={{ scale: 1.02 }}
     whileTap={{ scale: 0.98 }}
@@ -937,9 +914,16 @@ const BibleReferenceCard: React.FC<BibleReferenceCardProps> = ({ title, referenc
     className="bg-gray-50 hover:bg-gray-100 rounded-lg p-4 text-left transition-colors group w-full"
   >
     <div className="flex items-center justify-between">
-      <div>
+      <div className="flex-1">
         <h4 className="font-semibold text-gray-900 mb-2">{title}</h4>
-        <p className="text-sm text-gray-700">{reference}</p>
+        <p className="text-sm text-gray-700">
+          {reference}
+          {badge && (
+            <span className="ml-2 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
+              {badge}
+            </span>
+          )}
+        </p>
       </div>
       <MagnifyingGlassIcon className="w-5 h-5 text-gray-400 opacity-0 group-hover:opacity-100 transition-opacity" />
     </div>
