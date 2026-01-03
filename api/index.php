@@ -189,18 +189,18 @@ class LosungenService {
                 'text' => $losung['ot_text'],
                 'reference' => $losung['ot_reference'],
                 'testament' => 'AT',
-                'translation_source' => 'Herrnhuter Losungen 2025'
+                'translation_source' => 'Herrnhuter Losungen ' . substr($losung['date'], 0, 4)
             ],
-            
+
             // New Testament (Lehrtext)
             'lehrtext' => [
                 'text' => $losung['nt_text'],
                 'reference' => $losung['nt_reference'],
-                'testament' => 'NT', 
-                'translation_source' => 'Herrnhuter Losungen 2025'
+                'testament' => 'NT',
+                'translation_source' => 'Herrnhuter Losungen ' . substr($losung['date'], 0, 4)
             ],
-            
-            'source' => 'Herrnhuter Losungen 2025',
+
+            'source' => 'Herrnhuter Losungen ' . substr($losung['date'], 0, 4),
             'fetched_at' => date('c'),
             'url' => 'https://www.losungen.de/'
         ];
