@@ -48,10 +48,8 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
 
-      - name: Trigger Webhook
+      - name: Trigger Stack Webhook
         if: success()
         run: |
-          curl -X POST "${{ secrets.WEBHOOK_URL_FRONTEND }}" \
-            -H "Content-Type: application/json" \
-            -d '{"image": "${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest"}' \
+          curl -X POST "${{ secrets.PORTAINER_WEBHOOK }}" \
             --fail --silent --show-error || echo "Webhook failed but continuing..."
