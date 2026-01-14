@@ -8,11 +8,14 @@
     },
     "autoload": {
         "psr-4": {
-            "Newsletter\\": "api/newsletter/"
+            "Newsletter\\": "newsletter/"
         }
     },
     "config": {
         "optimize-autoloader": true,
-        "sort-packages": true
+        "sort-packages": true,
+        "allow-plugins": {
+            "php-http/discovery": false
+        }
     }
 }

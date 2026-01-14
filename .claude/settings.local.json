@@ -29,7 +29,8 @@
       "Bash(gh run view:*)",
       "WebFetch(domain:kirchenjahr-evangelisch.de)",
       "Bash(wc:*)",
-      "WebFetch(domain:github.com)"
+      "WebFetch(domain:github.com)",
+      "Bash(docker build:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"
