@@ -19,7 +19,16 @@
       "Bash(scp:*)",
       "Bash(docker exec:*)",
       "Bash(docker-compose up:*)",
-      "Bash(git pull:*)"
+      "Bash(git pull:*)",
+      "Bash(mdfind:*)",
+      "Bash(ls:*)",
+      "Bash(iconv:*)",
+      "Bash(gh workflow run:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh secret list:*)",
+      "Bash(gh run view:*)",
+      "WebFetch(domain:kirchenjahr-evangelisch.de)",
+      "Bash(wc:*)"
     ],
     "deny": [],
     "defaultMode": "acceptEdits"

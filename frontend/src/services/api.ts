@@ -193,7 +193,8 @@ class ApiService {
         if (params.limit) url += `&limit=${params.limit}`;
       }
       
-      const response = await fetch(`${this.baseUrl}${url}`, {
+      // church_events.php liegt direkt im Root, nicht unter /api
+      const response = await fetch(url, {
         headers: {
           'X-API-Key': this.getApiKey(),
         }
