@@ -84,8 +84,35 @@ function fetchBibleText($reference, $translation, $apiKey) {
         return null;
     }
 
-    // Referenz bereinigen - Klammern für optionale Verse entfernen
-    $cleanRef = preg_replace('/\([^)]+\)/', '', $reference);
+    // Referenz bereinigen für komplexe Formate wie "Jer 14, 1(2)3–4(5–6)7–9"
+    // Strategie: Extrahiere Buch, Kapitel, und vereinfache den Versbereich
+    $cleanRef = $reference;
+
+    // Prüfe ob komplexe Klammer-Notation vorhanden
+    if (preg_match('/\([^)]+\)/', $reference)) {
+        // Extrahiere Buch und Kapitel: "Jer 14, 1(2)3..." -> "Jer 14"
+        if (preg_match('/^(.+?\s*\d+)\s*,/', $reference, $bookMatch)) {
+            $bookAndChapter = trim($bookMatch[1]);
+
+            // Finde alle Verszahlen (auch in Klammern)
+            preg_match_all('/(\d+)/', substr($reference, strlen($bookMatch[0])), $verseMatches);
+
+            if (!empty($verseMatches[1])) {
+                $verses = array_map('intval', $verseMatches[1]);
+                $minVerse = min($verses);
+                $maxVerse = max($verses);
+
+                if ($minVerse === $maxVerse) {
+                    $cleanRef = "$bookAndChapter,$minVerse";
+                } else {
+                    $cleanRef = "$bookAndChapter,$minVerse-$maxVerse";
+                }
+            }
+        }
+    }
+
+    // Entferne übrige Klammern und normalisiere
+    $cleanRef = preg_replace('/\([^)]+\)/', '', $cleanRef);
     $cleanRef = preg_replace('/\s+/', ' ', trim($cleanRef));
 
     // Interne API-Anfrage
