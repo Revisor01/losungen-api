@@ -86,6 +86,7 @@ api_keys.txt
 
 # But include schema files
 !db/schema.sql
+!db/*.sql
 !sql/*.sql
 
 # Portainer Stack (enthält ggf. Secrets)

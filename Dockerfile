@@ -21,6 +21,11 @@ RUN docker-php-ext-install pdo pdo_pgsql \
     && pecl install redis \
     && docker-php-ext-enable redis
 
+# Install Composer and PHP dependencies (PHPMailer)
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+COPY composer.json /var/www/html/
+RUN cd /var/www/html && composer install --no-dev --optimize-autoloader
+
 # Create Python virtual environment and install packages
 RUN python3 -m venv /opt/venv \
     && /opt/venv/bin/pip install requests beautifulsoup4
@@ -37,7 +42,7 @@ COPY scripts/ /var/www/html/scripts/
 RUN echo 'RewriteEngine On' > /var/www/html/.htaccess \
     && echo '# Admin panel and Bible search files exist and should be served directly' >> /var/www/html/.htaccess \
     && echo 'RewriteCond %{REQUEST_FILENAME} -f' >> /var/www/html/.htaccess \
-    && echo 'RewriteRule ^(admin\.php|bible_search\.php|church_events\.php|services\.php|losungen_db\.php)$ - [L]' >> /var/www/html/.htaccess \
+    && echo 'RewriteRule ^(admin\.php|bible_search\.php|church_events\.php|services\.php|losungen_db\.php|newsletter\.php|sunday\.php)$ - [L]' >> /var/www/html/.htaccess \
     && echo '# Non-existing files with conditions' >> /var/www/html/.htaccess \
     && echo 'RewriteCond %{REQUEST_FILENAME} !-f' >> /var/www/html/.htaccess \
     && echo 'RewriteCond %{REQUEST_FILENAME} !-d' >> /var/www/html/.htaccess \
@@ -52,6 +57,10 @@ RUN echo 'RewriteEngine On' > /var/www/html/.htaccess \
 RUN echo '2 0 * * * root /usr/local/bin/php /var/www/html/scripts/daily_fetch.php >> /proc/1/fd/1 2>&1' > /etc/cron.d/daily-fetch \
     && chmod 0644 /etc/cron.d/daily-fetch \
     && crontab /etc/cron.d/daily-fetch
+
+# Newsletter cron - runs hourly to check for scheduled sends
+RUN echo '0 * * * * root /usr/local/bin/php /var/www/html/scripts/newsletter_send.php >> /proc/1/fd/1 2>&1' > /etc/cron.d/newsletter \
+    && chmod 0644 /etc/cron.d/newsletter
 
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html \

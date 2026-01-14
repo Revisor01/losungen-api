@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Losung für {{date_formatted}}</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f8f9fa;
+        }
+        .container {
+            background: #ffffff;
+            border-radius: 12px;
+            padding: 40px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.08);
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e5e7eb;
+        }
+        .logo {
+            font-size: 20px;
+            font-weight: bold;
+            color: #4f46e5;
+        }
+        .date {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 8px;
+        }
+        h1 {
+            color: #1f2937;
+            font-size: 22px;
+            margin-bottom: 24px;
+            text-align: center;
+        }
+        .bible-section {
+            margin-bottom: 30px;
+        }
+        .section-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #9ca3af;
+            margin-bottom: 8px;
+        }
+        .bible-text {
+            font-size: 18px;
+            line-height: 1.7;
+            color: #1f2937;
+            margin-bottom: 8px;
+        }
+        .reference {
+            font-size: 14px;
+            color: #6b7280;
+            font-style: italic;
+        }
+        .translation-badge {
+            display: inline-block;
+            background: #e5e7eb;
+            color: #4b5563;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 11px;
+            margin-left: 8px;
+        }
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #e5e7eb, transparent);
+            margin: 30px 0;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 12px;
+            color: #9ca3af;
+        }
+        .footer a {
+            color: #6b7280;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="logo">Losungen Newsletter</div>
+            <div class="date">{{date_formatted}}</div>
+        </div>
+
+        <h1>Die Losung für heute</h1>
+
+        <div class="bible-section">
+            <div class="section-title">Losung</div>
+            <p class="bible-text">{{losung_text}}</p>
+            <p class="reference">{{losung_reference}}</p>
+        </div>
+
+        <div class="divider"></div>
+
+        <div class="bible-section">
+            <div class="section-title">Lehrtext</div>
+            <p class="bible-text">{{lehrtext_text}}</p>
+            <p class="reference">{{lehrtext_reference}}</p>
+        </div>
+
+        <div class="footer">
+            <p>
+                <a href="{{preferences_url}}">Einstellungen</a> |
+                <a href="{{unsubscribe_url}}">Abmelden</a>
+            </p>
+            <p style="margin-top: 15px;">
+                Herrnhuter Losungen | {{base_url}}
+            </p>
+        </div>
+    </div>
+</body>
+</html>
