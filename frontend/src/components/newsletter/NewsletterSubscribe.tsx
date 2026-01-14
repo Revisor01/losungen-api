@@ -23,7 +23,7 @@ const WEEKDAYS = [
   { value: 0, label: 'So' }
 ];
 
-const HOURS = [5, 6, 7, 8, 9];
+const HOURS = Array.from({ length: 14 }, (_, i) => i + 5); // 5:00 - 18:00
 
 export const NewsletterSubscribe: React.FC = () => {
   const [step, setStep] = useState<Step>('email');
@@ -407,23 +407,22 @@ export const NewsletterSubscribe: React.FC = () => {
               <div>
                 <p className="text-sm font-medium text-gray-700 mb-2 flex items-center">
                   <ClockIcon className="w-4 h-4 mr-1" />
-                  Versandzeit
+                  Versandzeit (Uhr)
                 </p>
-                <div className="flex gap-2">
+                <select
+                  value={deliveryHour}
+                  onChange={(e) => setDeliveryHour(parseInt(e.target.value))}
+                  className="input-field w-32"
+                >
                   {HOURS.map((hour) => (
-                    <button
-                      key={hour}
-                      onClick={() => setDeliveryHour(hour)}
-                      className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                        deliveryHour === hour
-                          ? 'bg-royal-500 text-white'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                      }`}
-                    >
+                    <option key={hour} value={hour}>
                       {hour}:00
-                    </button>
+                    </option>
                   ))}
-                </div>
+                </select>
+                <p className="text-xs text-gray-500 mt-1">
+                  Zeitzone: Europe/Berlin
+                </p>
               </div>
             </motion.div>
           )}

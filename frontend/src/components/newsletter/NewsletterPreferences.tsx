@@ -22,7 +22,7 @@ const WEEKDAYS = [
   { value: 0, label: 'So' }
 ];
 
-const HOURS = [5, 6, 7, 8, 9];
+const HOURS = Array.from({ length: 14 }, (_, i) => i + 5); // 5:00 - 18:00
 
 export const NewsletterPreferences: React.FC = () => {
   const { token } = useParams<{ token: string }>();
@@ -321,23 +321,22 @@ export const NewsletterPreferences: React.FC = () => {
                 <div>
                   <p className="text-sm font-medium text-gray-700 mb-2 flex items-center">
                     <ClockIcon className="w-4 h-4 mr-1" />
-                    Versandzeit
+                    Versandzeit (Uhr)
                   </p>
-                  <div className="flex gap-2">
+                  <select
+                    value={preferences.delivery_hour}
+                    onChange={(e) => updatePreference('delivery_hour', parseInt(e.target.value))}
+                    className="input-field w-32"
+                  >
                     {HOURS.map((hour) => (
-                      <button
-                        key={hour}
-                        onClick={() => updatePreference('delivery_hour', hour)}
-                        className={`px-4 py-2 rounded-lg font-medium transition-all ${
-                          preferences.delivery_hour === hour
-                            ? 'bg-royal-500 text-white'
-                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                        }`}
-                      >
+                      <option key={hour} value={hour}>
                         {hour}:00
-                      </button>
+                      </option>
                     ))}
-                  </div>
+                  </select>
+                  <p className="text-xs text-gray-500 mt-1">
+                    Zeitzone: Europe/Berlin
+                  </p>
                 </div>
               </div>
 
