@@ -348,23 +348,25 @@ export const AdminPanel: React.FC = () => {
                   )}
                 </div>
 
+                {systemStatus.disk_space && (
                 <div className="border-t pt-4">
                   <span className="text-gray-500 text-sm">Disk Space:</span>
                   <div className="mt-1">
                     <div className="flex justify-between text-sm">
-                      <span>Free: {formatBytes(systemStatus.disk_space.free)}</span>
-                      <span>Total: {formatBytes(systemStatus.disk_space.total)}</span>
+                      <span>Free: {formatBytes(systemStatus.disk_space.free ?? 0)}</span>
+                      <span>Total: {formatBytes(systemStatus.disk_space.total ?? 0)}</span>
                     </div>
                     <div className="w-full bg-gray-200 rounded-full h-2 mt-1">
-                      <div 
-                        className="bg-royal-600 h-2 rounded-full" 
-                        style={{ 
-                          width: `${((systemStatus.disk_space.total - systemStatus.disk_space.free) / systemStatus.disk_space.total) * 100}%` 
+                      <div
+                        className="bg-royal-600 h-2 rounded-full"
+                        style={{
+                          width: `${systemStatus.disk_space.total ? ((systemStatus.disk_space.total - systemStatus.disk_space.free) / systemStatus.disk_space.total) * 100 : 0}%`
                         }}
                       ></div>
                     </div>
                   </div>
                 </div>
+                )}
               </div>
             ) : (
               <div className="flex items-center justify-center py-8">
