@@ -233,23 +233,37 @@ class NewsletterService {
             $stmt->execute([trim($data['name']) ?: null, $subscriber['id']]);
         }
 
-        // Präferenzen aktualisieren
+        // Präferenzen aktualisieren (UPSERT - falls noch keine existieren)
         $stmt = $this->db->prepare("
-            UPDATE newsletter_preferences SET
-                include_tageslosung = ?,
-                include_sonntagstexte = ?,
-                include_predigttext = ?,
-                include_lesungen = ?,
-                include_psalm = ?,
-                include_wochenspruch = ?,
-                translations = ?,
-                delivery_days_tageslosung = ?,
-                delivery_days_sonntag = ?,
-                delivery_hour = ?
-            WHERE subscriber_id = ?
+            INSERT INTO newsletter_preferences (
+                subscriber_id,
+                include_tageslosung,
+                include_sonntagstexte,
+                include_predigttext,
+                include_lesungen,
+                include_psalm,
+                include_wochenspruch,
+                translations,
+                delivery_days_tageslosung,
+                delivery_days_sonntag,
+                delivery_hour
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT (subscriber_id) DO UPDATE SET
+                include_tageslosung = EXCLUDED.include_tageslosung,
+                include_sonntagstexte = EXCLUDED.include_sonntagstexte,
+                include_predigttext = EXCLUDED.include_predigttext,
+                include_lesungen = EXCLUDED.include_lesungen,
+                include_psalm = EXCLUDED.include_psalm,
+                include_wochenspruch = EXCLUDED.include_wochenspruch,
+                translations = EXCLUDED.translations,
+                delivery_days_tageslosung = EXCLUDED.delivery_days_tageslosung,
+                delivery_days_sonntag = EXCLUDED.delivery_days_sonntag,
+                delivery_hour = EXCLUDED.delivery_hour,
+                updated_at = NOW()
         ");
 
         $stmt->execute([
+            $subscriber['id'],
             $data['include_tageslosung'] ?? true,
             $data['include_sonntagstexte'] ?? false,
             $data['include_predigttext'] ?? true,
@@ -259,8 +273,7 @@ class NewsletterService {
             json_encode($data['translations'] ?? ['LUT']),
             json_encode($data['delivery_days_tageslosung'] ?? [1,2,3,4,5,6]),
             json_encode($data['delivery_days_sonntag'] ?? [4,6]),
-            $data['delivery_hour'] ?? 6,
-            $subscriber['id']
+            $data['delivery_hour'] ?? 6
         ]);
 
         return [
