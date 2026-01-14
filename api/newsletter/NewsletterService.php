@@ -264,16 +264,16 @@ class NewsletterService {
 
         $stmt->execute([
             $subscriber['id'],
-            $data['include_tageslosung'] ?? true,
-            $data['include_sonntagstexte'] ?? false,
-            $data['include_predigttext'] ?? true,
-            $data['include_lesungen'] ?? true,
-            $data['include_psalm'] ?? true,
-            $data['include_wochenspruch'] ?? true,
+            $this->toBool($data['include_tageslosung'] ?? true),
+            $this->toBool($data['include_sonntagstexte'] ?? false),
+            $this->toBool($data['include_predigttext'] ?? true),
+            $this->toBool($data['include_lesungen'] ?? true),
+            $this->toBool($data['include_psalm'] ?? true),
+            $this->toBool($data['include_wochenspruch'] ?? true),
             json_encode($data['translations'] ?? ['LUT']),
             json_encode($data['delivery_days_tageslosung'] ?? [1,2,3,4,5,6]),
             json_encode($data['delivery_days_sonntag'] ?? [4,6]),
-            $data['delivery_hour'] ?? 6
+            (int)($data['delivery_hour'] ?? 6)
         ]);
 
         return [
@@ -513,16 +513,16 @@ class NewsletterService {
 
         $stmt->execute([
             $subscriberId,
-            $data['include_tageslosung'] ?? true,
-            $data['include_sonntagstexte'] ?? false,
-            $data['include_predigttext'] ?? true,
-            $data['include_lesungen'] ?? true,
-            $data['include_psalm'] ?? true,
-            $data['include_wochenspruch'] ?? true,
+            $this->toBool($data['include_tageslosung'] ?? true),
+            $this->toBool($data['include_sonntagstexte'] ?? false),
+            $this->toBool($data['include_predigttext'] ?? true),
+            $this->toBool($data['include_lesungen'] ?? true),
+            $this->toBool($data['include_psalm'] ?? true),
+            $this->toBool($data['include_wochenspruch'] ?? true),
             json_encode($data['translations'] ?? ['LUT']),
             json_encode($data['delivery_days_tageslosung'] ?? [1,2,3,4,5,6]),
             json_encode($data['delivery_days_sonntag'] ?? [4,6]),
-            $data['delivery_hour'] ?? 6
+            (int)($data['delivery_hour'] ?? 6)
         ]);
     }
 
@@ -556,6 +556,18 @@ class NewsletterService {
         $stmt = $this->db->prepare("SELECT * FROM newsletter_subscribers WHERE id = ?");
         $stmt->execute([$id]);
         return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    }
+
+    /**
+     * Konvertiert verschiedene Werte zu Boolean für PostgreSQL
+     */
+    private function toBool($value): bool {
+        if (is_bool($value)) return $value;
+        if ($value === '' || $value === null) return false;
+        if (is_string($value)) {
+            return in_array(strtolower($value), ['true', '1', 'yes', 'on'], true);
+        }
+        return (bool)$value;
     }
 
     private function updatePreferencesById(string $subscriberId, array $data): void {
