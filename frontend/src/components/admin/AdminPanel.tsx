@@ -330,20 +330,20 @@ export const AdminPanel: React.FC = () => {
 
                 <div className="border-t pt-4">
                   <div className="flex items-center space-x-2 mb-2">
-                    {systemStatus.database.connected ? (
+                    {systemStatus.database?.connected ? (
                       <CheckCircleIcon className="w-5 h-5 text-green-600" />
                     ) : (
                       <ExclamationTriangleIcon className="w-5 h-5 text-red-600" />
                     )}
                     <span className="font-medium">Database</span>
                   </div>
-                  {systemStatus.database.connected ? (
+                  {systemStatus.database?.connected ? (
                     <p className="text-sm text-gray-600">
-                      {systemStatus.database.cache_entries} cache entries
+                      {systemStatus.database?.cache_entries ?? 0} cache entries
                     </p>
                   ) : (
                     <p className="text-sm text-red-600">
-                      {systemStatus.database.error}
+                      {systemStatus.database?.error ?? 'Not connected'}
                     </p>
                   )}
                 </div>
