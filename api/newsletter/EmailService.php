@@ -29,6 +29,15 @@ class EmailService {
         $this->mailer->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
         $this->mailer->Port = (int)($_ENV['SMTP_PORT'] ?? 587);
 
+        // SSL-Optionen für lokale Docker-Verbindung (Zertifikat ist auf server.godsapp.de ausgestellt)
+        $this->mailer->SMTPOptions = [
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true
+            ]
+        ];
+
         // Absender
         $this->mailer->setFrom(
             $_ENV['NEWSLETTER_FROM_EMAIL'] ?? 'losung@godsapp.de',
