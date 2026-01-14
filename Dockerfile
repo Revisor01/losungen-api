@@ -21,10 +21,8 @@ RUN docker-php-ext-install pdo pdo_pgsql \
     && pecl install redis \
     && docker-php-ext-enable redis
 
-# Install Composer and PHP dependencies (PHPMailer)
+# Install Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
-COPY composer.json /var/www/html/
-RUN cd /var/www/html && composer install --no-dev --optimize-autoloader
 
 # Create Python virtual environment and install packages
 RUN python3 -m venv /opt/venv \
@@ -37,6 +35,10 @@ RUN a2enmod rewrite headers
 COPY api/ /var/www/html/
 COPY public/ /var/www/html/public/
 COPY scripts/ /var/www/html/scripts/
+COPY composer.json /var/www/html/
+
+# Install PHP dependencies (PHPMailer) after copying files
+RUN cd /var/www/html && composer install --no-dev --optimize-autoloader
 
 # Create .htaccess for routing
 RUN echo 'RewriteEngine On' > /var/www/html/.htaccess \
