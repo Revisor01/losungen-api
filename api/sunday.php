@@ -2,6 +2,7 @@
 /**
  * Sunday/Kirchenjahr API Endpoint
  * Liefert alle relevanten Daten für einen Sonntag/Feiertag
+ * Optional mit Bibeltexten in gewünschter Übersetzung
  * Optimiert für n8n und externe Integrationen
  */
 
@@ -75,12 +76,81 @@ function formatGermanDate($date) {
     return "$wochentag, $tag. $monat $jahr";
 }
 
+/**
+ * Holt Bibeltext über bible_search.php
+ */
+function fetchBibleText($reference, $translation, $apiKey) {
+    if (empty($reference)) {
+        return null;
+    }
+
+    // Referenz bereinigen - Klammern für optionale Verse entfernen
+    $cleanRef = preg_replace('/\([^)]+\)/', '', $reference);
+    $cleanRef = preg_replace('/\s+/', ' ', trim($cleanRef));
+
+    // Interne API-Anfrage
+    $baseUrl = 'http://localhost/bible_search.php';
+    $params = http_build_query([
+        'reference' => $cleanRef,
+        'translation' => $translation,
+        'api_key' => $apiKey,
+        'format' => 'json'
+    ]);
+
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 10,
+            'ignore_errors' => true
+        ]
+    ]);
+
+    $response = @file_get_contents("$baseUrl?$params", false, $context);
+
+    if ($response === false) {
+        return null;
+    }
+
+    $data = json_decode($response, true);
+
+    if (!$data || !isset($data['success']) || !$data['success']) {
+        return null;
+    }
+
+    // Text aus den Versen zusammenbauen
+    if (isset($data['data']['verses']) && is_array($data['data']['verses'])) {
+        $textParts = [];
+        foreach ($data['data']['verses'] as $verse) {
+            if (isset($verse['text'])) {
+                $verseNum = $verse['verse'] ?? '';
+                $textParts[] = $verse['text'];
+            }
+        }
+        return implode(' ', $textParts);
+    }
+
+    return $data['data']['text'] ?? null;
+}
+
+/**
+ * Normalisiert Bibelreferenz für Vergleich
+ */
+function normalizeReference($ref) {
+    if (empty($ref)) return '';
+    // Entferne Klammern, Leerzeichen, Bindestriche normalisieren
+    $normalized = preg_replace('/\([^)]+\)/', '', $ref);
+    $normalized = preg_replace('/\s+/', '', $normalized);
+    $normalized = strtolower($normalized);
+    return $normalized;
+}
+
 try {
     $db = getDatabase();
 
     // Parameter
     $action = $_GET['action'] ?? 'next_sunday';
     $date = $_GET['date'] ?? null;
+    $translation = $_GET['translation'] ?? null;
+    $apiKey = $_GET['api_key'] ?? $_SERVER['HTTP_X_API_KEY'] ?? null;
 
     switch ($action) {
         case 'next_sunday':
@@ -143,6 +213,18 @@ try {
         $aktuellerPredigttext = $perikopen[$perikopenInfo['reihe']];
     }
 
+    // Prüfen ob Predigttext identisch mit einer der Lesungen ist
+    $predigttextNorm = normalizeReference($aktuellerPredigttext);
+    $predigttextIdentischMit = null;
+
+    if ($predigttextNorm === normalizeReference($event['old_testament_reading'])) {
+        $predigttextIdentischMit = 'altes_testament';
+    } elseif ($predigttextNorm === normalizeReference($event['epistle'])) {
+        $predigttextIdentischMit = 'epistel';
+    } elseif ($predigttextNorm === normalizeReference($event['gospel'])) {
+        $predigttextIdentischMit = 'evangelium';
+    }
+
     // Response zusammenbauen
     $response = [
         'success' => true,
@@ -158,42 +240,48 @@ try {
             'kirchenjahreszeit' => $event['season'],
 
             // Wochenspruch
-            'wochenspruch' => $event['weekly_verse'],
-            'wochenspruch_referenz' => $event['weekly_verse_reference'],
+            'wochenspruch' => [
+                'referenz' => $event['weekly_verse_reference'],
+                'text' => $event['weekly_verse']
+            ],
 
             // Psalm
-            'wochenpsalm' => $event['psalm'],
-            'wochenpsalm_eg' => $event['psalm_eg'],
-
-            // Lesungen
-            'lesungen' => [
-                'altes_testament' => $event['old_testament_reading'],
-                'epistel' => $event['epistle'],
-                'evangelium' => $event['gospel']
+            'wochenpsalm' => [
+                'referenz' => $event['psalm'],
+                'eg_nummer' => $event['psalm_eg']
             ],
 
             // Perikopenreihe
             'perikopenreihe' => [
                 'aktuell' => $perikopenInfo['reihe'],
                 'nummer' => $perikopenInfo['reihe_nummer'],
-                'kirchenjahr' => $perikopenInfo['kirchenjahr'],
-                'predigttext' => $aktuellerPredigttext
+                'kirchenjahr' => $perikopenInfo['kirchenjahr']
+            ],
+
+            // Predigttext
+            'predigttext' => [
+                'referenz' => $aktuellerPredigttext,
+                'identisch_mit' => $predigttextIdentischMit
+            ],
+
+            // Lesungen
+            'lesungen' => [
+                'altes_testament' => [
+                    'referenz' => $event['old_testament_reading']
+                ],
+                'epistel' => [
+                    'referenz' => $event['epistle']
+                ],
+                'evangelium' => [
+                    'referenz' => $event['gospel']
+                ]
             ],
 
             // Alle Perikopen
             'perikopen' => $perikopen,
 
             // Wochenlieder
-            'wochenlieder' => [
-                [
-                    'titel' => $event['hymn1'],
-                    'eg_nummer' => $event['hymn1_eg']
-                ],
-                [
-                    'titel' => $event['hymn2'],
-                    'eg_nummer' => $event['hymn2_eg']
-                ]
-            ],
+            'wochenlieder' => [],
 
             // Links
             'url' => $event['url']
@@ -201,12 +289,70 @@ try {
         'timestamp' => date('c')
     ];
 
-    // Leere Wochenlieder entfernen
-    $response['data']['wochenlieder'] = array_filter(
-        $response['data']['wochenlieder'],
-        fn($lied) => !empty($lied['titel'])
-    );
-    $response['data']['wochenlieder'] = array_values($response['data']['wochenlieder']);
+    // Wochenlieder hinzufügen
+    if (!empty($event['hymn1'])) {
+        $response['data']['wochenlieder'][] = [
+            'titel' => $event['hymn1'],
+            'eg_nummer' => $event['hymn1_eg']
+        ];
+    }
+    if (!empty($event['hymn2'])) {
+        $response['data']['wochenlieder'][] = [
+            'titel' => $event['hymn2'],
+            'eg_nummer' => $event['hymn2_eg']
+        ];
+    }
+
+    // Wenn Übersetzung angefordert, Texte laden
+    if ($translation && $apiKey) {
+        $response['data']['uebersetzung'] = $translation;
+
+        // Texte die wir laden wollen (ohne Duplikate)
+        $texteZuLaden = [];
+
+        // Predigttext (wenn nicht identisch mit einer Lesung)
+        if (!$predigttextIdentischMit && $aktuellerPredigttext) {
+            $texteZuLaden['predigttext'] = $aktuellerPredigttext;
+        }
+
+        // AT-Lesung
+        if ($event['old_testament_reading']) {
+            $texteZuLaden['altes_testament'] = $event['old_testament_reading'];
+        }
+
+        // Epistel
+        if ($event['epistle']) {
+            $texteZuLaden['epistel'] = $event['epistle'];
+        }
+
+        // Evangelium
+        if ($event['gospel']) {
+            $texteZuLaden['evangelium'] = $event['gospel'];
+        }
+
+        // Psalm
+        if ($event['psalm']) {
+            $texteZuLaden['psalm'] = $event['psalm'];
+        }
+
+        // Texte laden
+        foreach ($texteZuLaden as $key => $referenz) {
+            $text = fetchBibleText($referenz, $translation, $apiKey);
+
+            if ($key === 'predigttext') {
+                $response['data']['predigttext']['text'] = $text;
+            } elseif ($key === 'psalm') {
+                $response['data']['wochenpsalm']['text'] = $text;
+            } else {
+                $response['data']['lesungen'][$key]['text'] = $text;
+            }
+        }
+
+        // Wenn Predigttext identisch, Referenz auf den Text setzen
+        if ($predigttextIdentischMit) {
+            $response['data']['predigttext']['text'] = $response['data']['lesungen'][$predigttextIdentischMit]['text'] ?? null;
+        }
+    }
 
     echo json_encode($response, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
 

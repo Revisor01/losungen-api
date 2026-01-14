@@ -76,7 +76,8 @@ class ApiService {
     // Für text/markdown/html Format direkte Response behandeln
     if (request.format && ['text', 'markdown', 'html'].includes(request.format)) {
       try {
-        const response = await fetch(`${this.baseUrl}/bible_search.php?${params}`, {
+        // bible_search.php liegt direkt im Root, nicht unter /api
+        const response = await fetch(`/bible_search.php?${params}`, {
           method: 'GET',
           headers: {
             'Content-Type': 'application/json',
@@ -115,7 +116,23 @@ class ApiService {
       }
     }
 
-    return this.request<BibleSearchResult>(`/bible_search.php?${params}`);
+    // bible_search.php liegt direkt im Root, nicht unter /api
+    const response = await fetch(`/bible_search.php?${params}`, {
+      headers: {
+        'X-API-Key': this.getApiKey(),
+      }
+    });
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      throw new Error(data.error || 'Bible search failed');
+    }
+
+    return {
+      success: true,
+      data: data.data,
+      timestamp: new Date().toISOString()
+    };
   }
 
   // Hole alle verfügbaren Übersetzungen (aus lokaler Liste)
