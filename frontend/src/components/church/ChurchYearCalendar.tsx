@@ -166,6 +166,28 @@ export const ChurchYearCalendar: React.FC = () => {
     });
   };
 
+  // Berechne aktuelle Perikopenreihe basierend auf Kirchenjahr
+  // Reihe I: 2024/25, Reihe II: 2025/26, Reihe III: 2026/27, etc.
+  const getCurrentPerikopenreihe = (date: Date): { reihe: string; kirchenjahr: string } => {
+    const year = date.getFullYear();
+    const month = date.getMonth(); // 0-11
+
+    // Kirchenjahr beginnt am 1. Advent (ca. Ende November)
+    // Vereinfacht: Vor Dezember = vorheriges Kirchenjahr
+    const kirchenjahrStart = month >= 11 ? year : year - 1;
+
+    // Reihe I startete 2018/19, dann rotiert es alle 6 Jahre
+    // 2018/19 = I, 2019/20 = II, ..., 2024/25 = I, 2025/26 = II, 2026/27 = III
+    const reihenNummern = ['I', 'II', 'III', 'IV', 'V', 'VI'];
+    const jahresSeit2018 = kirchenjahrStart - 2018;
+    const reiheIndex = ((jahresSeit2018 % 6) + 6) % 6; // Modulo auch für negative Zahlen
+
+    return {
+      reihe: reihenNummern[reiheIndex],
+      kirchenjahr: `${kirchenjahrStart}/${kirchenjahrStart + 1}`
+    };
+  };
+
   const handleBibleReferenceClick = (reference: string) => {
     // Navigate to search with pre-filled reference
     navigate(`/search?ref=${encodeURIComponent(reference)}`);
@@ -811,16 +833,17 @@ export const ChurchYearCalendar: React.FC = () => {
                   )}
 
                   {/* Perikopen */}
-                  {selectedEvent.perikopen && Object.keys(selectedEvent.perikopen).length > 0 && (
+                  {selectedEvent.perikopen && Object.keys(selectedEvent.perikopen).length > 0 && (() => {
+                    const { reihe: aktuelleReihe, kirchenjahr } = getCurrentPerikopenreihe(selectedEvent.date);
+                    return (
                     <div className="mb-6">
                       <div className="flex items-center justify-between mb-3">
                         <h4 className="font-semibold text-gray-900">Perikopenreihen</h4>
-                        <span className="text-sm text-gray-600">Aktuell: Reihe I (bis 1. Advent 2025)</span>
+                        <span className="text-sm text-gray-600">Aktuell: Reihe {aktuelleReihe} (Kirchenjahr {kirchenjahr})</span>
                       </div>
                       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
                         {Object.entries(selectedEvent.perikopen).map(([reihe, text]) => {
-                          // Current year's Perikope is Reihe I until Advent 2025
-                          const isCurrentPerikope = reihe === 'I';
+                          const isCurrentPerikope = reihe === aktuelleReihe;
                           
                           return (
                             <motion.button
@@ -854,7 +877,8 @@ export const ChurchYearCalendar: React.FC = () => {
                         })}
                       </div>
                     </div>
-                  )}
+                    );
+                  })()}
 
                   {/* Link */}
                   {selectedEvent.url && (
