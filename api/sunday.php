@@ -78,47 +78,18 @@ function formatGermanDate($date) {
 
 /**
  * Holt Bibeltext über bible_search.php
+ * Gibt das komplette Ergebnis mit Versen zurück (inkl. optional-Markierung)
  */
 function fetchBibleText($reference, $translation, $apiKey) {
     if (empty($reference)) {
         return null;
     }
 
-    // Referenz bereinigen für komplexe Formate wie "Jer 14, 1(2)3–4(5–6)7–9"
-    // Strategie: Extrahiere Buch, Kapitel, und vereinfache den Versbereich
-    $cleanRef = $reference;
-
-    // Prüfe ob komplexe Klammer-Notation vorhanden
-    if (preg_match('/\([^)]+\)/', $reference)) {
-        // Extrahiere Buch und Kapitel: "Jer 14, 1(2)3..." -> "Jer 14"
-        if (preg_match('/^(.+?\s*\d+)\s*,/', $reference, $bookMatch)) {
-            $bookAndChapter = trim($bookMatch[1]);
-
-            // Finde alle Verszahlen (auch in Klammern)
-            preg_match_all('/(\d+)/', substr($reference, strlen($bookMatch[0])), $verseMatches);
-
-            if (!empty($verseMatches[1])) {
-                $verses = array_map('intval', $verseMatches[1]);
-                $minVerse = min($verses);
-                $maxVerse = max($verses);
-
-                if ($minVerse === $maxVerse) {
-                    $cleanRef = "$bookAndChapter,$minVerse";
-                } else {
-                    $cleanRef = "$bookAndChapter,$minVerse-$maxVerse";
-                }
-            }
-        }
-    }
-
-    // Entferne übrige Klammern und normalisiere
-    $cleanRef = preg_replace('/\([^)]+\)/', '', $cleanRef);
-    $cleanRef = preg_replace('/\s+/', ' ', trim($cleanRef));
-
+    // Originale Referenz beibehalten - bible_search.php kann Klammer-Notation verarbeiten
     // Interne API-Anfrage
     $baseUrl = 'http://localhost/bible_search.php';
     $params = http_build_query([
-        'reference' => $cleanRef,
+        'reference' => $reference,
         'translation' => $translation,
         'api_key' => $apiKey,
         'format' => 'json'
@@ -126,7 +97,7 @@ function fetchBibleText($reference, $translation, $apiKey) {
 
     $context = stream_context_create([
         'http' => [
-            'timeout' => 10,
+            'timeout' => 15,
             'ignore_errors' => true
         ]
     ]);
@@ -143,19 +114,8 @@ function fetchBibleText($reference, $translation, $apiKey) {
         return null;
     }
 
-    // Text aus den Versen zusammenbauen
-    if (isset($data['data']['verses']) && is_array($data['data']['verses'])) {
-        $textParts = [];
-        foreach ($data['data']['verses'] as $verse) {
-            if (isset($verse['text'])) {
-                $verseNum = $verse['verse'] ?? '';
-                $textParts[] = $verse['text'];
-            }
-        }
-        return implode(' ', $textParts);
-    }
-
-    return $data['data']['text'] ?? null;
+    // Komplettes Ergebnis zurückgeben
+    return $data['data'] ?? null;
 }
 
 /**
@@ -364,20 +324,20 @@ try {
 
         // Texte laden
         foreach ($texteZuLaden as $key => $referenz) {
-            $text = fetchBibleText($referenz, $translation, $apiKey);
+            $bibeltext = fetchBibleText($referenz, $translation, $apiKey);
 
             if ($key === 'predigttext') {
-                $response['data']['predigttext']['text'] = $text;
+                $response['data']['predigttext']['bibeltext'] = $bibeltext;
             } elseif ($key === 'psalm') {
-                $response['data']['wochenpsalm']['text'] = $text;
+                $response['data']['wochenpsalm']['bibeltext'] = $bibeltext;
             } else {
-                $response['data']['lesungen'][$key]['text'] = $text;
+                $response['data']['lesungen'][$key]['bibeltext'] = $bibeltext;
             }
         }
 
-        // Wenn Predigttext identisch, Referenz auf den Text setzen
+        // Wenn Predigttext identisch, Referenz auf den Bibeltext setzen
         if ($predigttextIdentischMit) {
-            $response['data']['predigttext']['text'] = $response['data']['lesungen'][$predigttextIdentischMit]['text'] ?? null;
+            $response['data']['predigttext']['bibeltext'] = $response['data']['lesungen'][$predigttextIdentischMit]['bibeltext'] ?? null;
         }
     }
 
