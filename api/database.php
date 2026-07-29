@@ -23,17 +23,8 @@ class LosungenDatabase {
      */
     private function connect() {
         if ($this->pdo === null) {
-            try {
-                $dsn = "pgsql:host={$this->host};dbname={$this->dbname};port=5432";
-                $this->pdo = new PDO($dsn, $this->username, $this->password, [
-                    PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
-                    PDO::ATTR_DEFAULT_FETCH_MODE => PDO::FETCH_ASSOC,
-                    PDO::ATTR_EMULATE_PREPARES => false,
-                ]);
-            } catch (PDOException $e) {
-                error_log("Database connection failed: " . $e->getMessage());
-                throw new Exception("Database connection failed");
-            }
+            // Eine geteilte PDO-Verbindung pro Request statt mehrerer paralleler
+            $this->pdo = getDatabase();
         }
         return $this->pdo;
     }

@@ -7,15 +7,13 @@ import {
   ArrowTopRightOnSquareIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
-  MagnifyingGlassIcon,
-  PlusIcon
+  MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import { ICSParser, ChurchEvent } from '../../utils/icsParser';
 import { useNavigate } from 'react-router-dom';
 import { apiService } from '../../services/api';
 import { useAuth } from '../../context/AuthContext';
 import { PencilIcon, CheckIcon, XMarkIcon } from '@heroicons/react/24/outline';
-import { ServiceModal } from '../services/ServiceModal';
 
 export const ChurchYearCalendar: React.FC = () => {
   const navigate = useNavigate();
@@ -29,17 +27,9 @@ export const ChurchYearCalendar: React.FC = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [editedEvent, setEditedEvent] = useState<any>(null);
   const [saving, setSaving] = useState(false);
-  
-  // Gottesdienst Modal State
-  const [showServiceModal, setShowServiceModal] = useState(false);
-  const [selectedPerikope, setSelectedPerikope] = useState<any>(null);
-  const [creatingService, setCreatingService] = useState(false);
-  const [perikopes, setPerikopes] = useState<any[]>([]);
-  const [existingServices, setExistingServices] = useState<any[]>([]);
 
   useEffect(() => {
     loadChurchYearData();
-    loadPerikopes();
   }, []);
 
   useEffect(() => {
@@ -108,17 +98,6 @@ export const ChurchYearCalendar: React.FC = () => {
       createMockEvents();
     }
     setLoading(false);
-  };
-
-  const loadPerikopes = async () => {
-    try {
-      const response = await apiService.getPerikopes();
-      if (response.success && response.data) {
-        setPerikopes(response.data);
-      }
-    } catch (error) {
-      console.error('Failed to load perikopes:', error);
-    }
   };
 
   const createMockEvents = () => {
@@ -227,96 +206,6 @@ export const ChurchYearCalendar: React.FC = () => {
 
   const updateEditedField = (field: string, value: string) => {
     setEditedEvent({ ...editedEvent, [field]: value });
-  };
-
-  const loadExistingServices = async (eventName: string, eventDate: Date) => {
-    try {
-      const response = await apiService.getServices();
-      if (response.success && response.data) {
-        // Filter services by event name and date
-        const dateStr = eventDate.toISOString().split('T')[0];
-        const matchingServices = response.data.filter((service: any) => 
-          service.title.includes(eventName) || service.date === dateStr
-        );
-        setExistingServices(matchingServices);
-      }
-    } catch (error) {
-      console.error('Fehler beim Laden bestehender Gottesdienste:', error);
-      setExistingServices([]);
-    }
-  };
-
-  const handleCreateService = async (event?: ChurchEvent) => {
-    if (event) {
-      // Improved perikope matching - try exact match first, then fuzzy matching
-      let matchingPerikope = perikopes.find(p => p.event_name === event.summary);
-      
-      if (!matchingPerikope) {
-        // Try fuzzy matching for common differences
-        const eventSummary = event.summary.toLowerCase().trim();
-        matchingPerikope = perikopes.find(p => {
-          const eventName = p.event_name.toLowerCase().trim();
-          
-          // Direct partial matches
-          if (eventName.includes(eventSummary) || eventSummary.includes(eventName)) {
-            return true;
-          }
-          
-          // Handle Advent variations (1. Advent vs 4. Advent etc.)
-          if (eventSummary.includes('advent') && eventName.includes('advent')) {
-            return true;
-          }
-          
-          // Handle Sunday variations (So. n. = Sonntag nach)
-          if (eventSummary.includes('sonntag') && eventName.includes('so.')) {
-            return true;
-          }
-          
-          // Handle special cases
-          if (eventSummary.includes('weihnacht') && eventName.includes('christfest')) {
-            return true;
-          }
-          
-          if (eventSummary.includes('ostern') && eventName.includes('ostern')) {
-            return true;
-          }
-          
-          return false;
-        });
-      }
-      
-      // Debugging: log the matching attempt
-      console.log('Event summary:', event.summary);
-      console.log('Available perikopes:', perikopes.map(p => p.event_name));
-      console.log('Found matching perikope:', matchingPerikope?.event_name || 'None');
-      
-      setSelectedPerikope(matchingPerikope || null);
-      setSelectedDate(event.date);
-      
-      // Load existing services for this event
-      await loadExistingServices(event.summary, event.date);
-    } else {
-      setSelectedPerikope(null);
-      setExistingServices([]);
-    }
-    setShowServiceModal(true);
-  };
-
-  const handleServiceSubmit = async (serviceData: any) => {
-    setCreatingService(true);
-    try {
-      const response = await apiService.createService(serviceData);
-      if (response.success && response.data) {
-        setShowServiceModal(false);
-        setSelectedPerikope(null);
-        // Navigate to the service editor
-        navigate(`/service/${response.data.id}`);
-      }
-    } catch (error) {
-      console.error('Failed to create service:', error);
-    } finally {
-      setCreatingService(false);
-    }
   };
 
   if (loading) {
@@ -527,20 +416,6 @@ export const ChurchYearCalendar: React.FC = () => {
                       </div>
                       
                       <div className="flex items-center space-x-3" style={{ marginRight: '60px' }}>
-                        {/* Gottesdienst anlegen Button */}
-                        {isAuthenticated && (
-                          <motion.button
-                            whileHover={{ scale: 1.05 }}
-                            whileTap={{ scale: 0.95 }}
-                            onClick={() => handleCreateService(selectedEvent)}
-                            className="flex items-center space-x-2 px-4 py-2 bg-green-100 hover:bg-green-200 text-green-700 rounded-lg text-sm font-medium transition-colors"
-                            title="Neuen Gottesdienst für diesen Feiertag anlegen"
-                          >
-                            <PlusIcon className="w-4 h-4" />
-                            <span>Gottesdienst anlegen</span>
-                          </motion.button>
-                        )}
-                        
                         {selectedEvent.liturgicalColor && (
                           <span className={`px-3 py-1 rounded-full text-sm font-medium ${
                             ICSParser.getLiturgicalColorClass(selectedEvent.liturgicalColor)
@@ -913,21 +788,6 @@ export const ChurchYearCalendar: React.FC = () => {
             </AnimatePresence>
           </div>
         </div>
-
-        {/* Service Modal */}
-        <ServiceModal
-          isOpen={showServiceModal}
-          onClose={() => {
-            setShowServiceModal(false);
-            setSelectedPerikope(null);
-            setExistingServices([]);
-          }}
-          onSubmit={handleServiceSubmit}
-          preselectedPerikope={selectedPerikope}
-          preselectedDate={selectedDate}
-          existingServices={existingServices}
-          loading={creatingService}
-        />
       </div>
     </div>
   );

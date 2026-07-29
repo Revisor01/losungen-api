@@ -11,7 +11,6 @@ import {
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../context/AuthContext';
 import { BibleAbbreviations } from './BibleAbbreviations';
-import { NewsletterAdmin } from './NewsletterAdmin';
 
 interface SystemStatus {
   server_time: string;
@@ -435,11 +434,6 @@ export const AdminPanel: React.FC = () => {
               </div>
             )}
           </div>
-        </div>
-
-        {/* Newsletter Management */}
-        <div className="mt-8">
-          <NewsletterAdmin />
         </div>
 
         {/* Bible Abbreviations Management */}

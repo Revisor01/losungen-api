@@ -73,6 +73,32 @@ try {
             $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
             break;
             
+        case 'perikopes':
+            // Perikopen-Stammdaten (früher in services.php, wird vom Kirchenjahr-Kalender genutzt)
+            $stmt = $db->prepare("
+                SELECT
+                    id, event_name, event_type, liturgical_color, season,
+                    perikope_I, perikope_II, perikope_III, perikope_IV, perikope_V, perikope_VI,
+                    psalm, weekly_verse, weekly_verse_reference
+                FROM perikopes
+                ORDER BY
+                    CASE event_type
+                        WHEN 'holiday' THEN 1
+                        WHEN 'sunday' THEN 2
+                        WHEN 'season_start' THEN 3
+                        ELSE 4
+                    END,
+                    event_name
+            ");
+            $stmt->execute();
+
+            echo json_encode([
+                'success' => true,
+                'data' => $stmt->fetchAll(PDO::FETCH_ASSOC),
+                'timestamp' => date('c')
+            ], JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES);
+            exit;
+
         case 'range':
             $startDate = $_GET['start'] ?? date('Y-m-d');
             $endDate = $_GET['end'] ?? date('Y-m-d', strtotime('+1 year'));

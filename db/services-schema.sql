@@ -1,5 +1,5 @@
--- PostgreSQL Schema für Gottesdienst-Management
--- Erstellt: 2025-08-16
+-- PostgreSQL Schema für Kirchenjahr, Perikopen, Losungen und Bibel-Abkürzungen
+-- (Gottesdienst-CMS-Tabellen wurden 2026-07 entfernt)
 
 -- Perikopen-Tabelle (Kirchenjahr-Ereignisse)
 CREATE TABLE IF NOT EXISTS perikopes (
@@ -21,60 +21,8 @@ CREATE TABLE IF NOT EXISTS perikopes (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- Gottesdienste Tabelle
-CREATE TABLE IF NOT EXISTS services (
-    id SERIAL PRIMARY KEY,
-    title VARCHAR(255) NOT NULL,
-    service_type VARCHAR(50) NOT NULL, -- 'regular', 'wedding', 'funeral', 'baptism', 'confirmation', 'special'
-    date DATE NOT NULL,
-    time TIME DEFAULT '10:00:00',
-    location VARCHAR(255) DEFAULT 'Hauptkirche',
-    perikope_id INTEGER REFERENCES perikopes(id) ON DELETE SET NULL,
-    chosen_perikope VARCHAR(10), -- 'I', 'II', 'III', 'IV', 'V', 'VI'
-    congregation_size INTEGER,
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Gottesdienst-Komponenten Tabelle
-CREATE TABLE IF NOT EXISTS service_components (
-    id SERIAL PRIMARY KEY,
-    service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE CASCADE,
-    component_type VARCHAR(50) NOT NULL,
-    title VARCHAR(255) NOT NULL,
-    content TEXT,
-    bible_reference VARCHAR(255),
-    bible_translation VARCHAR(20),
-    bible_text TEXT, -- JSON storage für Bible verses
-    hymn_number VARCHAR(50),
-    order_position INTEGER DEFAULT 0,
-    duration_minutes INTEGER,
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- Tags für Gottesdienste
-CREATE TABLE IF NOT EXISTS service_tags (
-    id SERIAL PRIMARY KEY,
-    service_id INTEGER NOT NULL REFERENCES services(id) ON DELETE CASCADE,
-    tag VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    UNIQUE(service_id, tag)
-);
-
--- Indizes für Performance
-CREATE INDEX IF NOT EXISTS idx_services_date ON services(date);
-CREATE INDEX IF NOT EXISTS idx_services_perikope ON services(perikope_id);
-CREATE INDEX IF NOT EXISTS idx_services_type ON services(service_type);
-CREATE INDEX IF NOT EXISTS idx_components_service ON service_components(service_id);
-CREATE INDEX IF NOT EXISTS idx_components_type ON service_components(component_type);
-CREATE INDEX IF NOT EXISTS idx_components_order ON service_components(service_id, order_position);
-CREATE INDEX IF NOT EXISTS idx_tags_service ON service_tags(service_id);
-CREATE INDEX IF NOT EXISTS idx_tags_tag ON service_tags(tag);
-
--- Trigger für updated_at
+-- Trigger-Funktion für updated_at (Name aus historischen Gründen beibehalten,
+-- wird von bestehenden Triggern in der Produktions-DB referenziert)
 CREATE OR REPLACE FUNCTION update_services_updated_at_column()
 RETURNS TRIGGER AS $$
 BEGIN
@@ -84,12 +32,6 @@ END;
 $$ language 'plpgsql';
 
 CREATE TRIGGER update_perikopes_updated_at BEFORE UPDATE ON perikopes
-    FOR EACH ROW EXECUTE FUNCTION update_services_updated_at_column();
-
-CREATE TRIGGER update_services_updated_at BEFORE UPDATE ON services
-    FOR EACH ROW EXECUTE FUNCTION update_services_updated_at_column();
-
-CREATE TRIGGER update_service_components_updated_at BEFORE UPDATE ON service_components
     FOR EACH ROW EXECUTE FUNCTION update_services_updated_at_column();
 
 -- Church Events Tabelle
@@ -144,9 +86,10 @@ CREATE TRIGGER update_losungen_updated_at BEFORE UPDATE ON losungen
 
 -- Kommentare
 COMMENT ON TABLE perikopes IS 'Kirchenjahr-Perikopen und liturgische Texte';
-COMMENT ON TABLE services IS 'Gottesdienste mit Datum, Zeit und Ort';
-COMMENT ON TABLE service_components IS 'Einzelne Komponenten eines Gottesdienstes';
-COMMENT ON TABLE service_tags IS 'Tags/Kategorien für Gottesdienste';
 COMMENT ON TABLE church_events IS 'Kirchenjahr-Ereignisse und Feiertage';
 COMMENT ON TABLE bible_abbreviations IS 'Bibelbuch-Abkürzungen für Referenz-Parsing';
 COMMENT ON TABLE losungen IS 'Herrnhuter Losungen Tagesinhalte';
+
+-- Optionales Aufräum-Skript für bestehende Datenbanken (manuell ausführen):
+-- DROP TABLE IF EXISTS service_tags, service_components, services CASCADE;
+-- DROP TABLE IF EXISTS newsletter_send_log, newsletter_preferences, newsletter_subscribers CASCADE;

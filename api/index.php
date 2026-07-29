@@ -265,57 +265,82 @@ class LosungenService {
             logDocker("[LOSUNGEN] Cache lookup failed: " . $e->getMessage());
         }
         
-        // Fallback to scraper if cache miss
-        logDocker("[LOSUNGEN] Cache miss for $translation, falling back to scraper");
-        return $this->enhanceWithTranslations($data, $translation);
+        // Fallback: Texte für die Referenzen DIESES Datums über die interne
+        // Bibelsuche holen (Redis-gecacht) und Ergebnis in den Cache zurückschreiben
+        logDocker("[LOSUNGEN] Cache miss for $translation, fetching via bible_search");
+        return $this->enhanceWithTranslations($data, $translation, $date);
     }
-    
-    private function enhanceWithTranslations($data, $translation) {
-        // Use Python scraper for different translations
-        $pythonScript = '/var/www/html/scraper.py';
-        
-        if (!file_exists($pythonScript)) {
-            logDocker("[LOSUNGEN] WARNING: Python scraper not found, using German text only");
-            return $data;
-        }
-        
-        logDocker("[LOSUNGEN] Using Python scraper for translation: $translation");
-        
-        // Create temporary data in scraper format
-        $tempData = [
-            'losung' => [
-                'reference' => $data['losung']['reference'],
-                'text' => $data['losung']['text']
-            ],
-            'lehrtext' => [
-                'reference' => $data['lehrtext']['reference'], 
-                'text' => $data['lehrtext']['text']
-            ]
-        ];
-        
-        // Execute Python script with translation parameter
-        $output = shell_exec("/opt/venv/bin/python3 $pythonScript " . escapeshellarg($translation) . " 2>&1");
-        
-        if ($output) {
-            $scrapedData = json_decode($output, true);
-            if ($scrapedData && !isset($scrapedData['error'])) {
-                // Use scraped translations if available
-                if (isset($scrapedData['losung'])) {
-                    $data['losung']['text'] = $scrapedData['losung']['text'] ?? $data['losung']['text'];
-                    $data['losung']['translation_source'] = $scrapedData['losung']['translation_source'] ?? $data['losung']['translation_source'];
+
+    private function enhanceWithTranslations($data, $translation, $date) {
+        $translated = false;
+
+        foreach (['losung', 'lehrtext'] as $part) {
+            $reference = $data[$part]['reference'] ?? '';
+            if (!$reference) {
+                continue;
+            }
+
+            $result = $this->fetchBibleText($reference, $translation);
+
+            if ($result && !empty($result['text'])) {
+                $data[$part]['text'] = $result['text'];
+                $data[$part]['translation_source'] = $result['translation']['name'] ?? $translation;
+                if (!empty($result['url'])) {
+                    $data[$part]['bibleserver_url'] = $result['url'];
                 }
-                if (isset($scrapedData['lehrtext'])) {
-                    $data['lehrtext']['text'] = $scrapedData['lehrtext']['text'] ?? $data['lehrtext']['text'];
-                    $data['lehrtext']['translation_source'] = $scrapedData['lehrtext']['translation_source'] ?? $data['lehrtext']['translation_source'];
-                }
-                
-                logDocker("[LOSUNGEN] Successfully enhanced with translations from scraper");
+                $translated = true;
             } else {
-                logDocker("[LOSUNGEN] WARNING: Scraper failed, using German text");
+                logDocker("[LOSUNGEN] WARNING: No $translation text for $reference, keeping German text");
             }
         }
-        
+
+        if ($translated) {
+            $data['translation'] = [
+                'code' => $translation,
+                'name' => $this->getTranslationName($translation),
+                'language' => $this->getTranslationLanguage($translation)
+            ];
+
+            // Write-back: nächste Abfrage kommt direkt aus dem Cache
+            if ($this->losungenDb->saveTranslation($date, $translation, $data)) {
+                logDocker("[LOSUNGEN] Cached $translation for $date");
+            }
+        }
+
         return $data;
+    }
+
+    /**
+     * Interne Abfrage der Bibelsuche (bible_search.php) für eine einzelne Referenz.
+     * Nutzt deren Redis-Cache und Scraper-Logik, statt losungen.de erneut zu scrapen.
+     */
+    private function fetchBibleText($reference, $translation) {
+        $apiKey = $_SERVER['HTTP_X_API_KEY'] ?? $_GET['api_key'] ?? '';
+
+        $params = http_build_query([
+            'reference' => $reference,
+            'translation' => $translation,
+            'api_key' => $apiKey,
+            'format' => 'json'
+        ]);
+
+        $context = stream_context_create([
+            'http' => ['timeout' => 20, 'ignore_errors' => true]
+        ]);
+
+        $response = @file_get_contents("http://localhost/bible_search.php?$params", false, $context);
+
+        if ($response === false) {
+            return null;
+        }
+
+        $decoded = json_decode($response, true);
+
+        if (!$decoded || empty($decoded['success'])) {
+            return null;
+        }
+
+        return $decoded['data'] ?? null;
     }
     
     private function enhanceWithBibleserver($data, $translation) {
@@ -545,7 +570,7 @@ try {
     $result = $service->getDailyLosung($date, $translation);
     
     if ($result['success']) {
-        echo json_encode($result, JSON_UNESCAPED_UNICODE | JSON_PRETTY_PRINT);
+        echo json_encode($result, JSON_UNESCAPED_UNICODE);
     } else {
         http_response_code(400);
         echo json_encode($result, JSON_UNESCAPED_UNICODE);

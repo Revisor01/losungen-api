@@ -24,6 +24,16 @@ export const SearchInterface: React.FC = () => {
   const [showExcludedVerses, setShowExcludedVerses] = useState(true);
   const [showOptionalVerses, setShowOptionalVerses] = useState(true);
 
+  // Vergleichsmodus: bis zu 3 Übersetzungen nebeneinander
+  const [compareMode, setCompareMode] = useState(false);
+  const [compareTranslation2, setCompareTranslation2] = useState('HFA');
+  const [compareTranslation3, setCompareTranslation3] = useState('BIGS');
+  const [compareResults, setCompareResults] = useState<Array<{
+    code: string;
+    result?: BibleSearchResult;
+    error?: string;
+  }> | null>(null);
+
   const availableTranslations = apiService.getAvailableTranslations();
 
   // Beispiel-Suchen für bessere UX (jetzt aus Parser)
@@ -126,6 +136,42 @@ export const SearchInterface: React.FC = () => {
     setShowSuggestions(false);
 
     try {
+      if (compareMode) {
+        // Bis zu 3 Übersetzungen parallel laden (Duplikate entfernen)
+        const codes = Array.from(new Set([
+          selectedTranslation,
+          compareTranslation2,
+          compareTranslation3
+        ])).slice(0, 3);
+
+        const results = await Promise.all(codes.map(async (code) => {
+          try {
+            const response = await apiService.searchBibleText({
+              reference: term.trim(),
+              translation: code,
+              format: 'json'
+            });
+            if (response.success && response.data) {
+              return { code, result: response.data };
+            }
+            return { code, error: response.error || 'Fehler bei der Suche' };
+          } catch (err) {
+            return { code, error: err instanceof Error ? err.message : 'Unbekannter Fehler' };
+          }
+        }));
+
+        if (results.every(r => r.error)) {
+          setError(results[0].error || 'Fehler bei der Suche');
+          setCompareResults(null);
+        } else {
+          setCompareResults(results);
+          setSearchResult(null);
+          const newHistory = [term.trim(), ...searchHistory.filter(h => h !== term.trim())].slice(0, 5);
+          setSearchHistory(newHistory);
+        }
+        return;
+      }
+
       const request: BibleSearchRequest = {
         reference: term.trim(),
         translation: selectedTranslation,
@@ -133,10 +179,11 @@ export const SearchInterface: React.FC = () => {
       };
 
       const response = await apiService.searchBibleText(request);
-      
+
       if (response.success && response.data) {
         setSearchResult(response.data);
-        
+        setCompareResults(null);
+
         // Update search history
         const newHistory = [term.trim(), ...searchHistory.filter(h => h !== term.trim())].slice(0, 5);
         setSearchHistory(newHistory);
@@ -168,6 +215,7 @@ export const SearchInterface: React.FC = () => {
 
   const clearSearch = () => {
     setSearchResult(null);
+    setCompareResults(null);
     setError(null);
     setSearchTerm('');
   };
@@ -226,14 +274,57 @@ export const SearchInterface: React.FC = () => {
 
             {/* Translation Selection */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Übersetzung
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-700">
+                  {compareMode ? 'Übersetzung 1' : 'Übersetzung'}
+                </label>
+                <label className="flex items-center space-x-2 text-sm text-gray-600 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={compareMode}
+                    onChange={(e) => {
+                      setCompareMode(e.target.checked);
+                      setSearchResult(null);
+                      setCompareResults(null);
+                    }}
+                    className="rounded border-gray-300"
+                  />
+                  <span>Übersetzungen vergleichen (nebeneinander)</span>
+                </label>
+              </div>
               <TranslationSelector
                 selected={selectedTranslation}
                 onSelect={setSelectedTranslation}
                 available={availableTranslations}
               />
+
+              {compareMode && (
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Übersetzung 2
+                    </label>
+                    <TranslationSelector
+                      selected={compareTranslation2}
+                      onSelect={setCompareTranslation2}
+                      available={availableTranslations}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Übersetzung 3
+                    </label>
+                    <TranslationSelector
+                      selected={compareTranslation3}
+                      onSelect={setCompareTranslation3}
+                      available={availableTranslations}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Tipp: Gleiche Übersetzung doppelt wählen, um nur zwei Spalten zu vergleichen.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Submit Button */}
@@ -256,7 +347,7 @@ export const SearchInterface: React.FC = () => {
                 )}
               </button>
 
-              {(searchResult || error) && (
+              {(searchResult || compareResults || error) && (
                 <button
                   type="button"
                   onClick={clearSearch}
@@ -270,7 +361,7 @@ export const SearchInterface: React.FC = () => {
         </motion.div>
 
         {/* Next Church Event */}
-        {nextEvent && !searchResult && !error && !loading && (
+        {nextEvent && !searchResult && !compareResults && !error && !loading && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -371,7 +462,7 @@ export const SearchInterface: React.FC = () => {
         )}
 
         {/* Example Searches */}
-        {!searchResult && !error && !loading && (
+        {!searchResult && !compareResults && !error && !loading && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -401,7 +492,7 @@ export const SearchInterface: React.FC = () => {
         )}
 
         {/* Search History */}
-        {searchHistory.length > 0 && !searchResult && !error && !loading && (
+        {searchHistory.length > 0 && !searchResult && !compareResults && !error && !loading && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -674,6 +765,111 @@ export const SearchInterface: React.FC = () => {
                   ))}
                 </div>
               </motion.div>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {/* Comparison Result: bis zu 3 Übersetzungen nebeneinander */}
+        <AnimatePresence>
+          {compareResults && (
+            <motion.div
+              initial={{ opacity: 0, y: 30 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -30 }}
+              className="space-y-6"
+            >
+              <div className="flex items-center justify-between">
+                <h2 className="font-heading text-2xl font-semibold text-gray-900">
+                  Übersetzungsvergleich
+                  {(() => {
+                    const first = compareResults.find(r => r.result);
+                    return first?.result?.reference ? `: ${first.result.reference}` : '';
+                  })()}
+                </h2>
+                <div className="text-sm text-gray-500">
+                  {compareResults.length} Übersetzungen
+                </div>
+              </div>
+
+              <div className={`grid grid-cols-1 gap-4 ${
+                compareResults.length === 3
+                  ? 'lg:grid-cols-3 md:grid-cols-2'
+                  : compareResults.length === 2
+                  ? 'md:grid-cols-2'
+                  : ''
+              }`}>
+                {compareResults.map(({ code, result, error: colError }, index) => {
+                  const translationInfo = availableTranslations.find(t => t.code === code);
+
+                  return (
+                    <motion.div
+                      key={code}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ delay: 0.1 + index * 0.1 }}
+                      className="card p-6 flex flex-col"
+                    >
+                      <div className="flex items-center justify-between mb-4 pb-3 border-b border-gray-100">
+                        <div>
+                          <h3 className="font-heading font-semibold text-gray-900">
+                            {translationInfo?.name || code}
+                          </h3>
+                          <span className="text-xs text-gray-500">{code}</span>
+                        </div>
+                        {result?.url && (
+                          <a
+                            href={result.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="p-2 rounded-lg bg-royal-50 hover:bg-royal-100 text-royal-700 transition-colors"
+                            title="Auf Bibelserver öffnen"
+                          >
+                            <ArrowTopRightOnSquareIcon className="w-4 h-4" />
+                          </a>
+                        )}
+                      </div>
+
+                      {colError && (
+                        <p className="text-sm text-red-600">
+                          Konnte nicht geladen werden: {colError}
+                        </p>
+                      )}
+
+                      {result && (
+                        <>
+                          <div className="flex-1 space-y-3 text-gray-700 leading-relaxed">
+                            {result.verses && result.verses.length > 0 ? (
+                              result.verses.map((verse) => (
+                                <p key={verse.number}>
+                                  <span className="text-xs font-semibold text-royal-500 mr-1 align-super">
+                                    {verse.number}
+                                  </span>
+                                  {formatBibleText(verse.text || '')}
+                                </p>
+                              ))
+                            ) : (
+                              <p>{formatBibleText(result.text)}</p>
+                            )}
+                          </div>
+                          <button
+                            onClick={() => {
+                              const text = result.verses && result.verses.length > 0
+                                ? result.verses.map(v => v.text || '').join(' ')
+                                : result.text;
+                              navigator.clipboard.writeText(
+                                `${result.reference} (${code}): ${text}`
+                              );
+                            }}
+                            className="btn-secondary text-sm mt-4 self-start"
+                          >
+                            Kopieren
+                          </button>
+                        </>
+                      )}
+                    </motion.div>
+                  );
+                })}
+              </div>
             </motion.div>
           )}
         </AnimatePresence>
