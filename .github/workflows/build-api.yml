@@ -8,7 +8,7 @@ on:
       - 'public/**'
       - 'scripts/**'
       - 'Dockerfile'
-      - 'composer.json'
+      - 'docker/**'
       - 'db/**'
       - '.github/workflows/build-api.yml'
   workflow_dispatch:
