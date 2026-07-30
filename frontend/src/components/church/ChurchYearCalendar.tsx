@@ -5,8 +5,6 @@ import {
   BookOpenIcon, 
   MusicalNoteIcon,
   ArrowTopRightOnSquareIcon,
-  ChevronLeftIcon,
-  ChevronRightIcon,
   MagnifyingGlassIcon
 } from '@heroicons/react/24/outline';
 import { ICSParser, ChurchEvent } from '../../utils/icsParser';
@@ -20,13 +18,13 @@ export const ChurchYearCalendar: React.FC = () => {
   const { isAuthenticated } = useAuth();
   const [events, setEvents] = useState<ChurchEvent[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedDate, setSelectedDate] = useState(new Date());
   const [todaysEvents, setTodaysEvents] = useState<ChurchEvent[]>([]);
   const [nextEvent, setNextEvent] = useState<ChurchEvent | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<ChurchEvent | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [editedEvent, setEditedEvent] = useState<any>(null);
   const [saving, setSaving] = useState(false);
+  const [selectedChurchYear, setSelectedChurchYear] = useState<string>('');
 
   useEffect(() => {
     loadChurchYearData();
@@ -123,18 +121,26 @@ export const ChurchYearCalendar: React.FC = () => {
     setEvents(mockEvents);
   };
 
-  const navigateDate = (direction: 'prev' | 'next') => {
-    const newDate = new Date(selectedDate);
-    newDate.setDate(newDate.getDate() + (direction === 'next' ? 1 : -1));
-    setSelectedDate(newDate);
-    
-    const dayEvents = ICSParser.findEventsForDate(events, newDate);
-    if (dayEvents.length > 0) {
-      setSelectedEvent(dayEvents[0]);
-    } else {
-      setSelectedEvent(null);
-    }
+  // Kirchenjahr-Zuordnung: beginnt am 1. Advent (Sonntag zwischen 27.11. und 3.12.)
+  const getChurchYearStart = (date: Date): number => {
+    const year = date.getFullYear();
+    const advent = new Date(year, 10, 27);
+    advent.setDate(27 + ((7 - advent.getDay()) % 7));
+    return date >= advent ? year : year - 1;
   };
+
+  const churchYearOf = (date: Date): string => {
+    const start = getChurchYearStart(date);
+    return `${start}/${start + 1}`;
+  };
+
+  const churchYears = Array.from(new Set(events.map(e => churchYearOf(e.date)))).sort();
+  const activeChurchYear = selectedChurchYear && churchYears.includes(selectedChurchYear)
+    ? selectedChurchYear
+    : churchYearOf(new Date());
+  const yearEvents = events
+    .filter(e => churchYearOf(e.date) === activeChurchYear)
+    .sort((a, b) => a.date.getTime() - b.date.getTime());
 
   const formatDate = (date: Date) => {
     return date.toLocaleDateString('de-DE', {
@@ -285,7 +291,7 @@ export const ChurchYearCalendar: React.FC = () => {
             {nextEvent && (
               <div className="card p-6">
                 <h3 className="font-heading text-lg font-semibold text-gray-900 mb-4">
-                  Nächstes Fest
+                  Nächster Feiertag
                 </h3>
                 
                 <motion.div
@@ -313,45 +319,47 @@ export const ChurchYearCalendar: React.FC = () => {
               </div>
             )}
 
-            {/* Date Navigation */}
+            {/* Sonntag/Feiertag direkt anspringen */}
             <div className="card p-6">
               <h3 className="font-heading text-lg font-semibold text-gray-900 mb-4">
-                Datum durchsuchen
+                Sonntag / Feiertag finden
               </h3>
-              
-              <div className="flex items-center justify-between mb-4">
-                <button
-                  onClick={() => navigateDate('prev')}
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <ChevronLeftIcon className="w-5 h-5" />
-                </button>
-                
-                <div className="text-center">
-                  <p className="font-medium text-gray-900">
-                    {formatDate(selectedDate)}
-                  </p>
-                </div>
-                
-                <button
-                  onClick={() => navigateDate('next')}
-                  className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
-                >
-                  <ChevronRightIcon className="w-5 h-5" />
-                </button>
-              </div>
-              
-              <input
-                type="date"
-                value={selectedDate.toISOString().split('T')[0]}
+
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Kirchenjahr
+              </label>
+              <select
+                value={activeChurchYear}
+                onChange={(e) => setSelectedChurchYear(e.target.value)}
+                className="input-field mb-4"
+              >
+                {churchYears.map((year) => (
+                  <option key={year} value={year}>
+                    Kirchenjahr {year}
+                  </option>
+                ))}
+              </select>
+
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Sonntag / Feiertag
+              </label>
+              <select
+                value={selectedEvent && churchYearOf(selectedEvent.date) === activeChurchYear ? selectedEvent.uid : ''}
                 onChange={(e) => {
-                  const newDate = new Date(e.target.value);
-                  setSelectedDate(newDate);
-                  const dayEvents = ICSParser.findEventsForDate(events, newDate);
-                  setSelectedEvent(dayEvents.length > 0 ? dayEvents[0] : null);
+                  const event = yearEvents.find(ev => ev.uid === e.target.value);
+                  if (event) {
+                    setSelectedEvent(event);
+                  }
                 }}
                 className="input-field"
-              />
+              >
+                <option value="" disabled>Bitte wählen…</option>
+                {yearEvents.map((event) => (
+                  <option key={event.uid} value={event.uid}>
+                    {event.summary} – {event.date.toLocaleDateString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                  </option>
+                ))}
+              </select>
             </div>
           </div>
 

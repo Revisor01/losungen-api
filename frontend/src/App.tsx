@@ -1,14 +1,12 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { FavoritesProvider } from './context/FavoritesContext';
 import { LoginForm } from './components/auth/LoginForm';
 import { Header } from './components/layout/Header';
 import { Dashboard } from './components/dashboard/Dashboard';
 import { SearchInterface } from './components/search/SearchInterface';
 import { ProfileSettings } from './components/profile/ProfileSettings';
 import { AdminPanel } from './components/admin/AdminPanel';
-import { FavoritesList } from './components/favorites/FavoritesList';
 import { ChurchYearCalendar } from './components/church/ChurchYearCalendar';
 import './styles/globals.css';
 
@@ -53,7 +51,6 @@ function ProtectedRoutes() {
           <Route path="/search" element={<SearchInterface />} />
           <Route path="/profile" element={<ProfileSettings />} />
           <Route path="/admin" element={<AdminPanel />} />
-          <Route path="/favorites" element={<FavoritesList />} />
           <Route path="/kirchenjahr" element={<ChurchYearCalendar />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
@@ -66,9 +63,7 @@ function App() {
   return (
     <Router>
       <AuthProvider>
-        <FavoritesProvider>
-          <ProtectedRoutes />
-        </FavoritesProvider>
+        <ProtectedRoutes />
       </AuthProvider>
     </Router>
   );

@@ -201,10 +201,10 @@ export const Dashboard: React.FC = () => {
             icon="🔍"
           />
           <QuickActionCard
-            title="Favoriten"
-            description="Deine gespeicherten Verse"
-            href="/favorites"
-            icon="❤️"
+            title="Kirchenjahr"
+            description="Sonntage und Feiertage mit Perikopen"
+            href="/kirchenjahr"
+            icon="📅"
           />
         </motion.div>
       </div>

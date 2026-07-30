@@ -1,15 +1,12 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
-  ClipboardDocumentIcon, 
-  ShareIcon, 
+import {
+  ClipboardDocumentIcon,
+  ShareIcon,
   ArrowTopRightOnSquareIcon,
-  CheckIcon,
-  HeartIcon
+  CheckIcon
 } from '@heroicons/react/24/outline';
-import { HeartIcon as HeartSolidIcon } from '@heroicons/react/24/solid';
 import { BibleTextDisplayProps } from '../../types';
-import { useFavorites } from '../../context/FavoritesContext';
 
 export const BibleTextDisplay: React.FC<BibleTextDisplayProps> = ({
   verse,
@@ -18,8 +15,6 @@ export const BibleTextDisplay: React.FC<BibleTextDisplayProps> = ({
   showSource = true
 }) => {
   const [copied, setCopied] = useState(false);
-  const { addFavorite, removeFavoriteByReference, isFavorite } = useFavorites();
-  const isVerseInFavorites = isFavorite(verse.reference);
 
   const handleCopy = async () => {
     const textToCopy = showReference 
@@ -49,14 +44,6 @@ export const BibleTextDisplay: React.FC<BibleTextDisplayProps> = ({
     }
   };
 
-  const handleFavoriteToggle = () => {
-    if (isVerseInFavorites) {
-      removeFavoriteByReference(verse.reference);
-    } else {
-      addFavorite(verse);
-    }
-  };
-
   // Funktion um optionale Verse kursiv zu formatieren
   const formatText = (text: string) => {
     // Ersetze [OPTIONAL]...[/OPTIONAL] mit kursivem Text
@@ -77,25 +64,6 @@ export const BibleTextDisplay: React.FC<BibleTextDisplayProps> = ({
           </h3>
           
           <div className="flex items-center space-x-2">
-            {/* Favorite Button */}
-            <motion.button
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              onClick={handleFavoriteToggle}
-              className={`p-2 rounded-lg transition-colors ${
-                isVerseInFavorites 
-                  ? 'text-red-500 hover:text-red-600 hover:bg-red-50' 
-                  : 'text-gray-400 hover:text-red-500 hover:bg-red-50'
-              }`}
-              title={isVerseInFavorites ? 'Aus Favoriten entfernen' : 'Zu Favoriten hinzufügen'}
-            >
-              {isVerseInFavorites ? (
-                <HeartSolidIcon className="w-5 h-5" />
-              ) : (
-                <HeartIcon className="w-5 h-5" />
-              )}
-            </motion.button>
-
             {/* Copy Button */}
             <motion.button
               whileHover={{ scale: 1.05 }}

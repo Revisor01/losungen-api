@@ -24,6 +24,10 @@ export const SearchInterface: React.FC = () => {
   const [showExcludedVerses, setShowExcludedVerses] = useState(true);
   const [showOptionalVerses, setShowOptionalVerses] = useState(true);
 
+  // Kopier-Optionen
+  const [copyWithVerseNumbers, setCopyWithVerseNumbers] = useState(false);
+  const [copyWithReference, setCopyWithReference] = useState(true);
+
   // Vergleichsmodus: bis zu 3 Übersetzungen nebeneinander
   const [compareMode, setCompareMode] = useState(false);
   const [compareTranslation2, setCompareTranslation2] = useState('HFA');
@@ -137,12 +141,12 @@ export const SearchInterface: React.FC = () => {
 
     try {
       if (compareMode) {
-        // Bis zu 3 Übersetzungen parallel laden (Duplikate entfernen)
+        // Bis zu 3 Übersetzungen parallel laden (leere Auswahl und Duplikate entfernen)
         const codes = Array.from(new Set([
           selectedTranslation,
           compareTranslation2,
           compareTranslation3
-        ])).slice(0, 3);
+        ].filter(Boolean))).slice(0, 3);
 
         const results = await Promise.all(codes.map(async (code) => {
           try {
@@ -312,16 +316,14 @@ export const SearchInterface: React.FC = () => {
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Übersetzung 3
+                      Übersetzung 3 <span className="text-gray-400 font-normal">(optional)</span>
                     </label>
                     <TranslationSelector
                       selected={compareTranslation3}
                       onSelect={setCompareTranslation3}
                       available={availableTranslations}
+                      allowNone
                     />
-                    <p className="text-xs text-gray-500 mt-1">
-                      Tipp: Gleiche Übersetzung doppelt wählen, um nur zwei Spalten zu vergleichen.
-                    </p>
                   </div>
                 </div>
               )}
@@ -690,35 +692,51 @@ export const SearchInterface: React.FC = () => {
                 <div className="text-sm text-gray-600 mb-4">
                   Text wird entsprechend den Sichtbarkeits-Einstellungen kopiert (ausgeschlossene/optionale Verse werden nur kopiert wenn sie angezeigt werden).
                 </div>
-                
-                {/* Toggles für Zwischenablage */}
-                {(searchResult?.verses?.some(v => v.excluded) || searchResult?.verses?.some(v => v.optional)) && (
-                  <div className="flex flex-wrap gap-2 mb-4 p-3 bg-gray-50 rounded-lg">
-                    <div className="text-sm font-medium text-gray-700">Für Zwischenablage:</div>
-                    {searchResult?.verses?.some(v => v.excluded) && (
-                      <label className="flex items-center space-x-2 text-sm">
-                        <input 
-                          type="checkbox" 
-                          checked={showExcludedVerses} 
-                          onChange={(e) => setShowExcludedVerses(e.target.checked)}
-                          className="rounded border-gray-300"
-                        />
-                        <span>Ausgeschlossene Verse</span>
-                      </label>
-                    )}
-                    {searchResult?.verses?.some(v => v.optional) && (
-                      <label className="flex items-center space-x-2 text-sm">
-                        <input 
-                          type="checkbox" 
-                          checked={showOptionalVerses} 
-                          onChange={(e) => setShowOptionalVerses(e.target.checked)}
-                          className="rounded border-gray-300"
-                        />
-                        <span>Optionale Verse</span>
-                      </label>
-                    )}
-                  </div>
-                )}
+
+                {/* Optionen für Zwischenablage */}
+                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-4 p-3 bg-gray-50 rounded-lg">
+                  <div className="text-sm font-medium text-gray-700">Für Zwischenablage:</div>
+                  <label className="flex items-center space-x-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={copyWithReference}
+                      onChange={(e) => setCopyWithReference(e.target.checked)}
+                      className="rounded border-gray-300"
+                    />
+                    <span>Referenz als Überschrift</span>
+                  </label>
+                  <label className="flex items-center space-x-2 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={copyWithVerseNumbers}
+                      onChange={(e) => setCopyWithVerseNumbers(e.target.checked)}
+                      className="rounded border-gray-300"
+                    />
+                    <span>Versnummern</span>
+                  </label>
+                  {searchResult?.verses?.some(v => v.excluded) && (
+                    <label className="flex items-center space-x-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={showExcludedVerses}
+                        onChange={(e) => setShowExcludedVerses(e.target.checked)}
+                        className="rounded border-gray-300"
+                      />
+                      <span>Ausgeschlossene Verse</span>
+                    </label>
+                  )}
+                  {searchResult?.verses?.some(v => v.optional) && (
+                    <label className="flex items-center space-x-2 text-sm">
+                      <input
+                        type="checkbox"
+                        checked={showOptionalVerses}
+                        onChange={(e) => setShowOptionalVerses(e.target.checked)}
+                        className="rounded border-gray-300"
+                      />
+                      <span>Optionale Verse</span>
+                    </label>
+                  )}
+                </div>
 
                 <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                   {[
@@ -747,14 +765,25 @@ export const SearchInterface: React.FC = () => {
                             if (verse.optional && !showOptionalVerses) return false;
                             return true;
                           });
-                          filteredText = visibleVerses.map(v => cleanText(v.text || '')).join(' ');
+                          filteredText = visibleVerses
+                            .map(v => {
+                              const text = cleanText(v.text || '');
+                              return copyWithVerseNumbers ? `${v.number}${v.suffix || ''} ${text}` : text;
+                            })
+                            .join(' ');
                         } else {
                           filteredText = cleanText(searchResult.text);
                         }
-                        
-                        const content = format === 'text' ? filteredText :
-                                      format === 'markdown' ? `## ${searchResult.reference}\n\n> ${filteredText}\n\n*— ${searchResult.translation?.name}*` :
-                                      format === 'html' ? `<div class="bible-verse">\n  <h3>${searchResult.reference}</h3>\n  <blockquote>${filteredText}</blockquote>\n  <footer>${searchResult.translation?.name}</footer>\n</div>` :
+
+                        const heading = `${searchResult.reference} (${searchResult.translation?.name || searchResult.translation?.code})`;
+
+                        const content = format === 'text' ? (copyWithReference ? `${heading}\n\n${filteredText}` : filteredText) :
+                                      format === 'markdown' ? (copyWithReference
+                                        ? `## ${searchResult.reference}\n\n> ${filteredText}\n\n*— ${searchResult.translation?.name}*`
+                                        : `> ${filteredText}\n\n*— ${searchResult.translation?.name}*`) :
+                                      format === 'html' ? (copyWithReference
+                                        ? `<div class="bible-verse">\n  <h3>${searchResult.reference}</h3>\n  <blockquote>${filteredText}</blockquote>\n  <footer>${searchResult.translation?.name}</footer>\n</div>`
+                                        : `<div class="bible-verse">\n  <blockquote>${filteredText}</blockquote>\n  <footer>${searchResult.translation?.name}</footer>\n</div>`) :
                                       JSON.stringify(searchResult, null, 2);
                         navigator.clipboard.writeText(content);
                       }}
@@ -778,7 +807,7 @@ export const SearchInterface: React.FC = () => {
               exit={{ opacity: 0, y: -30 }}
               className="space-y-6"
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between flex-wrap gap-2">
                 <h2 className="font-heading text-2xl font-semibold text-gray-900">
                   Übersetzungsvergleich
                   {(() => {
@@ -786,8 +815,32 @@ export const SearchInterface: React.FC = () => {
                     return first?.result?.reference ? `: ${first.result.reference}` : '';
                   })()}
                 </h2>
-                <div className="text-sm text-gray-500">
-                  {compareResults.length} Übersetzungen
+                <div className="flex items-center space-x-4">
+                  {compareResults.some(r => r.result?.verses?.some(v => v.excluded)) && (
+                    <label className="flex items-center space-x-2 text-sm text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={showExcludedVerses}
+                        onChange={(e) => setShowExcludedVerses(e.target.checked)}
+                        className="rounded border-gray-300"
+                      />
+                      <span>Ausgeschlossene Verse</span>
+                    </label>
+                  )}
+                  {compareResults.some(r => r.result?.verses?.some(v => v.optional)) && (
+                    <label className="flex items-center space-x-2 text-sm text-gray-600">
+                      <input
+                        type="checkbox"
+                        checked={showOptionalVerses}
+                        onChange={(e) => setShowOptionalVerses(e.target.checked)}
+                        className="rounded border-gray-300"
+                      />
+                      <span>Optionale Verse</span>
+                    </label>
+                  )}
+                  <div className="text-sm text-gray-500">
+                    {compareResults.length} Übersetzungen
+                  </div>
                 </div>
               </div>
 
@@ -839,14 +892,34 @@ export const SearchInterface: React.FC = () => {
                         <>
                           <div className="flex-1 space-y-3 text-gray-700 leading-relaxed">
                             {result.verses && result.verses.length > 0 ? (
-                              result.verses.map((verse) => (
-                                <p key={verse.number}>
-                                  <span className="text-xs font-semibold text-royal-500 mr-1 align-super">
-                                    {verse.number}
-                                  </span>
-                                  {formatBibleText(verse.text || '')}
-                                </p>
-                              ))
+                              result.verses.map((verse) => {
+                                if (verse.excluded && !showExcludedVerses) return null;
+                                if (verse.optional && !showOptionalVerses) return null;
+
+                                return (
+                                  <p
+                                    key={verse.number}
+                                    className={
+                                      verse.excluded
+                                        ? 'opacity-50 italic text-gray-500 bg-gray-50 rounded-lg px-2 py-1 border-l-4 border-orange-300'
+                                        : verse.optional
+                                        ? 'italic text-blue-700 bg-blue-50 rounded-lg px-2 py-1 border-l-4 border-blue-300'
+                                        : ''
+                                    }
+                                  >
+                                    <span className={`text-xs font-semibold mr-1 align-super ${
+                                      verse.excluded
+                                        ? 'text-orange-500'
+                                        : verse.optional
+                                        ? 'text-blue-500'
+                                        : 'text-royal-500'
+                                    }`}>
+                                      {verse.number}{verse.suffix || ''}
+                                    </span>
+                                    {formatBibleText(verse.text || (verse.excluded ? '— Vers ausgelassen —' : ''))}
+                                  </p>
+                                );
+                              })
                             ) : (
                               <p>{formatBibleText(result.text)}</p>
                             )}
@@ -854,7 +927,9 @@ export const SearchInterface: React.FC = () => {
                           <button
                             onClick={() => {
                               const text = result.verses && result.verses.length > 0
-                                ? result.verses.map(v => v.text || '').join(' ')
+                                ? result.verses
+                                    .filter(v => !(v.excluded && !showExcludedVerses) && !(v.optional && !showOptionalVerses) && !v.excluded)
+                                    .map(v => v.text || '').join(' ')
                                 : result.text;
                               navigator.clipboard.writeText(
                                 `${result.reference} (${code}): ${text}`

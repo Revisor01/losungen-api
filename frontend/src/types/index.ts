@@ -75,6 +75,8 @@ export interface TranslationSelectorProps {
   onSelect: (translation: string) => void;
   available: Translation[];
   className?: string;
+  /** Zeigt zusätzlich eine "– keine –"-Option (code: '') an, z.B. für optionale Vergleichs-Spalten */
+  allowNone?: boolean;
 }
 
 export interface BibleTextDisplayProps {

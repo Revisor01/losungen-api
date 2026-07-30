@@ -36,6 +36,9 @@ interface CronStatus {
   next_expected?: string;
 }
 
+// admin.php liegt an der Domain-Wurzel (Traefik-Route), NICHT unter /api
+const ADMIN_BASE = process.env.NODE_ENV === 'production' ? '' : 'http://localhost:8374';
+
 export const AdminPanel: React.FC = () => {
   const { user } = useAuth();
   const [systemStatus, setSystemStatus] = useState<SystemStatus | null>(null);
@@ -54,10 +57,8 @@ export const AdminPanel: React.FC = () => {
   const loadStatus = async () => {
     setLoading(true);
     try {
-      const baseUrl = process.env.NODE_ENV === 'production' 
-        ? '/api'
-        : 'http://localhost:8374';
-        
+      const baseUrl = ADMIN_BASE;
+
       // Load system status
       const statusResponse = await fetch(`${baseUrl}/admin.php?action=status&api_key=${apiKey}`);
       const statusData = await statusResponse.json();
@@ -80,69 +81,39 @@ export const AdminPanel: React.FC = () => {
   const manualFetch = async () => {
     setFetchLoading(true);
     try {
-      const baseUrl = process.env.NODE_ENV === 'production' 
-        ? '/api'
-        : 'http://localhost:8374';
-        
-      const response = await fetch(`${baseUrl}/admin.php?action=fetch&api_key=${apiKey}`);
+      const response = await fetch(`${ADMIN_BASE}/admin.php?action=fetch&api_key=${apiKey}`);
       const data = await response.json();
-      
+
       if (data.success) {
-        setLastAction(`✓ Alle Übersetzungen geladen: ${data.data.successful_translations} erfolgreich in ${data.data.duration_ms}ms`);
+        setLastAction(`✓ Alle Übersetzungen neu geladen: ${data.data.successful_translations} erfolgreich in ${Math.round(data.data.duration_ms / 1000)}s`);
         loadStatus(); // Refresh status
       } else {
-        setLastAction(`✗ Fetch failed: ${data.error}`);
+        setLastAction(`✗ Fetch fehlgeschlagen: ${data.error}`);
       }
     } catch (error) {
-      setLastAction(`✗ Fetch error: ${error}`);
+      setLastAction(`✗ Fetch-Fehler: ${error}`);
     }
     setFetchLoading(false);
   };
 
-  const clearCache = async () => {
-    setClearLoading(true);
-    try {
-      const baseUrl = process.env.NODE_ENV === 'production' 
-        ? '/api'
-        : 'http://localhost:8374';
-        
-      const response = await fetch(`${baseUrl}/admin.php?action=clear_cache&api_key=${apiKey}`);
-      const data = await response.json();
-      
-      if (data.success) {
-        setLastAction(`✓ Cleared ${data.data.deleted_entries} cache entries`);
-        loadStatus(); // Refresh status
-      } else {
-        setLastAction(`✗ Clear failed: ${data.error}`);
-      }
-    } catch (error) {
-      setLastAction(`✗ Clear error: ${error}`);
-    }
-    setClearLoading(false);
-  };
-
   const clearBibleCache = async () => {
-    if (!window.confirm('Möchtest du wirklich den gesamten Bibeltext-Cache leeren? Dies kann die Performance vorübergehend beeinträchtigen.')) {
+    if (!window.confirm('Möchtest du wirklich den gesamten Bibeltext-Cache leeren? Alle Suchanfragen werden danach neu von den Quellen geladen.')) {
       return;
     }
-    
+
     setClearLoading(true);
     try {
-      const baseUrl = process.env.NODE_ENV === 'production' 
-        ? '/api'
-        : 'http://localhost:8374';
-        
-      const response = await fetch(`${baseUrl}/admin.php?action=clear_bible_cache&api_key=${apiKey}`);
+      const response = await fetch(`${ADMIN_BASE}/admin.php?action=clear_bible_cache&api_key=${apiKey}`);
       const data = await response.json();
-      
+
       if (data.success) {
-        setLastAction(`✓ Bible Cache geleert: ${data.data.deleted_entries} Einträge gelöscht`);
+        setLastAction(`✓ Bibel-Cache geleert: ${data.data.deleted_entries} Einträge gelöscht`);
         loadStatus(); // Refresh status
       } else {
-        setLastAction(`✗ Bible Cache Clear failed: ${data.error}`);
+        setLastAction(`✗ Bibel-Cache leeren fehlgeschlagen: ${data.error}`);
       }
     } catch (error) {
-      setLastAction(`✗ Bible Cache Clear error: ${error}`);
+      setLastAction(`✗ Bibel-Cache-Fehler: ${error}`);
     }
     setClearLoading(false);
   };
@@ -177,23 +148,23 @@ export const AdminPanel: React.FC = () => {
         </div>
 
         {/* Actions */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <div className="card p-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+          <div className="card p-6 flex flex-col">
             <div className="flex items-center space-x-3 mb-4">
               <PlayIcon className="w-6 h-6 text-royal-600" />
-              <h3 className="font-heading text-lg font-semibold">Manual Fetch</h3>
+              <h3 className="font-heading text-lg font-semibold">Manueller Fetch</h3>
             </div>
-            
-            <p className="text-sm text-gray-600 mb-4">
-              Lädt alle Übersetzungen für den heutigen Tag neu und löscht den bestehenden Cache.
+
+            <p className="text-sm text-gray-600 mb-4 flex-1">
+              Löscht den heutigen Losungs-Cache und lädt alle Übersetzungen neu.
             </p>
-            
+
             <motion.button
               onClick={manualFetch}
               disabled={fetchLoading}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="btn-primary w-full flex items-center justify-center space-x-2"
+              className="btn-primary w-full flex items-center justify-center space-x-2 mt-auto"
             >
               {fetchLoading ? (
                 <ArrowPathIcon className="w-4 h-4 animate-spin" />
@@ -204,81 +175,51 @@ export const AdminPanel: React.FC = () => {
             </motion.button>
           </div>
 
-          <div className="card p-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <TrashIcon className="w-6 h-6 text-red-600" />
-              <h3 className="font-heading text-lg font-semibold">Clear Cache</h3>
-            </div>
-            
-            <p className="text-sm text-gray-600 mb-4">
-              Löscht den heutigen Cache. Nächster API-Call wird neu gefetcht.
-            </p>
-            
-            <motion.button
-              onClick={clearCache}
-              disabled={clearLoading}
-              whileHover={{ scale: 1.02 }}
-              whileTap={{ scale: 0.98 }}
-              className="btn-secondary w-full flex items-center justify-center space-x-2 hover:bg-red-50 hover:text-red-600"
-            >
-              {clearLoading ? (
-                <ArrowPathIcon className="w-4 h-4 animate-spin" />
-              ) : (
-                <TrashIcon className="w-4 h-4" />
-              )}
-              <span>{clearLoading ? 'Clearing...' : 'Clear Today'}</span>
-            </motion.button>
-          </div>
-
-          <div className="card p-6">
+          <div className="card p-6 flex flex-col">
             <div className="flex items-center space-x-3 mb-4">
               <TrashIcon className="w-6 h-6 text-orange-600" />
-              <h3 className="font-heading text-lg font-semibold">Bible Cache</h3>
+              <h3 className="font-heading text-lg font-semibold">Bibel-Cache</h3>
             </div>
-            
-            <p className="text-sm text-gray-600 mb-4">
-              Löscht den gesamten Bibeltext-Cache (Redis). Alle Suchanfragen werden neu geladen.
+
+            <p className="text-sm text-gray-600 mb-4 flex-1">
+              Invalidiert den gesamten Bibeltext-Cache (Redis), z.&nbsp;B. nach Korrekturen an ausgeschlossenen Versen.
             </p>
-            
+
             <motion.button
               onClick={clearBibleCache}
               disabled={clearLoading}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="btn-secondary w-full flex items-center justify-center space-x-2 hover:bg-orange-50 hover:text-orange-600"
+              className="btn-secondary w-full flex items-center justify-center space-x-2 hover:bg-orange-50 hover:text-orange-600 mt-auto"
             >
               {clearLoading ? (
                 <ArrowPathIcon className="w-4 h-4 animate-spin" />
               ) : (
                 <TrashIcon className="w-4 h-4" />
               )}
-              <span>{clearLoading ? 'Leere Cache...' : 'Bibeltext-Cache leeren'}</span>
+              <span>{clearLoading ? 'Leere Cache...' : 'Bibel-Cache leeren'}</span>
             </motion.button>
           </div>
 
-          <div className="card p-6">
+          <div className="card p-6 flex flex-col">
             <div className="flex items-center space-x-3 mb-4">
               <ArrowPathIcon className="w-6 h-6 text-blue-600" />
-              <h3 className="font-heading text-lg font-semibold">Refresh Status</h3>
+              <h3 className="font-heading text-lg font-semibold">Status aktualisieren</h3>
             </div>
-            
-            <p className="text-sm text-gray-600 mb-4">
+
+            <p className="text-sm text-gray-600 mb-4 flex-1">
               Aktualisiert alle Systemstatistiken.
             </p>
-            
+
             <motion.button
               onClick={loadStatus}
               disabled={loading}
               whileHover={{ scale: 1.02 }}
               whileTap={{ scale: 0.98 }}
-              className="btn-secondary w-full flex items-center justify-center space-x-2"
+              className="btn-secondary w-full flex items-center justify-center space-x-2 mt-auto"
             >
-              {loading ? (
-                <ArrowPathIcon className="w-4 h-4 animate-spin" />
-              ) : (
-                <ArrowPathIcon className="w-4 h-4" />
-              )}
-              <span>{loading ? 'Refreshing...' : 'Refresh'}</span>
+              <ArrowPathIcon className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span>{loading ? 'Aktualisiere...' : 'Aktualisieren'}</span>
             </motion.button>
           </div>
         </div>
