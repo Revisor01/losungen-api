@@ -757,33 +757,52 @@ export const SearchInterface: React.FC = () => {
                           return cleaned.trim();
                         };
 
+                        // Versnummern hochgestellt (Unicode für Text/Markdown, <sup> für HTML)
+                        const toSuperscript = (s: string) => {
+                          const map: Record<string, string> = {
+                            '0': '⁰', '1': '¹', '2': '²', '3': '³', '4': '⁴',
+                            '5': '⁵', '6': '⁶', '7': '⁷', '8': '⁸', '9': '⁹',
+                            'a': 'ᵃ', 'b': 'ᵇ', 'c': 'ᶜ'
+                          };
+                          return s.split('').map(c => map[c] ?? c).join('');
+                        };
+
                         // Generiere gefilterten Text basierend auf Toggle-Settings
-                        let filteredText = '';
+                        let plainText = '';
+                        let htmlText = '';
                         if (searchResult.verses && searchResult.verses.length > 0) {
                           const visibleVerses = searchResult.verses.filter(verse => {
                             if (verse.excluded && !showExcludedVerses) return false;
                             if (verse.optional && !showOptionalVerses) return false;
                             return true;
                           });
-                          filteredText = visibleVerses
+                          plainText = visibleVerses
                             .map(v => {
                               const text = cleanText(v.text || '');
-                              return copyWithVerseNumbers ? `${v.number}${v.suffix || ''} ${text}` : text;
+                              const label = `${v.number}${v.suffix || ''}`;
+                              return copyWithVerseNumbers ? `${toSuperscript(label)}${text}` : text;
+                            })
+                            .join(' ');
+                          htmlText = visibleVerses
+                            .map(v => {
+                              const text = cleanText(v.text || '');
+                              const label = `${v.number}${v.suffix || ''}`;
+                              return copyWithVerseNumbers ? `<sup>${label}</sup>${text}` : text;
                             })
                             .join(' ');
                         } else {
-                          filteredText = cleanText(searchResult.text);
+                          plainText = htmlText = cleanText(searchResult.text);
                         }
 
                         const heading = `${searchResult.reference} (${searchResult.translation?.name || searchResult.translation?.code})`;
 
-                        const content = format === 'text' ? (copyWithReference ? `${heading}\n\n${filteredText}` : filteredText) :
+                        const content = format === 'text' ? (copyWithReference ? `${heading}\n\n${plainText}` : plainText) :
                                       format === 'markdown' ? (copyWithReference
-                                        ? `## ${searchResult.reference}\n\n> ${filteredText}\n\n*— ${searchResult.translation?.name}*`
-                                        : `> ${filteredText}\n\n*— ${searchResult.translation?.name}*`) :
+                                        ? `## ${searchResult.reference}\n\n> ${plainText}\n\n*— ${searchResult.translation?.name}*`
+                                        : `> ${plainText}\n\n*— ${searchResult.translation?.name}*`) :
                                       format === 'html' ? (copyWithReference
-                                        ? `<div class="bible-verse">\n  <h3>${searchResult.reference}</h3>\n  <blockquote>${filteredText}</blockquote>\n  <footer>${searchResult.translation?.name}</footer>\n</div>`
-                                        : `<div class="bible-verse">\n  <blockquote>${filteredText}</blockquote>\n  <footer>${searchResult.translation?.name}</footer>\n</div>`) :
+                                        ? `<div class="bible-verse">\n  <h3>${searchResult.reference}</h3>\n  <blockquote>${htmlText}</blockquote>\n  <footer>${searchResult.translation?.name}</footer>\n</div>`
+                                        : `<div class="bible-verse">\n  <blockquote>${htmlText}</blockquote>\n  <footer>${searchResult.translation?.name}</footer>\n</div>`) :
                                       JSON.stringify(searchResult, null, 2);
                         navigator.clipboard.writeText(content);
                       }}
