@@ -98,4 +98,4 @@ docker-compose.portainer.yml
 
 # Lock files (we want package-lock.json but not others)
 yarn.lock
-pnpm-lock.yaml
+pnpm-lock.yaml.playwright-mcp/
