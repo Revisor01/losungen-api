@@ -90,7 +90,7 @@ export const Dashboard: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="mb-8"
+          className="mb-8 relative z-30"
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="font-heading text-xl font-semibold text-gray-900">

@@ -58,7 +58,7 @@ export const TranslationSelector: React.FC<TranslationSelectorProps> = ({
   };
 
   return (
-    <div className={`relative ${className} z-50`} ref={dropdownRef}>
+    <div className={`relative ${className} ${isOpen ? 'z-50' : 'z-10'}`} ref={dropdownRef}>
       {/* Trigger Button */}
       <motion.button
         whileHover={{ scale: 1.02 }}
