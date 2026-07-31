@@ -575,6 +575,23 @@ export const SearchInterface: React.FC = () => {
                 </div>
               </div>
 
+              {/* Haupttext-Anzeige für Einzelverse (kein verses-Array von der API) */}
+              {(!searchResult.verses || searchResult.verses.length <= 1) && searchResult.text && (
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="card p-6"
+                >
+                  <blockquote className="text-xl leading-relaxed text-gray-800 font-serif">
+                    {formatBibleText(searchResult.text)}
+                  </blockquote>
+                  <p className="mt-4 text-sm text-gray-500">
+                    {searchResult.reference} — {searchResult.translation?.name}
+                  </p>
+                </motion.div>
+              )}
+
               {/* Multiple Verses Display - Moved to top */}
               {searchResult.verses && searchResult.verses.length > 1 && (
                 <motion.div

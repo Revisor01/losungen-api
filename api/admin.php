@@ -251,9 +251,21 @@ function clearCache() {
 }
 
 function getCronStatus() {
-    $cronFile = __DIR__ . '/../scripts/cron_status.php';
-    
-    if (file_exists($cronFile)) {
+    // Im Container liegt admin.php in /var/www/html/ (scripts/ ist Unterordner),
+    // im Repo liegt admin.php in api/ (scripts/ ist Nachbarordner)
+    $candidates = [
+        __DIR__ . '/scripts/cron_status.php',
+        __DIR__ . '/../scripts/cron_status.php'
+    ];
+    $cronFile = null;
+    foreach ($candidates as $candidate) {
+        if (file_exists($candidate)) {
+            $cronFile = $candidate;
+            break;
+        }
+    }
+
+    if ($cronFile !== null) {
         $lastRun = filemtime($cronFile);
         $timeSince = time() - $lastRun;
         
@@ -262,8 +274,8 @@ function getCronStatus() {
             'data' => [
                 'last_run' => date('Y-m-d H:i:s', $lastRun),
                 'seconds_ago' => $timeSince,
-                'status' => $timeSince < 3600 ? 'active' : 'inactive', // 1 hour threshold
-                'next_expected' => date('Y-m-d H:i:s', $lastRun + 3600) // Assuming hourly
+                'status' => $timeSince < 26 * 3600 ? 'active' : 'inactive', // Cron läuft täglich um 00:02
+                'next_expected' => date('Y-m-d', strtotime('tomorrow')) . ' 00:02:00'
             ]
         ];
     } else {
