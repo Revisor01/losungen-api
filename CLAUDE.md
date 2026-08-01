@@ -31,23 +31,23 @@ docker-compose logs -f
 docker-compose down
 
 # Rebuild specific service
-docker-compose up -d --build losungen-api
+docker-compose up -d --build ketiv-api
 ```
 
 ### Database Management
 ```bash
 # Access PostgreSQL
-docker exec -it losungen-postgres psql -U losungen_user -d losungen_db
+docker exec -it ketiv-postgres psql -U losungen_user -d losungen_db
 
 # Run SQL migrations
-docker exec -i losungen-postgres psql -U losungen_user -d losungen_db < db/schema.sql
+docker exec -i ketiv-postgres psql -U losungen_user -d losungen_db < db/schema.sql
 ```
 
 ## Architecture Overview
 
 ### Multi-Container Docker Setup
-- **losungen-api** (Port 8374): PHP 8.2/Apache backend serving API endpoints
-- **biblescraper-frontend** (Port 3030): React/TypeScript frontend application  
+- **ketiv-api** (Port 8374): PHP 8.2/Apache backend serving API endpoints
+- **ketiv-frontend** (Port 3030): React/TypeScript frontend application  
 - **postgres** (Port 5432 internal): PostgreSQL 15 database for caching
 
 ### Data Flow Architecture
